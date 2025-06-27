@@ -188,7 +188,7 @@ class AutoHealer:
 
         try:
             headers = {'User-Agent': 'Mozilla/5.0'}
-            response = requests.get("[https://www.google.com/search](https://www.google.com/search)", params={'q': query}, headers=headers)
+            response = requests.get("https://www.google.com/search", params={'q': query}, headers=headers)
             response.raise_for_status()
             soup = BeautifulSoup(response.text, 'html.parser')
             link_tag = soup.find('a', href=lambda href: href and "[stackoverflow.com/questions](https://stackoverflow.com/questions)" in href)

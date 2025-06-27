@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="https://unpkg.com/blockly/blockly.min.js"></script>
+  <style>
+    html,body {height:100%; margin:0; background:#121212;}
+    #work {height:100%; filter:blur(0px) brightness(0.9);}
+  </style>
+</head>
+<body>
+  <xml id="toolbox" style="display:none">
+    <block type="python"></block>
+  </xml>
+  <div id="work"></div>
+  <script>
+    const ws = Blockly.inject('work',{toolbox:document.getElementById('toolbox'),
+                                      theme:Blockly.Themes.Dark});
+    window.addNewPythonBlock = () => {
+      const b = ws.newBlock('python'); b.initSvg(); b.render();
+    };
+    window.exportPython = () => {
+      return JSON.stringify(ws.getAllBlocks(false).map(b=>({
+        name:b.id.replace(/-/g,''),
+        code:b.getFieldValue('TEXT')||''
+      })));
+    };
+  </script>
+</body>
+</html>
+</details>
