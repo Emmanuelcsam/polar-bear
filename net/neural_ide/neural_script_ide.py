@@ -55,7 +55,12 @@ try:
     HAS_PYLINT = True
 except ImportError:
     HAS_PYLINT = False
-
+try:
+    from pylint.lint import Run as PylintRun
+    from pylint.reporters.text import TextReporter
+except ImportError:
+    PylintRun = None
+    TextReporter = None
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

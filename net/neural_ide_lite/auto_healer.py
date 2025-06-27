@@ -80,11 +80,11 @@ class AutoHealer:
         try:
             # Use a common user agent to avoid being blocked
             headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'}
-            response = requests.get("[https://www.google.com/search](https://www.google.com/search)", params={'q': query}, headers=headers)
+            response = requests.get("https://www.google.com/search", params={'q': query}, headers=headers)
             response.raise_for_status()
 
             soup = BeautifulSoup(response.text, 'html.parser')
-            link_tag = soup.find('a', href=lambda href: href and "[stackoverflow.com/questions](https://stackoverflow.com/questions)" in href)
+            link_tag = soup.find('a', href=lambda href: href and "stackoverflow.com/questions" in href)
 
             if not link_tag:
                 return "Could not find a relevant Stack Overflow page from the search results."
@@ -105,13 +105,18 @@ class AutoHealer:
             response = requests.get(url, headers=headers)
             response.raise_for_status()
             soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # --- FIXED LINE ---
+            # Correctly search for the accepted answer first, then fall back to the first answer.
+            # Using attrs dictionary for attributes with hyphens is the correct syntax.
+            answer = soup.find('div', class_='accepted-answer')
+            if not answer:
+                answer = soup.find('div', class_='answer')
 
-            # Find the answer with the highest vote count
-            answer = soup.find('div', class_='answer', 'data-answerid'=True)
             if answer:
                 # Extract the code blocks and text for context
-                code_elements = answer.select('.s-prose js-post-body pre code')
-                solution_text = "\n".join([code.get_text() for code in code_elements])
+                code_elements = answer.select('.s-prose .js-post-body pre code')
+                solution_text = "\n\n".join([code.get_text() for code in code_elements])
                 return solution_text if solution_text else "Found a solution page, but could not extract code snippets."
             return "Could not find a clear answer on the Stack Overflow page."
         except requests.exceptions.RequestException as e:

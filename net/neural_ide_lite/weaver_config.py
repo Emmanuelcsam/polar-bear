@@ -211,7 +211,7 @@ class ConfigManager:
             if cycles:
                 # Provide a more user-friendly cycle description
                 cycle_paths = " -> ".join(cycles[0]) + f" -> {cycles[0][0]}"
-                errors.append(f"Error: A circular connection was detected: {cycle_paths}. Blocks cannot depend on each other in a loop.")
+                errors.append(f"Error: A ciprcular connection was detected: {cycle_paths}. Blocks cannot depend on each other in a loop.")
         except Exception as e:
             errors.append(f"An unexpected error occurred during validation: {e}")
             
