@@ -1617,17 +1617,34 @@ class NeuralScriptIDE:
         self.tab_count_label.config(text=f"Scripts: {len(self.tabs)}")
         
 
-    def update_message_targets(self):
-        """Update message target options for all tabs"""
-        targets = ["BROADCAST"]
-        for tab_id, tab in self.tabs.items():
-            targets.append(tab.script_node.id)
-            
-        for tab in self.tabs.values():
-            tab.message_target.set("BROADCAST")
-            if hasattr(tab, 'target_combo'):
-                tab.target_combo['values'] = targets
-                tab.target_combo.set("BROADCAST")
+    def update_message_flow(self):
+        """Update message flow display"""
+        # Get recent messages
+        recent_messages = list(self.message_broker.message_history)[-20:]
+
+        self.message_flow_text.config(state='normal')
+        self.message_flow_text.delete(1.0, tk.END)
+
+        for msg in recent_messages:
+            timestamp = datetime.fromtimestamp(msg.timestamp).strftime("%H:%M:%S.%f")[:-3]
+            self.message_flow_text.insert(
+                tk.END,
+                f"[{timestamp}] {msg.sender_id} → {msg.receiver_id}: {msg.payload}\n"
+            )
+
+        self.message_flow_text.config(state='disabled')
+        self.message_flow_text.see(tk.END)
+
+        # Update count (guard message_count_label until it's created)
+        self.total_messages_label.config(text=str(len(self.message_broker.message_history)))
+        if hasattr(self, 'message_count_label'):
+            self.message_count_label.config(
+                text=f"Messages: {len(self.message_broker.message_history)}"
+            )
+
+        # Schedule next update
+        self.root.after(500, self.update_message_flow)
+
                 
 
             
