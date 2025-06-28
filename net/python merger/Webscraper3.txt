@@ -1,0 +1,788 @@
+
+========================================
+# File: /home/jarvis/Documents/GitHub/WhatNow-/Proton/core/mirror.py
+========================================
+
+import os
+
+
+def mirror(url, response):
+    if response != 'dummy':
+        clean_url = url.replace('http://', '').replace('https://', '').rstrip('/')
+        parts = clean_url.split('?')[0].split('/')
+        root = parts[0]
+        webpage = parts[-1]
+        parts.remove(root)
+        try:
+            parts.remove(webpage)
+        except ValueError:
+            pass
+        prefix = root + '_mirror'
+        try:
+            os.mkdir(prefix)
+        except OSError:
+            pass
+        suffix = ''
+        if parts:
+            for directory in parts:
+                suffix += directory + '/'
+                try:
+                    os.mkdir(prefix + '/' + suffix)
+                except OSError:
+                    pass
+        path = prefix + '/' + suffix
+        trail = ''
+        if '.' not in webpage:
+            trail += '.html'
+        if webpage == root:
+            name = 'index.html'
+        else:
+            name = webpage
+        if len(url.split('?')) > 1:
+            trail += '?' + url.split('?')[1]
+        with open(path + name + trail, 'w+') as out_file:
+            out_file.write(response.encode('utf-8'))
+
+========================================
+# File: /home/jarvis/Documents/GitHub/WhatNow-/Proton/core/config.py
+========================================
+
+"""Configuration options for Photon."""
+
+VERBOSE = False
+
+INTELS = [
+    'facebook.com',
+    'github.com',
+    'instagram.com',
+    'youtube.com',
+]
+
+BAD_TYPES = (
+    'bmp',
+    'css',
+    'csv',
+    'docx',
+    'ico',
+    'jpeg',
+    'jpg',
+    'js',
+    'json',
+    'pdf',
+    'png',
+    'svg',
+    'xls',
+    'xml',
+)
+
+========================================
+# File: /home/jarvis/Documents/GitHub/WhatNow-/Proton/core/colors.py
+========================================
+
+import sys
+
+
+if sys.platform.lower().startswith(('os', 'win', 'darwin', 'ios')):
+    # Colors shouldn't be displayed on Mac and Windows
+    end = red = white = green = yellow = run = bad = good = info = que = ''
+else:
+    white = '\033[97m'
+    green = '\033[92m'
+    red = '\033[91m'
+    yellow = '\033[93m'
+    end = '\033[0m'
+    back = '\033[7;91m'
+    info = '\033[93m[!]\033[0m'
+    que = '\033[94m[?]\033[0m'
+    bad = '\033[91m[-]\033[0m'
+    good = '\033[92m[+]\033[0m'
+    run = '\033[97m[~]\033[0m'
+
+========================================
+# File: /home/jarvis/Documents/GitHub/WhatNow-/Proton/core/flash.py
+========================================
+
+from __future__ import print_function
+import concurrent.futures
+
+from core.colors import info
+
+def flash(function, links, thread_count):
+    """Process the URLs and uses a threadpool to execute a function."""
+    # Convert links (set) to list
+    links = list(links)
+    threadpool = concurrent.futures.ThreadPoolExecutor(
+            max_workers=thread_count)
+    futures = (threadpool.submit(function, link) for link in links)
+    for i, _ in enumerate(concurrent.futures.as_completed(futures)):
+        if i + 1 == len(links) or (i + 1) % thread_count == 0:
+            print('%s Progress: %i/%i' % (info, i + 1, len(links)),
+                    end='\r')
+    print('')
+
+========================================
+# File: /home/jarvis/Documents/GitHub/WhatNow-/Proton/core/prompt.py
+========================================
+
+"""Support for an input prompt."""
+import os
+import tempfile
+
+
+def prompt(default=None):
+    """Present the user a prompt."""
+    editor = 'nano'
+    with tempfile.NamedTemporaryFile(mode='r+') as tmpfile:
+        if default:
+            tmpfile.write(default)
+            tmpfile.flush()
+
+        child_pid = os.fork()
+        is_child = child_pid == 0
+
+        if is_child:
+            os.execvp(editor, [editor, tmpfile.name])
+        else:
+            os.waitpid(child_pid, 0)
+            tmpfile.seek(0)
+            return tmpfile.read().strip()
+
+========================================
+# File: /home/jarvis/Documents/GitHub/WhatNow-/Proton/core/requester.py
+========================================
+
+import random
+import time
+
+import requests
+from requests.exceptions import TooManyRedirects
+
+
+SESSION = requests.Session()
+SESSION.max_redirects = 3
+
+def requester(
+        url,
+        main_url=None,
+        delay=0,
+        cook=None,
+        headers=None,
+        timeout=10,
+        host=None,
+        proxies=[None],
+        user_agents=[None],
+        failed=None,
+        processed=None
+    ):
+    """Handle the requests and return the response body."""
+    cook = cook or set()
+    headers = headers or set()
+    user_agents = user_agents or ['Photon']
+    failed = failed or set()
+    processed = processed or set()
+    # Mark the URL as crawled
+    processed.add(url)
+    # Pause/sleep the program for specified time
+    time.sleep(delay)
+
+    def make_request(url):
+        """Default request"""
+        final_headers = headers or {
+            'Host': host,
+            # Selecting a random user-agent
+            'User-Agent': random.choice(user_agents),
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip',
+            'DNT': '1',
+            'Connection': 'close',
+        }
+        try:
+            response = SESSION.get(
+                url,
+                cookies=cook,
+                headers=final_headers,
+                verify=False,
+                timeout=timeout,
+                stream=True,
+                proxies=random.choice(proxies)
+            )
+        except TooManyRedirects:
+            return 'dummy'
+
+        if 'text/html' in response.headers['content-type'] or \
+           'text/plain' in response.headers['content-type']:
+            if response.status_code != '404':
+                return response.text
+            else:
+                response.close()
+                failed.add(url)
+                return 'dummy'
+        else:
+            response.close()
+            return 'dummy'
+
+    return make_request(url)
+
+========================================
+# File: /home/jarvis/Documents/GitHub/WhatNow-/Proton/core/updater.py
+========================================
+
+import os
+import re
+
+from core.colors import run, que, good, green, end, info
+from core.requester import requester
+
+
+def updater():
+    """Update the current installation.
+
+    git clones the latest version and merges it with the current directory.
+    """
+    print('%s Checking for updates' % run)
+    # Changes must be separated by ;
+    changes = '''major bug fixes;removed ninja mode;dropped python < 3.2 support;fixed unicode output;proxy support;more intels'''
+    latest_commit = requester('https://raw.githubusercontent.com/s0md3v/Photon/master/core/updater.py', host='raw.githubusercontent.com')
+    # Just a hack to see if a new version is available
+    if changes not in latest_commit:
+        changelog = re.search(r"changes = '''(.*?)'''", latest_commit)
+        # Splitting the changes to form a list
+        changelog = changelog.group(1).split(';')
+        print('%s A new version of Photon is available.' % good)
+        print('%s Changes:' % info)
+        for change in changelog: # print changes
+            print('%s>%s %s' % (green, end, change))
+
+        current_path = os.getcwd().split('/') # if you know it, you know it
+        folder = current_path[-1] # current directory name
+        path = '/'.join(current_path) # current directory path
+        choice = input('%s Would you like to update? [Y/n] ' % que).lower()
+
+        if choice != 'n':
+            print('%s Updating Photon' % run)
+            os.system('git clone --quiet https://github.com/s0md3v/Photon %s'
+                      % (folder))
+            os.system('cp -r %s/%s/* %s && rm -r %s/%s/ 2>/dev/null'
+                      % (path, folder, path, path, folder))
+            print('%s Update successful!' % good)
+    else:
+        print('%s Photon is up to date!' % good)
+
+========================================
+# File: /home/jarvis/Documents/GitHub/WhatNow-/Proton/core/zap.py
+========================================
+
+import re
+import requests
+import random
+
+from core.utils import verb, xml_parser
+from core.colors import run, good
+from plugins.wayback import time_machine
+
+
+def zap(input_url, archive, domain, host, internal, robots, proxies):
+    """Extract links from robots.txt and sitemap.xml."""
+    if archive:
+        print('%s Fetching URLs from archive.org' % run)
+        if False:
+            archived_urls = time_machine(domain, 'domain')
+        else:
+            archived_urls = time_machine(host, 'host')
+        print('%s Retrieved %i URLs from archive.org' % (
+            good, len(archived_urls) - 1))
+        for url in archived_urls:
+            verb('Internal page', url)
+            internal.add(url)
+    # Makes request to robots.txt
+    response = requests.get(input_url + '/robots.txt',
+                            proxies=random.choice(proxies)).text
+    # Making sure robots.txt isn't some fancy 404 page
+    if '<body' not in response:
+        # If you know it, you know it
+        matches = re.findall(r'Allow: (.*)|Disallow: (.*)', response)
+        if matches:
+            # Iterating over the matches, match is a tuple here
+            for match in matches:
+                # One item in match will always be empty so will combine both
+                # items
+                match = ''.join(match)
+                # If the URL doesn't use a wildcard
+                if '*' not in match:
+                    url = input_url + match
+                    # Add the URL to internal list for crawling
+                    internal.add(url)
+                    # Add the URL to robots list
+                    robots.add(url)
+            print('%s URLs retrieved from robots.txt: %s' % (good, len(robots)))
+    # Makes request to sitemap.xml
+    response = requests.get(input_url + '/sitemap.xml',
+                            proxies=random.choice(proxies)).text
+    # Making sure robots.txt isn't some fancy 404 page
+    if '<body' not in response:
+        matches = xml_parser(response)
+        if matches: # if there are any matches
+            print('%s URLs retrieved from sitemap.xml: %s' % (
+                good, len(matches)))
+            for match in matches:
+                verb('Internal page', match)
+                # Cleaning up the URL and adding it to the internal list for
+                # crawling
+                internal.add(match)
+
+========================================
+# File: /home/jarvis/Documents/GitHub/WhatNow-/Proton/core/__init__.py
+========================================
+
+"""The Photon core."""
+
+========================================
+# File: /home/jarvis/Documents/GitHub/WhatNow-/Proton/core/utils.py
+========================================
+
+import requests
+import math
+import os.path
+import re
+import argparse
+
+import tld
+
+from core.colors import info
+from core.config import VERBOSE, BAD_TYPES
+
+from urllib.parse import urlparse
+
+
+def regxy(pattern, response, supress_regex, custom):
+    """Extract a string based on regex pattern supplied by user."""
+    try:
+        matches = re.findall(r'%s' % pattern, response)
+        for match in matches:
+            verb('Custom regex', match)
+            custom.add(match)
+    except:
+        supress_regex = True
+
+
+def is_link(url, processed, files):
+    """
+    Determine whether or not a link should be crawled
+    A url should not be crawled if it
+        - Is a file
+        - Has already been crawled
+
+    Args:
+        url: str Url to be processed
+        processed: list[str] List of urls that have already been crawled
+
+    Returns:
+        bool If `url` should be crawled
+    """
+    if url not in processed:
+        if url.startswith('#') or url.startswith('javascript:'):
+            return False
+        is_file = url.endswith(BAD_TYPES)
+        if is_file:
+            files.add(url)
+            return False
+        return True
+    return False
+
+
+def remove_regex(urls, regex):
+    """
+    Parse a list for non-matches to a regex.
+
+    Args:
+        urls: iterable of urls
+        regex: string regex to be parsed for
+
+    Returns:
+        list of strings not matching regex
+    """
+
+    if not regex:
+        return urls
+
+    # To avoid iterating over the characters of a string
+    if not isinstance(urls, (list, set, tuple)):
+        urls = [urls]
+
+    try:
+        non_matching_urls = [url for url in urls if not re.search(regex, url)]
+    except TypeError:
+        return []
+
+    return non_matching_urls
+
+
+def writer(datasets, dataset_names, output_dir):
+    """Write the results."""
+    for dataset, dataset_name in zip(datasets, dataset_names):
+        if dataset:
+            filepath = output_dir + '/' + dataset_name + '.txt'
+            with open(filepath, 'w+') as out_file:
+                joined = '\n'.join(dataset)
+                out_file.write(str(joined.encode('utf-8').decode('utf-8')))
+                out_file.write('\n')
+
+
+def timer(diff, processed):
+    """Return the passed time."""
+    # Changes seconds into minutes and seconds
+    minutes, seconds = divmod(diff, 60)
+    try:
+        # Finds average time taken by requests
+        time_per_request = diff / float(len(processed))
+    except ZeroDivisionError:
+        time_per_request = 0
+    return minutes, seconds, time_per_request
+
+
+def entropy(string):
+    """Calculate the entropy of a string."""
+    entropy = 0
+    for number in range(256):
+        result = float(string.encode('utf-8').count(
+            chr(number))) / len(string.encode('utf-8'))
+        if result != 0:
+            entropy = entropy - result * math.log(result, 2)
+    return entropy
+
+
+def xml_parser(response):
+    """Extract links from .xml files."""
+    # Regex for extracting URLs
+    return re.findall(r'<loc>(.*?)</loc>', response)
+
+
+def verb(kind, string):
+    """Enable verbose output."""
+    if VERBOSE:
+        print('%s %s: %s' % (info, kind, string))
+
+
+def extract_headers(headers):
+    """This function extracts valid headers from interactive input."""
+    sorted_headers = {}
+    matches = re.findall(r'(.*):\s(.*)', headers)
+    for match in matches:
+        header = match[0]
+        value = match[1]
+        try:
+            if value[-1] == ',':
+                value = value[:-1]
+            sorted_headers[header] = value
+        except IndexError:
+            pass
+    return sorted_headers
+
+
+def top_level(url, fix_protocol=True):
+    """Extract the top level domain from an URL."""
+    ext = tld.get_tld(url, fix_protocol=fix_protocol)
+    toplevel = '.'.join(urlparse(url).netloc.split('.')[-2:]).split(
+        ext)[0] + ext
+    return toplevel
+
+
+def is_proxy_list(v, proxies):
+    if os.path.isfile(v):
+        with open(v, 'r') as _file:
+            for line in _file:
+                line = line.strip()
+                if re.match(r"((http|socks5):\/\/.)?(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):(\d{1,5})", line) or \
+                   re.match(r"((http|socks5):\/\/.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}:(\d{1,5})", line):
+                    proxies.append({"http": line,
+                                    "https": line})
+                else:
+                    print("%s ignored" % line)
+        if proxies:
+            return True
+    return False
+
+
+def proxy_type(v):
+    """ Match IP:PORT or DOMAIN:PORT in a losse manner """
+    proxies = []
+    if re.match(r"((http|socks5):\/\/.)?(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):(\d{1,5})", v):
+        proxies.append({"http": v,
+                        "https": v})
+        return proxies
+    elif re.match(r"((http|socks5):\/\/.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}:(\d{1,5})", v):
+        proxies.append({"http": v,
+                        "https": v})
+        return proxies
+    elif is_proxy_list(v, proxies):
+        return proxies
+    else:
+        raise argparse.ArgumentTypeError(
+            "Proxy should follow IP:PORT or DOMAIN:PORT format")
+
+
+def luhn(purported):
+
+    # sum_of_digits (index * 2)
+    LUHN_ODD_LOOKUP = (0, 2, 4, 6, 8, 1, 3, 5, 7, 9)
+
+    if not isinstance(purported, str):
+        purported = str(purported)
+    try:
+        evens = sum(int(p) for p in purported[-1::-2])
+        odds = sum(LUHN_ODD_LOOKUP[int(p)] for p in purported[-2::-2])
+        return (evens + odds) % 10 == 0
+    except ValueError:  # Raised if an int conversion fails
+        return False
+
+
+def is_good_proxy(pip):
+    try:
+        requests.get('http://example.com', proxies=pip, timeout=3)
+    except requests.exceptions.ConnectTimeout as e:
+        return False
+    except Exception as detail:
+        return False
+
+    return True
+
+
+========================================
+# File: /home/jarvis/Documents/GitHub/WhatNow-/Proton/core/regex.py
+========================================
+
+import re
+
+# regex taken from https://github.com/InQuest/python-iocextract
+# Reusable end punctuation regex.
+END_PUNCTUATION = r"[\.\?>\"'\)!,}:;\u201d\u2019\uff1e\uff1c\]]*"
+
+# Reusable regex for symbols commonly used to defang.
+SEPARATOR_DEFANGS = r"[\(\)\[\]{}<>\\]"
+
+# Split URLs on some characters that may be valid, but may also be garbage.
+URL_SPLIT_STR = r"[>\"'\),};]"
+
+# Get basic url format, including a few obfuscation techniques, main anchor is the uri scheme.
+GENERIC_URL = re.compile(r"""
+        (
+            # Scheme.
+            [fhstu]\S\S?[px]s?
+            # One of these delimiters/defangs.
+            (?:
+                :\/\/|
+                :\\\\|
+                :?__
+            )
+            # Any number of defang characters.
+            (?:
+                \x20|
+                """ + SEPARATOR_DEFANGS + r"""
+            )*
+            # Domain/path characters.
+            \w
+            \S+?
+            # CISCO ESA style defangs followed by domain/path characters.
+            (?:\x20[\/\.][^\.\/\s]\S*?)*
+        )
+    """ + END_PUNCTUATION + r"""
+        (?=\s|$)
+    """, re.IGNORECASE | re.VERBOSE | re.UNICODE)
+
+# Get some obfuscated urls, main anchor is brackets around the period.
+BRACKET_URL = re.compile(r"""
+        \b
+        (
+            [\.\:\/\\\w\[\]\(\)-]+
+            (?:
+                \x20?
+                [\(\[]
+                \x20?
+                \.
+                \x20?
+                [\]\)]
+                \x20?
+                \S*?
+            )+
+        )
+    """ + END_PUNCTUATION + r"""
+        (?=\s|$)
+    """, re.VERBOSE | re.UNICODE)
+
+# Get some obfuscated urls, main anchor is backslash before a period.
+BACKSLASH_URL = re.compile(r"""
+        \b
+        (
+            [\:\/\\\w\[\]\(\)-]+
+            (?:
+                \x20?
+                \\?\.
+                \x20?
+                \S*?
+            )*?
+            (?:
+                \x20?
+                \\\.
+                \x20?
+                \S*?
+            )
+            (?:
+                \x20?
+                \\?\.
+                \x20?
+                \S*?
+            )*
+        )
+    """ + END_PUNCTUATION + r"""
+        (?=\s|$)
+    """, re.VERBOSE | re.UNICODE)
+
+# Get hex-encoded urls.
+HEXENCODED_URL = re.compile(r"""
+        (
+            [46][86]
+            (?:[57]4)?
+            [57]4[57]0
+            (?:[57]3)?
+            3a2f2f
+            (?:2[356def]|3[0-9adf]|[46][0-9a-f]|[57][0-9af])+
+        )
+        (?:[046]0|2[0-2489a-c]|3[bce]|[57][b-e]|[8-f][0-9a-f]|0a|0d|09|[
+            \x5b-\x5d\x7b\x7d\x0a\x0d\x20
+        ]|$)
+    """, re.IGNORECASE | re.VERBOSE)
+
+# Get urlencoded urls.
+URLENCODED_URL = re.compile(r"""
+        (s?[hf]t?tps?%3A%2F%2F\w[\w%-]*?)(?:[^\w%-]|$)
+    """, re.IGNORECASE | re.VERBOSE)
+
+# Get base64-encoded urls.
+B64ENCODED_URL = re.compile(r"""
+        (
+            # b64re '([hH][tT][tT][pP][sS]|[hH][tT][tT][pP]|[fF][tT][pP])://'
+            # Modified to ignore whitespace.
+            (?:
+                [\x2b\x2f-\x39A-Za-z]\s*[\x2b\x2f-\x39A-Za-z]\s*[\x31\x35\x39BFJNRVZdhlptx]\s*[Gm]\s*[Vd]\s*[FH]\s*[A]\s*\x36\s*L\s*y\s*[\x2b\x2f\x38-\x39]\s*|
+                [\x2b\x2f-\x39A-Za-z]\s*[\x2b\x2f-\x39A-Za-z]\s*[\x31\x35\x39BFJNRVZdhlptx]\s*[Io]\s*[Vd]\s*[FH]\s*[R]\s*[Qw]\s*[O]\s*i\s*\x38\s*v\s*[\x2b\x2f-\x39A-Za-z]\s*|
+                [\x2b\x2f-\x39A-Za-z]\s*[\x2b\x2f-\x39A-Za-z]\s*[\x31\x35\x39BFJNRVZdhlptx]\s*[Io]\s*[Vd]\s*[FH]\s*[R]\s*[Qw]\s*[Uc]\s*[z]\s*o\s*v\s*L\s*[\x2b\x2f-\x39w-z]\s*|
+                [\x2b\x2f-\x39A-Za-z]\s*[\x30\x32EGUWkm]\s*[Z]\s*[\x30U]\s*[Uc]\s*[D]\s*o\s*v\s*L\s*[\x2b\x2f-\x39w-z]\s*|
+                [\x2b\x2f-\x39A-Za-z]\s*[\x30\x32EGUWkm]\s*[h]\s*[\x30U]\s*[Vd]\s*[FH]\s*[A]\s*\x36\s*L\s*y\s*[\x2b\x2f\x38-\x39]\s*|
+                [\x2b\x2f-\x39A-Za-z]\s*[\x30\x32EGUWkm]\s*[h]\s*[\x30U]\s*[Vd]\s*[FH]\s*[B]\s*[Tz]\s*[O]\s*i\s*\x38\s*v\s*[\x2b\x2f-\x39A-Za-z]\s*|
+                [RZ]\s*[ln]\s*[R]\s*[Qw]\s*[O]\s*i\s*\x38\s*v\s*[\x2b\x2f-\x39A-Za-z]\s*|
+                [Sa]\s*[FH]\s*[R]\s*[\x30U]\s*[Uc]\s*[D]\s*o\s*v\s*L\s*[\x2b\x2f-\x39w-z]\s*|
+                [Sa]\s*[FH]\s*[R]\s*[\x30U]\s*[Uc]\s*[FH]\s*[M]\s*\x36\s*L\s*y\s*[\x2b\x2f\x38-\x39]\s*
+            )
+            # Up to 260 characters (pre-encoding, reasonable URL length).
+            [A-Za-z0-9+/=\s]{1,357}
+        )
+        (?=[^A-Za-z0-9+/=\s]|$)
+    """, re.VERBOSE)
+
+# Get some valid obfuscated ip addresses.
+IPV4 = re.compile(r"""
+        (?:^|
+            (?![^\d\.])
+        )
+        (?:
+            (?:[1-9]?\d|1\d\d|2[0-4]\d|25[0-5])
+            [\[\(\\]*?\.[\]\)]*?
+        ){3}
+        (?:[1-9]?\d|1\d\d|2[0-4]\d|25[0-5])
+        (?:(?=[^\d\.])|$)
+    """, re.VERBOSE)
+
+# Experimental IPv6 regex, will not catch everything but should be sufficent for now.
+IPV6 = re.compile(r"""
+        \b(?:[a-f0-9]{1,4}:|:){2,7}(?:[a-f0-9]{1,4}|:)\b
+    """, re.IGNORECASE | re.VERBOSE)
+
+# Capture email addresses including common defangs.
+EMAIL = re.compile(r"""
+        (
+            [a-z0-9_.+-]+
+            [\(\[{\x20]*
+            (?:@|\Wat\W)
+            [\)\]}\x20]*
+            [a-z0-9-]+
+            (?:
+                (?:
+                    (?:
+                        \x20*
+                        """ + SEPARATOR_DEFANGS + r"""
+                        \x20*
+                    )*
+                    \.
+                    (?:
+                        \x20*
+                        """ + SEPARATOR_DEFANGS + r"""
+                        \x20*
+                    )*
+                    |
+                    \W+dot\W+
+                )
+                [a-z0-9-]+?
+            )+
+        )
+    """ + END_PUNCTUATION + r"""
+        (?=\s|$)
+    """, re.IGNORECASE | re.VERBOSE | re.UNICODE)
+
+MD5 = re.compile(r"(?:[^a-fA-F\d]|\b)([a-fA-F\d]{32})(?:[^a-fA-F\d]|\b)")
+SHA1 = re.compile(r"(?:[^a-fA-F\d]|\b)([a-fA-F\d]{40})(?:[^a-fA-F\d]|\b)")
+SHA256 = re.compile(r"(?:[^a-fA-F\d]|\b)([a-fA-F\d]{64})(?:[^a-fA-F\d]|\b)")
+SHA512 = re.compile(
+    r"(?:[^a-fA-F\d]|\b)([a-fA-F\d]{128})(?:[^a-fA-F\d]|\b)")
+
+# YARA regex.
+YARA_PARSE = re.compile(r"""
+        (?:^|\s)
+        (
+            (?:
+                \s*?import\s+?"[^\r\n]*?[\r\n]+|
+                \s*?include\s+?"[^\r\n]*?[\r\n]+|
+                \s*?//[^\r\n]*[\r\n]+|
+                \s*?/\*.*?\*/\s*?
+            )*
+            (?:
+                \s*?private\s+|
+                \s*?global\s+
+            )*
+            rule\s*?
+            \w+\s*?
+            (?:
+                :[\s\w]+
+            )?
+            \s+\{
+            .*?
+            condition\s*?:
+            .*?
+            \s*\}
+        )
+        (?:$|\s)
+    """, re.MULTILINE | re.DOTALL | re.VERBOSE)
+
+CREDIT_CARD = re.compile(r"[0-9]{4}[ ]?[-]?[0-9]{4}[ ]?[-]?[0-9]{4}[ ]?[-]?[0-9]{4}")
+
+rintels = [(GENERIC_URL, "GENERIC_URL"),
+           (BRACKET_URL, "BRACKET_URL"),
+           (BACKSLASH_URL, "BACKSLASH_URL"),
+           (HEXENCODED_URL, "HEXENCODED_URL"),
+           (URLENCODED_URL, "URLENCODED_URL"),
+           (B64ENCODED_URL, "B64ENCODED_URL"),
+           (IPV4, "IPV4"),
+           (IPV6, "IPV6"),
+           (EMAIL, "EMAIL"),
+           (MD5, "MD5"),
+           (SHA1, "SHA1"),
+           (SHA256, "SHA256"),
+           (SHA512, "SHA512"),
+           (YARA_PARSE, "YARA_PARSE"),
+           (CREDIT_CARD, "CREDIT_CARD")]
+
+
+rscript = re.compile(r'<(script|SCRIPT).*(src|SRC)=([^\s>]+)')
+rhref = re.compile(r'<[aA].*(href|HREF)=([^\s>]+)')
+rendpoint = re.compile(r'[\'"](/.*?)[\'"]|[\'"](http.*?)[\'"]')
+rentropy = re.compile(r'[\w-]{16,45}')
