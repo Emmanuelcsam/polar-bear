@@ -1,4 +1,0 @@
-openai
-beautifulsoup4
-requests
-github-copilot-cli
