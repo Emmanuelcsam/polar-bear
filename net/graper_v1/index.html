@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatGPT Live Analyzer - Auto Login & Scan</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #10a37f;
+            --primary-dark: #0d8a6f;
+            --secondary: #353740;
+            --background: #f7f7f8;
+            --surface: #ffffff;
+            --text: #353740;
+            --text-light: #6e6e80;
+            --border: #e5e5e5;
+            --success: #10a37f;
+            --warning: #fab005;
+            --error: #ef4444;
+            --code-bg: #282c34;
+            --research-bg: #e3f2fd;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .login-section {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 500px;
+            margin: 0 auto 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(16, 163, 127, 0.1);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .checkbox {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(16, 163, 127, 0.3);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .status-section {
+            display: none;
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .status-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .status-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .status-text {
+            flex: 1;
+        }
+
+        .status-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .status-message {
+            color: var(--text-light);
+        }
+
+        .progress-bar {
+            background: var(--background);
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        .progress-fill {
+            background: var(--primary);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .log-container {
+            background: var(--secondary);
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.875rem;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 1rem;
+        }
+
+        .log-entry {
+            margin-bottom: 0.5rem;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .log-time {
+            color: #888;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: var(--text-light);
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .results-section {
+            display: none;
+        }
+
+        .filters {
+            background: var(--surface);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+            border: 1px solid var(--border);
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .filter-label {
+            font-weight: 600;
+            color: var(--text-light);
+            font-size: 0.875rem;
+        }
+
+        .filter-button {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border);
+            background: white;
+            color: var(--text);
+            border-radius: 6px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .filter-button:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .filter-button.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 300px;
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(16, 163, 127, 0.1);
+        }
+
+        .conversations-grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .conversation-card {
+            background: var(--surface);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            transition: all 0.2s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .conversation-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+        }
+
+        .conversation-card.code {
+            border-left: 4px solid #61dafb;
+        }
+
+        .conversation-card.research {
+            border-left: 4px solid #4caf50;
+        }
+
+        .conversation-card.mixed {
+            border-left: 4px solid #ff9800;
+        }
+
+        .conversation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 1rem;
+        }
+
+        .conversation-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 0.5rem;
+            flex: 1;
+            margin-right: 1rem;
+        }
+
+        .conversation-type {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+
+        .type-code {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .type-research {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .type-mixed {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .export-button {
+            background: var(--secondary);
+            color: white;
+            border: none;
+            padding: 0.5rem 1.5rem;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .export-button:hover {
+            background: #2c2d36;
+            transform: translateY(-1px);
+        }
+
+        .notification {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--success);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.error {
+            background: var(--error);
+        }
+
+        .notification.warning {
+            background: var(--warning);
+            color: var(--text);
+        }
+
+        .advanced-options {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .option-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .option-label {
+            font-size: 0.875rem;
+            color: var(--text-light);
+            min-width: 150px;
+        }
+
+        .option-input {
+            padding: 0.25rem 0.5rem;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 0.875rem;
+            width: 80px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .filters {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-box {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>
+                <div class="logo">CA</div>
+                ChatGPT Live Analyzer
+            </h1>
+            <div id="connectionStatus" style="color: var(--text-light); font-size: 0.875rem;">
+                <span id="statusDot" style="display: inline-block; width: 8px; height: 8px; background: #ccc; border-radius: 50%; margin-right: 0.5rem;"></span>
+                <span id="statusText">Not connected</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Login Section -->
+        <div class="login-section" id="loginSection">
+            <h2 style="margin-bottom: 1.5rem; text-align: center;">Login to ChatGPT</h2>
+            
+            <form id="loginForm">
+                <div class="form-group">
+                    <label class="form-label" for="email">Email Address</label>
+                    <input type="email" id="email" class="form-input" required 
+                           placeholder="your-email@example.com">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="password">Password</label>
+                    <input type="password" id="password" class="form-input" required 
+                           placeholder="Your ChatGPT password">
+                </div>
+                
+                <div class="checkbox-group">
+                    <input type="checkbox" id="headless" class="checkbox" checked>
+                    <label for="headless">Run in background (headless mode)</label>
+                </div>
+                
+                <div class="checkbox-group">
+                    <input type="checkbox" id="autoRename" class="checkbox">
+                    <label for="autoRename">Auto-rename conversations with [Code] [Research] tags</label>
+                </div>
+                
+                <button type="submit" class="btn-primary" id="startButton">
+                    <span>🚀</span> Start Analysis
+                </button>
+                
+                <div class="advanced-options">
+                    <h4 style="margin-bottom: 0.75rem; color: var(--text-light);">Advanced Options</h4>
+                    
+                    <div class="option-row">
+                        <label class="option-label">Scan delay (seconds):</label>
+                        <input type="number" class="option-input" id="scanDelay" value="2" min="1" max="10">
+                    </div>
+                    
+                    <div class="option-row">
+                        <label class="option-label">Max conversations:</label>
+                        <input type="number" class="option-input" id="maxConversations" value="0" min="0">
+                        <span style="font-size: 0.75rem; color: var(--text-light);">(0 = all)</span>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Status Section -->
+        <div class="status-section" id="statusSection">
+            <div class="status-header">
+                <div class="status-icon" id="statusIcon">⚡</div>
+                <div class="status-text">
+                    <div class="status-title" id="statusTitle">Initializing...</div>
+                    <div class="status-message" id="statusMessage">Setting up browser automation</div>
+                </div>
+                <button class="export-button" onclick="stopAnalysis()" style="background: var(--error);">
+                    <span>⏹</span> Stop
+                </button>
+            </div>
+            
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressBar"></div>
+            </div>
+            
+            <div class="stats-grid" id="liveStats">
+                <div class="stat-card">
+                    <div class="stat-number" id="scannedCount">0</div>
+                    <div class="stat-label">Conversations Scanned</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="codeCount">0</div>
+                    <div class="stat-label">With Code</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="researchCount">0</div>
+                    <div class="stat-label">With Research</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="mixedCount">0</div>
+                    <div class="stat-label">Mixed Content</div>
+                </div>
+            </div>
+            
+            <div class="log-container" id="logContainer"></div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="results-section" id="resultsSection">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h2>Analysis Complete</h2>
+                <div style="display: flex; gap: 1rem;">
+                    <button class="export-button" onclick="exportResults()">
+                        <span>💾</span> Export Results
+                    </button>
+                    <button class="export-button" onclick="startNewAnalysis()" style="background: var(--primary);">
+                        <span>🔄</span> New Analysis
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="filters">
+                <div class="filter-group">
+                    <span class="filter-label">Type:</span>
+                    <button class="filter-button active" onclick="filterConversations('all')">All</button>
+                    <button class="filter-button" onclick="filterConversations('code')">💻 Code</button>
+                    <button class="filter-button" onclick="filterConversations('research')">🔬 Research</button>
+                    <button class="filter-button" onclick="filterConversations('mixed')">🔀 Mixed</button>
+                </div>
+                <input type="text" class="search-box" placeholder="Search by title, language, or keyword..." 
+                       onkeyup="searchConversations(this.value)">
+            </div>
+
+            <!-- Conversations Grid -->
+            <div class="conversations-grid" id="conversationsGrid"></div>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div class="notification" id="notification">
+        <span id="notificationIcon">✓</span>
+        <span id="notificationText">Success!</span>
+    </div>
+
+    <script>
+        // WebSocket connection
+        let ws = null;
+        let allConversations = [];
+        let filteredConversations = [];
+        let currentFilter = 'all';
+        let searchTerm = '';
+        let isAnalyzing = false;
+
+        // Initialize WebSocket
+        function connectWebSocket() {
+            const wsUrl = `ws://${window.location.host}/ws`;
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                updateConnectionStatus(true);
+                console.log('WebSocket connected');
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleWebSocketMessage(data);
+            };
+
+            ws.onclose = () => {
+                updateConnectionStatus(false);
+                if (isAnalyzing) {
+                    setTimeout(connectWebSocket, 2000); // Reconnect
+                }
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                showNotification('Connection error', 'error');
+            };
+        }
+
+        // Update connection status
+        function updateConnectionStatus(connected) {
+            const dot = document.getElementById('statusDot');
+            const text = document.getElementById('statusText');
+            
+            if (connected) {
+                dot.style.background = '#10a37f';
+                text.textContent = 'Connected';
+            } else {
+                dot.style.background = '#ef4444';
+                text.textContent = 'Disconnected';
+            }
+        }
+
+        // Handle WebSocket messages
+        function handleWebSocketMessage(data) {
+            switch (data.type) {
+                case 'status':
+                    updateStatus(data.title, data.message, data.icon);
+                    break;
+                
+                case 'progress':
+                    updateProgress(data.current, data.total);
+                    break;
+                
+                case 'log':
+                    addLog(data.message, data.level);
+                    break;
+                
+                case 'stats':
+                    updateStats(data);
+                    break;
+                
+                case 'conversation':
+                    addConversation(data.conversation);
+                    break;
+                
+                case 'complete':
+                    analysisComplete(data.results);
+                    break;
+                
+                case 'error':
+                    handleError(data.message);
+                    break;
+                
+                case 'captcha':
+                    handleCaptcha(data);
+                    break;
+            }
+        }
+
+        // Start analysis
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const headless = document.getElementById('headless').checked;
+            const autoRename = document.getElementById('autoRename').checked;
+            const scanDelay = parseInt(document.getElementById('scanDelay').value);
+            const maxConversations = parseInt(document.getElementById('maxConversations').value);
+            
+            // Disable form
+            document.getElementById('startButton').disabled = true;
+            
+            try {
+                const response = await fetch('/api/start-analysis', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email,
+                        password,
+                        headless,
+                        autoRename,
+                        scanDelay,
+                        maxConversations
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    isAnalyzing = true;
+                    document.getElementById('loginSection').style.display = 'none';
+                    document.getElementById('statusSection').style.display = 'block';
+                    connectWebSocket();
+                } else {
+                    showNotification(result.error || 'Failed to start analysis', 'error');
+                    document.getElementById('startButton').disabled = false;
+                }
+            } catch (error) {
+                showNotification('Failed to connect to server', 'error');
+                document.getElementById('startButton').disabled = false;
+            }
+        });
+
+        // Update status display
+        function updateStatus(title, message, icon = '⚡') {
+            document.getElementById('statusIcon').textContent = icon;
+            document.getElementById('statusTitle').textContent = title;
+            document.getElementById('statusMessage').textContent = message;
+        }
+
+        // Update progress bar
+        function updateProgress(current, total) {
+            const percentage = total > 0 ? (current / total) * 100 : 0;
+            document.getElementById('progressBar').style.width = `${percentage}%`;
+        }
+
+        // Add log entry
+        function addLog(message, level = 'info') {
+            const logContainer = document.getElementById('logContainer');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            
+            const time = new Date().toLocaleTimeString();
+            entry.innerHTML = `
+                <span class="log-time">${time}</span>
+                <span>${message}</span>
+            `;
+            
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        // Update statistics
+        function updateStats(stats) {
+            document.getElementById('scannedCount').textContent = stats.scanned || 0;
+            document.getElementById('codeCount').textContent = stats.code || 0;
+            document.getElementById('researchCount').textContent = stats.research || 0;
+            document.getElementById('mixedCount').textContent = stats.mixed || 0;
+        }
+
+        // Add conversation to results
+        function addConversation(conversation) {
+            allConversations.push(conversation);
+            updateStats({
+                scanned: allConversations.length,
+                code: allConversations.filter(c => c.type === 'code').length,
+                research: allConversations.filter(c => c.type === 'research').length,
+                mixed: allConversations.filter(c => c.type === 'mixed').length
+            });
+        }
+
+        // Handle captcha detection
+        function handleCaptcha(data) {
+            updateStatus('CAPTCHA Detected', 'Attempting to solve automatically...', '🤖');
+            if (!data.solved) {
+                showNotification('CAPTCHA detected - manual intervention may be required', 'warning');
+            }
+        }
+
+        // Handle errors
+        function handleError(message) {
+            showNotification(message, 'error');
+            updateStatus('Error', message, '❌');
+        }
+
+        // Analysis complete
+        function analysisComplete(results) {
+            isAnalyzing = false;
+            allConversations = results || allConversations;
+            
+            document.getElementById('statusSection').style.display = 'none';
+            document.getElementById('resultsSection').style.display = 'block';
+            
+            filterConversations('all');
+            showNotification(`Analysis complete! Found ${allConversations.length} relevant conversations`, 'success');
+        }
+
+        // Stop analysis
+        async function stopAnalysis() {
+            if (ws) {
+                ws.send(JSON.stringify({ action: 'stop' }));
+            }
+            
+            await fetch('/api/stop-analysis', { method: 'POST' });
+            
+            isAnalyzing = false;
+            if (allConversations.length > 0) {
+                analysisComplete(allConversations);
+            } else {
+                startNewAnalysis();
+            }
+        }
+
+        // Start new analysis
+        function startNewAnalysis() {
+            allConversations = [];
+            filteredConversations = [];
+            document.getElementById('loginForm').reset();
+            document.getElementById('startButton').disabled = false;
+            document.getElementById('loginSection').style.display = 'block';
+            document.getElementById('statusSection').style.display = 'none';
+            document.getElementById('resultsSection').style.display = 'none';
+        }
+
+        // Filter conversations
+        function filterConversations(type) {
+            currentFilter = type;
+            
+            // Update button states
+            document.querySelectorAll('.filter-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            applyFilters();
+        }
+
+        // Search conversations
+        function searchConversations(term) {
+            searchTerm = term.toLowerCase();
+            applyFilters();
+        }
+
+        // Apply filters
+        function applyFilters() {
+            filteredConversations = allConversations.filter(conv => {
+                const matchesType = currentFilter === 'all' || conv.type === currentFilter;
+                const matchesSearch = !searchTerm || 
+                    conv.title.toLowerCase().includes(searchTerm) ||
+                    (conv.languages || []).some(lang => lang.includes(searchTerm)) ||
+                    (conv.research_keywords || []).some(kw => kw.includes(searchTerm));
+                
+                return matchesType && matchesSearch;
+            });
+            
+            displayConversations();
+        }
+
+        // Display conversations
+        function displayConversations() {
+            const grid = document.getElementById('conversationsGrid');
+            
+            if (filteredConversations.length === 0) {
+                grid.innerHTML = '<div style="text-align: center; padding: 3rem; color: var(--text-light);">No conversations found</div>';
+                return;
+            }
+            
+            grid.innerHTML = filteredConversations.map(conv => `
+                <div class="conversation-card ${conv.type}" onclick="window.open('${conv.url}', '_blank')">
+                    <div class="conversation-header">
+                        <div class="conversation-title">${conv.title}</div>
+                        <span class="conversation-type type-${conv.type}">
+                            ${getTypeIcon(conv.type)} ${conv.type}
+                        </span>
+                    </div>
+                    
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem;">
+                        ${conv.languages ? conv.languages.map(lang => 
+                            `<span class="filter-button" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">${lang}</span>`
+                        ).join('') : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Get type icon
+        function getTypeIcon(type) {
+            const icons = {
+                code: '💻',
+                research: '🔬',
+                mixed: '🔀',
+                links: '🔗'
+            };
+            return icons[type] || '📄';
+        }
+
+        // Export results
+        async function exportResults() {
+            try {
+                const response = await fetch('/api/export', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        conversations: filteredConversations
+                    })
+                });
+                
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `chatgpt_analysis_${new Date().toISOString().split('T')[0]}.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                showNotification('Results exported successfully!', 'success');
+            } catch (error) {
+                showNotification('Export failed', 'error');
+            }
+        }
+
+        // Show notification
+        function showNotification(text, type = 'success') {
+            const notification = document.getElementById('notification');
+            const notificationText = document.getElementById('notificationText');
+            const notificationIcon = document.getElementById('notificationIcon');
+            
+            notificationText.textContent = text;
+            notification.className = `notification ${type} show`;
+            
+            const icons = {
+                success: '✓',
+                error: '✗',
+                warning: '⚠'
+            };
+            notificationIcon.textContent = icons[type] || '✓';
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

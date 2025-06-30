@@ -1,0 +1,15 @@
+# ===========================================
+# ChatGPT‑Analyzer configuration
+# ===========================================
+
+mode: export            # or "live"
+paths:
+  export_file: conversations.json   # only for export mode
+  output_dir: chatgpt_analysis
+
+reports:
+  formats: [html]   # any of html, csv, json, markdown, pdf
+
+options:
+  use_cache: true
+  debug: false

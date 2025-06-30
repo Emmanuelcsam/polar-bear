@@ -1,0 +1,243 @@
+#!/usr/bin/env python3
+"""
+VS Code GitHub Copilot Auto‑Continue – hardened edition
+Maintains all original capabilities while adding:
+
+• Head‑less “dry‑run” mode – script still runs, logs detections, but
+  substitutes mouse actions with no‑op stubs if an X display cannot be opened
+  or when --dry-run is given.
+• Correct button‑text ratio calculation (fixes false‑negatives).
+• Graceful dependency probing and self‑diagnostics (`--diag`).
+• Thread‑safe shutdown and cleaner logging.
+"""
+from __future__ import annotations
+
+import sys, os, time, logging, argparse, threading
+from datetime import datetime
+from pathlib import Path
+from typing import List, Optional, Tuple
+
+# ──────────────────────────── Logging ────────────────────────────
+LOG_DIR = Path.home() / ".vscode-auto-clicker"
+LOG_DIR.mkdir(exist_ok=True)
+LOG_FILE = LOG_DIR / f"auto_clicker_{datetime.now():%Y%m%d_%H%M%S}.log"
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s  %(levelname)s  %(message)s",
+    handlers=[logging.FileHandler(LOG_FILE), logging.StreamHandler(sys.stdout)],
+    force=True,
+)
+logger = logging.getLogger(__name__)
+
+# ───────────────────────── Configuration ─────────────────────────
+class Config:
+    # CLI‑tunable
+    SCAN_INTERVAL: float = 0.50
+    CLICK_COOLDOWN: float = 3.00
+    DEBUG_MODE: bool = False
+    DRY_RUN: bool = False           # ⇐ new
+    # Safety
+    FAILSAFE: bool = True
+    PAUSE_BETWEEN_ACTIONS: float = 0.10
+    # Detection
+    CONFIDENCE_THRESHOLD: float = 0.85
+    # Button geometry
+    BUTTON_MIN_WIDTH, BUTTON_MAX_WIDTH =  70, 150
+    BUTTON_MIN_HEIGHT, BUTTON_MAX_HEIGHT = 25,  50
+
+# ─────────────────── Dependency / head‑less handling ─────────────
+def _import_pyautogui() -> "pyautogui | None":
+    """
+    Try importing pyautogui.  If DISPLAY is unavailable, stub the API so that the
+    rest of the code keeps running (dry‑run mode).
+    """
+    try:
+        import pyautogui  # type: ignore
+        if not os.environ.get("DISPLAY"):
+            raise RuntimeError("DISPLAY not set")
+        # Basic functional test
+        _ = pyautogui.size()
+        pyautogui.FAILSAFE = Config.FAILSAFE
+        pyautogui.PAUSE = Config.PAUSE_BETWEEN_ACTIONS
+        logger.info("pyautogui loaded – live mode.")
+        return pyautogui
+    except Exception as e:
+        logger.warning("pyautogui unavailable (%s) – switching to dry‑run.", e)
+        Config.DRY_RUN = True
+
+        class _Stub:
+            def __getattr__(self, name):
+                def _noop(*args, **kwargs):
+                    logger.debug("pyautogui stub: %s%r %r", name, args, kwargs)
+                return _noop
+        return _Stub()  # type: ignore
+
+pyautogui = _import_pyautogui()
+
+# Non‑GUI deps
+try:
+    import cv2, numpy as np, mss
+except ImportError as e:
+    logger.error("Missing dependency: %s", e.name)
+    logger.error("Install with: pip install opencv-python pyautogui mss numpy")
+    sys.exit(1)
+
+# ────────────────────────── Core classes ─────────────────────────
+class ContinueButtonDetector:
+    """Detect the blue 'Continue' button in VS Code Copilot dialogs."""
+    _KERNEL = np.ones((3, 3), np.uint8)
+    _LOWER_BLUE = np.array([100, 130, 100])
+    _UPPER_BLUE = np.array([120, 255, 255])
+
+    def __init__(self):
+        self.sct = mss.mss()
+        self._debug_dir = LOG_DIR / "debug"
+        if Config.DEBUG_MODE:
+            self._debug_dir.mkdir(exist_ok=True)
+
+    # — Screen capture —
+    def capture_screen(self) -> Optional[np.ndarray]:
+        try:
+            scr = self.sct.grab(self.sct.monitors[0])
+            img = np.array(scr)
+            return cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
+        except Exception as e:
+            logger.error("Screen capture failed: %s", e)
+            return None
+
+    # — Colour filter —
+    def _find_blue_regions(self, frame: np.ndarray) -> List[Tuple[int, int, int, int]]:
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        mask = cv2.inRange(hsv, self._LOWER_BLUE, self._UPPER_BLUE)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, self._KERNEL)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN,  self._KERNEL)
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        buttons: List[Tuple[int, int, int, int]] = []
+        for cnt in contours:
+            x, y, w, h = cv2.boundingRect(cnt)
+            if (Config.BUTTON_MIN_WIDTH  <= w <= Config.BUTTON_MAX_WIDTH  and
+                Config.BUTTON_MIN_HEIGHT <= h <= Config.BUTTON_MAX_HEIGHT):
+                aspect = w / h
+                if 1.5 <= aspect <= 4.0:
+                    buttons.append((x, y, w, h))
+                    logger.debug("Candidate @(%d,%d) %dx%d", x, y, w, h)
+        return buttons
+
+    # — Text‑presence heuristic —
+    @staticmethod
+    def _looks_like_text(region: np.ndarray) -> bool:
+        gray = cv2.cvtColor(region, cv2.COLOR_BGR2GRAY)
+        _, thresh = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)
+        white_ratio = thresh.mean() / 255.0          # 0‑1
+        return 0.05 <= white_ratio <= 0.40           # tuned
+
+    # — Composite detection —
+    def locate(self, frame: np.ndarray) -> Optional[Tuple[int, int]]:
+        for x, y, w, h in self._find_blue_regions(frame):
+            if self._looks_like_text(frame[y:y+h, x:x+w]):
+                cx, cy = x + w//2, y + h//2
+                if Config.DEBUG_MODE:
+                    dbg = frame.copy()
+                    cv2.rectangle(dbg, (x, y), (x+w, y+h), (0,255,0), 2)
+                    cv2.circle(dbg, (cx, cy), 4, (0,255,0), -1)
+                    cv2.imwrite(str(self._debug_dir / f"{int(time.time()*1000)}.png"), dbg)
+                return cx, cy
+        return None
+
+# ────────────────────────── Auto‑clicker ─────────────────────────
+class AutoClicker:
+    """Orchestrates capture & clicking loop."""
+    def __init__(self) -> None:
+        self.detector = ContinueButtonDetector()
+        self._last_click = 0.0
+        self._running = threading.Event()
+        self.stats = dict(scans=0, found=0, clicks=0, start=time.time())
+
+    # — I/O helpers —
+    def _eligible_for_click(self) -> bool:
+        return (time.time() - self._last_click) >= Config.CLICK_COOLDOWN
+
+    def _click(self, x: int, y: int) -> None:
+        if not self._eligible_for_click():
+            return
+        pyautogui.moveTo(x, y, duration=0.10)
+        time.sleep(0.05)
+        pyautogui.click(x, y)
+        self._last_click = time.time()
+        self.stats["clicks"] += 1
+        logger.info("Clicked Continue @(%d,%d)", x, y)
+
+    # — Main loop —
+    def run(self) -> None:
+        self._running.set()
+        logger.info("Scan interval %.2fs  cool‑down %.2fs  dry‑run=%s",
+                    Config.SCAN_INTERVAL, Config.CLICK_COOLDOWN, Config.DRY_RUN)
+        try:
+            while self._running.is_set():
+                frame = self.detector.capture_screen()
+                if frame is None:
+                    time.sleep(Config.SCAN_INTERVAL)
+                    continue
+                self.stats["scans"] += 1
+                pos = self.detector.locate(frame)
+                if pos:
+                    self.stats["found"] += 1
+                    logger.info("Button at %s", pos)
+                    if not Config.DRY_RUN:
+                        self._click(*pos)
+                    time.sleep(Config.CLICK_COOLDOWN)
+                else:
+                    time.sleep(Config.SCAN_INTERVAL)
+                # periodic heartbeat
+                if self.stats["scans"] % int(60 / Config.SCAN_INTERVAL) == 0:
+                    self._print_stats()
+        except KeyboardInterrupt:
+            logger.info("Interrupted by user.")
+        finally:
+            self.stop()
+
+    def stop(self) -> None:
+        self._running.clear()
+        self._print_stats()
+        logger.info("Auto‑clicker stopped.")
+
+    def _print_stats(self) -> None:
+        dur = time.time() - self.stats["start"]
+        logger.info("Runtime %ds | scans %d | detections %d | clicks %d",
+                    dur, self.stats["scans"], self.stats["found"], self.stats["clicks"])
+
+# ──────────────────────────── CLI entry ──────────────────────────
+def main() -> None:
+    ap = argparse.ArgumentParser(description="VS Code Copilot Auto‑Clicker")
+    ap.add_argument("--test",   action="store_true", help="Run detection test without clicks")
+    ap.add_argument("--debug",  action="store_true", help="Save debug screenshots")
+    ap.add_argument("--dry-run",action="store_true", help="Force stubbed mouse actions")
+    ap.add_argument("--interval", type=float, default=0.5, help="Scan interval (s)")
+    ap.add_argument("--cooldown", type=float, default=3.0, help="Click cooldown (s)")
+    ap.add_argument("--diag",   action="store_true", help="Show environment diagnostics and exit")
+    args = ap.parse_args()
+
+    # Apply flags
+    Config.DEBUG_MODE    = args.debug
+    Config.DRY_RUN       = args.dry_run or Config.DRY_RUN
+    Config.SCAN_INTERVAL = max(0.1, args.interval)
+    Config.CLICK_COOLDOWN= max(0.2, args.cooldown)
+
+    if args.diag:
+        logger.info("DISPLAY=%s  dry_run=%s  debug=%s  scan=%.2fs  cooldown=%.2fs",
+                    os.environ.get("DISPLAY"), Config.DRY_RUN, Config.DEBUG_MODE,
+                    Config.SCAN_INTERVAL, Config.CLICK_COOLDOWN)
+        sys.exit(0)
+
+    # Modes
+    clicker = AutoClicker()
+    if args.test:
+        logger.info("Running in test mode (no clicks).")
+        Config.DRY_RUN = True
+    clicker.run()
+
+if __name__ == "__main__":
+    main()
+

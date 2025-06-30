@@ -1,0 +1,1907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neural Nexus IDE - AI-Powered Development Environment</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #1a1a1a;
+            --bg-tertiary: #252525;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --accent: #00ff88;
+            --error: #ff3366;
+            --warning: #ffaa00;
+            --success: #00ff88;
+            --border: #333;
+        }
+
+        body {
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 250px 1fr 400px;
+            grid-template-rows: 60px 1fr 30px;
+            height: 100vh;
+            gap: 1px;
+            background: var(--border);
+        }
+
+        /* Header */
+        .header {
+            grid-column: 1 / -1;
+            background: var(--bg-secondary);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--accent);
+            margin-right: 40px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+            margin-left: auto;
+        }
+
+        .btn {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 12px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn:hover {
+            background: var(--accent);
+            color: var(--bg-primary);
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        .btn-danger {
+            background: var(--error);
+            color: white;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: var(--bg-secondary);
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .section {
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .script-list {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .script-item {
+            padding: 8px 12px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .script-item:hover {
+            background: #333;
+            transform: translateX(2px);
+            border-color: var(--accent);
+        }
+
+        .script-item.active {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        .script-status {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-secondary);
+        }
+
+        .script-status.running { background: var(--warning); animation: pulse 1s infinite; }
+        .script-status.success { background: var(--success); }
+        .script-status.error { background: var(--error); }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Project List */
+        .project-list {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin-bottom: 20px;
+        }
+
+        .project-item {
+            padding: 8px 12px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .project-item:hover {
+            background: #333;
+            border-color: var(--accent);
+        }
+
+        .project-item.active {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        .script-item.in-project {
+            border-left: 3px solid var(--accent);
+        }
+
+        /* Editor */
+        .editor-container {
+            background: var(--bg-primary);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .editor-tabs {
+            display: flex;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-right: 1px solid var(--border);
+            transition: all 0.2s;
+        }
+
+        .tab:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .tab.active {
+            background: var(--bg-primary);
+            color: var(--accent);
+            border-bottom: 2px solid var(--accent);
+        }
+
+        .editor-content {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #codeEditor {
+            width: 100%;
+            height: 100%;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: none;
+            padding: 20px;
+            font-family: inherit;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: none;
+            outline: none;
+        }
+
+        .output-container {
+            width: 100%;
+            height: 100%;
+            background: #000;
+            color: #fff;
+            padding: 20px;
+            font-family: inherit;
+            font-size: 13px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        .output-line {
+            margin: 2px 0;
+        }
+
+        .output-line.error { color: var(--error); }
+        .output-line.success { color: var(--success); }
+        .output-line.info { color: var(--accent); }
+        .output-line.warning { color: var(--warning); }
+
+        /* Tools Panel */
+        .tools-panel {
+            background: var(--bg-secondary);
+            overflow-y: auto;
+        }
+
+        .tools-tabs {
+            display: flex;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tool-tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .tool-tab:hover {
+            background: var(--bg-secondary);
+        }
+
+        .tool-tab.active {
+            background: var(--bg-secondary);
+            color: var(--accent);
+            border-bottom: 2px solid var(--accent);
+        }
+
+        .tool-content {
+            padding: 20px;
+            display: none;
+        }
+
+        .tool-content.active {
+            display: block;
+        }
+
+        /* Errors Panel */
+        .error-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .error-item {
+            background: var(--bg-tertiary);
+            padding: 12px;
+            border-radius: 4px;
+            border-left: 3px solid var(--error);
+        }
+
+        .error-type {
+            color: var(--error);
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .error-message {
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        /* Dependencies Panel */
+        .deps-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .dep-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+        }
+
+        .dep-missing {
+            border-left: 3px solid var(--warning);
+        }
+
+        /* Network Visualization */
+        #networkViz {
+            width: 100%;
+            height: 300px;
+            background: var(--bg-primary);
+            border-radius: 4px;
+            position: relative;
+        }
+
+        /* Terminal */
+        .terminal-container {
+            background: #000;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .terminal-output {
+            color: #ffffff;
+            margin-bottom: 2px;
+        }
+
+        .terminal-output.error {
+            color: #ff3366;
+        }
+
+        .terminal-output.info {
+            color: #00ff88;
+        }
+
+        .terminal-input {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .terminal-input input {
+            flex: 1;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 8px;
+            border-radius: 4px;
+            outline: none;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 12px;
+        }
+
+        .terminal-input input:focus {
+            border-color: var(--accent);
+        }
+
+        /* Status Bar */
+        .status-bar {
+            grid-column: 1 / -1;
+            background: var(--bg-secondary);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            border-top: 1px solid var(--border);
+        }
+
+        .status-item {
+            margin-right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .status-indicator {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--success);
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: var(--bg-secondary);
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: var(--accent);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 4px;
+            outline: none;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--bg-tertiary);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Drag & Drop */
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            margin: 20px 0;
+            transition: all 0.3s;
+        }
+
+        .drop-zone.active {
+            border-color: var(--accent);
+            background: rgba(0, 255, 136, 0.1);
+        }
+
+        /* Auto-heal indicator */
+        #autoHealIndicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">⚡ Neural Nexus IDE</div>
+            <div class="header-actions">
+                <button class="btn" onclick="newScript()">
+                    <span>➕</span> New Script
+                </button>
+                <button class="btn" onclick="uploadScript()">
+                    <span>📁</span> Upload
+                </button>
+                <button class="btn btn-primary" onclick="runScript()">
+                    <span>▶️</span> Run
+                </button>
+                <button class="btn btn-danger" onclick="stopScript()">
+                    <span>⏹️</span> Stop
+                </button>
+                <button class="btn" id="autoHealBtn" onclick="toggleAutoHeal()">
+                    <span>🔄</span> Auto-Heal: OFF
+                </button>
+                <button class="btn" onclick="fixNow()">
+                    <span>🔧</span> Fix Now
+                </button>
+                <button class="btn" onclick="openInVSCode()">
+                    <span>📝</span> VS Code
+                </button>
+                <button class="btn" onclick="document.getElementById('settingsModal').style.display = 'flex'">
+                    <span>⚙️</span> Settings
+                </button>
+            </div>
+        </header>
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="section">
+                <div class="section-title">Projects</div>
+                <button class="btn" style="width: 100%; margin-bottom: 5px;" onclick="createProject()">
+                    📂 New Project
+                </button>
+                <div class="project-list" id="projectList">
+                    <!-- Projects will be added dynamically -->
+                </div>
+            </div>
+            
+            <div class="section">
+                <div class="section-title">Scripts</div>
+                <div class="script-list" id="scriptList">
+                    <!-- Scripts will be added dynamically -->
+                </div>
+            </div>
+            
+            <div class="section">
+                <div class="section-title">Quick Actions</div>
+                <button class="btn" style="width: 100%; margin-bottom: 5px;" onclick="installDependencies()">
+                    📦 Install Dependencies
+                </button>
+                <button class="btn" style="width: 100%; margin-bottom: 5px;" onclick="analyzeWithAI()">
+                    🤖 AI Analysis
+                </button>
+                <button class="btn" style="width: 100%; margin-bottom: 5px;" onclick="copilotSuggest()">
+                    🚁 Copilot Suggest
+                </button>
+                <button class="btn" style="width: 100%; display: none;" onclick="addScriptToProject()" id="addToProjectBtn">
+                    ➕ Add to Project
+                </button>
+            </div>
+        </aside>
+
+        <!-- Editor -->
+        <main class="editor-container">
+            <div class="editor-tabs">
+                <div class="tab active" onclick="switchTab('editor')">Code</div>
+                <div class="tab" onclick="switchTab('output')">Output</div>
+            </div>
+            <div class="editor-content">
+                <textarea id="codeEditor" placeholder="# Paste your Python code here or drag & drop a file..."></textarea>
+                <div class="output-container" id="outputContainer" style="display: none;"></div>
+            </div>
+        </main>
+
+        <!-- Tools Panel -->
+        <aside class="tools-panel">
+            <div class="tools-tabs">
+                <div class="tool-tab active" onclick="switchTool('errors')">Errors</div>
+                <div class="tool-tab" onclick="switchTool('deps')">Dependencies</div>
+                <div class="tool-tab" onclick="switchTool('network')">Network</div>
+                <div class="tool-tab" onclick="switchTool('terminal')">Terminal</div>
+            </div>
+            
+            <div class="tool-content active" id="errors-content">
+                <div class="error-list" id="errorList">
+                    <!-- Errors will be shown here -->
+                </div>
+            </div>
+            
+            <div class="tool-content" id="deps-content">
+                <div class="deps-list" id="depsList">
+                    <!-- Dependencies will be shown here -->
+                </div>
+            </div>
+            
+            <div class="tool-content" id="network-content">
+                <div id="networkViz">
+                    <canvas id="networkCanvas"></canvas>
+                </div>
+            </div>
+            
+            <div class="tool-content" id="terminal-content">
+                <div style="margin-bottom: 10px;">
+                    <button class="btn" onclick="executeQuickCommand('pip list')" style="font-size: 11px; padding: 4px 8px;">pip list</button>
+                    <button class="btn" onclick="executeQuickCommand('python --version')" style="font-size: 11px; padding: 4px 8px;">Python Version</button>
+                    <button class="btn" onclick="executeQuickCommand('dir || ls')" style="font-size: 11px; padding: 4px 8px;">List Files</button>
+                    <button class="btn" onclick="executeQuickCommand('pwd')" style="font-size: 11px; padding: 4px 8px;">Current Dir</button>
+                </div>
+                <div class="terminal-container" id="terminalOutput"></div>
+                <div class="terminal-input">
+                    <input type="text" id="terminalInput" placeholder="Enter command..." onkeypress="terminalKeyPress(event)">
+                    <button class="btn" onclick="executeCommand()">Run</button>
+                    <button class="btn" onclick="clearTerminal()">Clear</button>
+                </div>
+                <div style="margin-top: 10px;">
+                    <label style="font-size: 12px; color: var(--text-secondary);">Terminal Type:</label>
+                    <select id="terminalTypeSelect" onchange="updateTerminalType()" style="background: var(--bg-tertiary); border: 1px solid var(--border); color: var(--text-primary); padding: 4px; border-radius: 4px; font-size: 12px;">
+                        <option value="auto">Auto Detect</option>
+                        <option value="cmd">CMD (Windows)</option>
+                        <option value="powershell">PowerShell</option>
+                        <option value="gitbash">Git Bash</option>
+                        <option value="wsl">WSL</option>
+                        <option value="bash">Bash</option>
+                    </select>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Status Bar -->
+        <footer class="status-bar">
+            <div class="status-item">
+                <div class="status-indicator"></div>
+                <span id="statusText">Ready</span>
+            </div>
+            <div class="status-item">
+                <span id="scriptName">No script loaded</span>
+            </div>
+            <div class="status-item" id="projectIndicator" style="display: none;">
+                <span>📁 Project: <span id="projectName"></span></span>
+            </div>
+            <div class="status-item" id="autoHealIndicator" style="display: none;">
+                <div class="spinner"></div>
+                <span>Auto-healing...</span>
+            </div>
+            <div class="status-item" style="margin-left: auto;">
+                <span id="aiStatus">AI: Not configured</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">Settings</div>
+            <div class="form-group">
+                <label>OpenAI API Key</label>
+                <input type="password" id="openaiKey" placeholder="sk-...">
+                <button class="btn" onclick="testOpenAI()" style="margin-top: 5px;">Test Connection</button>
+            </div>
+            <div class="form-group">
+                <label>GitHub Token (for Copilot)</label>
+                <input type="password" id="githubToken" placeholder="ghp_...">
+            </div>
+            <div class="form-group">
+                <label>Terminal Type</label>
+                <select id="terminalType" style="width: 100%; background: var(--bg-tertiary); border: 1px solid var(--border); color: var(--text-primary); padding: 8px; border-radius: 4px;">
+                    <option value="auto">Auto Detect</option>
+                    <option value="gitbash">Git Bash</option>
+                    <option value="wsl">WSL</option>
+                    <option value="cmd">CMD</option>
+                    <option value="powershell">PowerShell</option>
+                    <option value="bash">Bash</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Auto-heal Attempts Limit</label>
+                <input type="number" id="maxHealAttempts" value="10" min="1" max="50">
+            </div>
+            <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+            <button class="btn" onclick="document.getElementById('settingsModal').style.display = 'none'" style="margin-left: 10px;">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        // State Management
+        let scripts = {};
+        let activeScriptId = null;
+        let isRunning = false;
+        let ws = null;
+        let config = {
+            openaiKey: localStorage.getItem('openaiKey') || '',
+            githubToken: localStorage.getItem('githubToken') || '',
+            terminalType: localStorage.getItem('terminalType') || 'auto',
+            maxHealAttempts: parseInt(localStorage.getItem('maxHealAttempts') || '10')
+        };
+        let autoHealEnabled = {}; // Track auto-heal per script
+        let projects = {};
+        let activeProjectId = null;
+        let terminalHistory = [];
+        let historyIndex = -1;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            setupWebSocket();
+            setupDragDrop();
+            loadSavedScripts();
+            updateAIStatus();
+            
+            // Initialize settings inputs
+            document.getElementById('openaiKey').value = config.openaiKey;
+            document.getElementById('githubToken').value = config.githubToken;
+            document.getElementById('terminalType').value = config.terminalType;
+            document.getElementById('maxHealAttempts').value = config.maxHealAttempts;
+            
+            // Initialize terminal type selector
+            const terminalSelect = document.getElementById('terminalTypeSelect');
+            if (terminalSelect) {
+                terminalSelect.value = config.terminalType;
+            }
+            
+            // Initialize terminal
+            addTerminalOutput('Terminal ready. Type commands and press Enter.', 'info');
+            
+            // Auto-save editor content
+            let saveTimeout;
+            document.getElementById('codeEditor').addEventListener('input', () => {
+                if (activeScriptId) {
+                    clearTimeout(saveTimeout);
+                    saveTimeout = setTimeout(() => {
+                        scripts[activeScriptId].content = document.getElementById('codeEditor').value;
+                        saveScriptsToStorage();
+                    }, 2000); // Save after 2 seconds of inactivity
+                }
+            });
+
+            // Terminal history navigation
+            document.getElementById('terminalInput').addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (historyIndex < terminalHistory.length - 1) {
+                        historyIndex++;
+                        e.target.value = terminalHistory[terminalHistory.length - 1 - historyIndex];
+                    }
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (historyIndex > 0) {
+                        historyIndex--;
+                        e.target.value = terminalHistory[terminalHistory.length - 1 - historyIndex];
+                    } else if (historyIndex === 0) {
+                        historyIndex = -1;
+                        e.target.value = '';
+                    }
+                }
+            });
+        });
+
+        // WebSocket Connection
+        function setupWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.hostname}:8765/ws`;
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = () => {
+                updateStatus('Connected to server', 'success');
+                // Re-enable terminal if it was disabled
+                const terminalInput = document.getElementById('terminalInput');
+                if (terminalInput) {
+                    terminalInput.disabled = false;
+                    terminalInput.placeholder = 'Enter command...';
+                }
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleServerMessage(data);
+            };
+            
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                updateStatus('Connection error', 'error');
+                // Disable terminal on error
+                const terminalInput = document.getElementById('terminalInput');
+                if (terminalInput) {
+                    terminalInput.disabled = true;
+                    terminalInput.placeholder = 'Not connected to server';
+                }
+            };
+            
+            ws.onclose = () => {
+                updateStatus('Disconnected', 'error');
+                // Disable terminal on disconnect
+                const terminalInput = document.getElementById('terminalInput');
+                if (terminalInput) {
+                    terminalInput.disabled = true;
+                    terminalInput.placeholder = 'Not connected to server';
+                }
+                // Attempt to reconnect after 5 seconds
+                setTimeout(setupWebSocket, 5000);
+            };
+        }
+
+        // Project Management
+        function createProject() {
+            const name = prompt('Project name:');
+            if (!name) return;
+            
+            ws.send(JSON.stringify({
+                action: 'createProject',
+                projectName: name
+            }));
+        }
+        
+        function selectProject(projectId) {
+            // If clicking the same project, deselect it
+            if (activeProjectId === projectId) {
+                activeProjectId = null;
+                document.getElementById('project_' + projectId).classList.remove('active');
+                document.getElementById('projectIndicator').style.display = 'none';
+                updateProjectUI();
+                return;
+            }
+            
+            activeProjectId = projectId;
+            
+            // Update UI
+            document.querySelectorAll('.project-item').forEach(el => {
+                el.classList.remove('active');
+            });
+            
+            const projectEl = document.getElementById('project_' + projectId);
+            if (projectEl) {
+                projectEl.classList.add('active');
+            }
+            
+            // Update status bar
+            if (projectId && projects[projectId]) {
+                document.getElementById('projectIndicator').style.display = 'flex';
+                document.getElementById('projectName').textContent = projects[projectId].name;
+            } else {
+                document.getElementById('projectIndicator').style.display = 'none';
+            }
+            
+            // Update add to project button visibility
+            const addBtn = document.getElementById('addToProjectBtn');
+            if (addBtn) {
+                addBtn.style.display = projectId ? 'block' : 'none';
+            }
+            
+            // Update run button to show project mode
+            updateProjectUI();
+        }
+        
+        function addProjectToList(projectId, projectName) {
+            const list = document.getElementById('projectList');
+            const item = document.createElement('div');
+            item.className = 'project-item';
+            item.id = 'project_' + projectId;
+            item.innerHTML = `<span>📁 ${projectName}</span>`;
+            item.onclick = () => selectProject(projectId);
+            list.appendChild(item);
+        }
+        
+        function addScriptToProject() {
+            if (!activeProjectId || !activeScriptId) {
+                updateStatus('Select a project and script first', 'warning');
+                return;
+            }
+            
+            const script = scripts[activeScriptId];
+            const isMain = confirm('Is this the main script for the project?');
+            
+            ws.send(JSON.stringify({
+                action: 'addToProject',
+                projectId: activeProjectId,
+                scriptId: activeScriptId,
+                scriptName: script.name,
+                content: script.content,
+                isMain: isMain
+            }));
+        }
+        
+        function runProject() {
+            if (!activeProjectId) {
+                updateStatus('No project selected', 'warning');
+                return;
+            }
+            
+            // Save all scripts first
+            saveAllScriptsToServer();
+            
+            ws.send(JSON.stringify({
+                action: 'runProject',
+                projectId: activeProjectId,
+                apiKey: config.openaiKey
+            }));
+            
+            clearOutput();
+            switchTab('output');
+        }
+        
+        function saveAllScriptsToServer() {
+            // Save current editor content
+            if (activeScriptId) {
+                scripts[activeScriptId].content = document.getElementById('codeEditor').value;
+            }
+            
+            ws.send(JSON.stringify({
+                action: 'saveAllScripts',
+                scripts: scripts
+            }));
+        }
+        
+        function updateProjectUI() {
+            const runBtn = document.querySelector('.btn-primary');
+            if (activeProjectId) {
+                runBtn.innerHTML = '<span>▶️</span> Run Project';
+                runBtn.onclick = runProject;
+            } else {
+                runBtn.innerHTML = '<span>▶️</span> Run';
+                runBtn.onclick = runScript;
+            }
+        }
+
+        // Script Management
+        function newScript() {
+            const name = prompt('Script name (e.g., main.py, utils.py):');
+            if (!name) return;
+            
+            const id = 'script_' + Date.now();
+            const script = {
+                id,
+                name: name.endsWith('.py') ? name : name + '.py',
+                content: '#!/usr/bin/env python3\n# -*- coding: utf-8 -*-\n\n',
+                status: 'idle',
+                errors: [],
+                dependencies: [],
+                projectId: activeProjectId
+            };
+            
+            scripts[id] = script;
+            addScriptToList(script);
+            selectScript(id);
+            saveScriptsToStorage();
+        }
+
+        function uploadScript() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.py';
+            input.multiple = true;
+            input.onchange = (e) => {
+                const files = Array.from(e.target.files);
+                files.forEach(file => {
+                    if (!file) return;
+                    
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const id = 'script_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                        const script = {
+                            id,
+                            name: file.name,
+                            content: event.target.result,
+                            status: 'idle',
+                            errors: [],
+                            dependencies: []
+                        };
+                        
+                        scripts[id] = script;
+                        addScriptToList(script);
+                        if (files.indexOf(file) === 0) {
+                            selectScript(id);
+                        }
+                        analyzeScript(id);
+                    };
+                    reader.readAsText(file);
+                });
+                saveScriptsToStorage();
+            };
+            input.click();
+        }
+
+        function addScriptToList(script) {
+            const list = document.getElementById('scriptList');
+            const item = document.createElement('div');
+            item.className = 'script-item';
+            if (script.projectId) {
+                item.className += ' in-project';
+            }
+            item.id = 'script_' + script.id;
+            item.innerHTML = `
+                <span>${script.name}</span>
+                <div class="script-status ${script.status}"></div>
+            `;
+            item.onclick = () => selectScript(script.id);
+            list.appendChild(item);
+        }
+
+        function selectScript(id) {
+            activeScriptId = id;
+            const script = scripts[id];
+            
+            // Update UI
+            document.querySelectorAll('.script-item').forEach(el => {
+                el.classList.remove('active');
+            });
+            document.getElementById('script_' + id).classList.add('active');
+            
+            document.getElementById('codeEditor').value = script.content;
+            document.getElementById('scriptName').textContent = script.name;
+            
+            // Update errors and dependencies
+            updateErrorDisplay(script.errors);
+            updateDepsDisplay(script.dependencies);
+            
+            // Update auto-heal button
+            updateAutoHealButton();
+        }
+
+        function updateScriptList() {
+            const list = document.getElementById('scriptList');
+            list.innerHTML = '';
+            Object.values(scripts).forEach(script => {
+                addScriptToList(script);
+            });
+        }
+
+        function updateAutoHealButton() {
+            const btn = document.getElementById('autoHealBtn');
+            const enabled = autoHealEnabled[activeScriptId] || false;
+            
+            if (enabled) {
+                btn.innerHTML = '<span>🔄</span> Auto-Heal: ON';
+                btn.style.background = 'var(--success)';
+                btn.style.color = 'var(--bg-primary)';
+            } else {
+                btn.innerHTML = '<span>🔄</span> Auto-Heal: OFF';
+                btn.style.background = '';
+                btn.style.color = '';
+            }
+        }
+
+        // Script Execution
+        function runScript() {
+            if (!activeScriptId) {
+                updateStatus('No script selected', 'warning');
+                return;
+            }
+            
+            if (isRunning) {
+                updateStatus('A script is already running', 'warning');
+                return;
+            }
+            
+            const script = scripts[activeScriptId];
+            script.content = document.getElementById('codeEditor').value;
+            
+            isRunning = true;
+            updateScriptStatus(activeScriptId, 'running');
+            clearOutput();
+            switchTab('output');
+            
+            // Send to server with API key for auto-heal and project info
+            ws.send(JSON.stringify({
+                action: 'run',
+                scriptId: activeScriptId,
+                content: script.content,
+                scriptName: script.name,
+                projectId: script.projectId,
+                apiKey: config.openaiKey
+            }));
+        }
+
+        function stopScript() {
+            if (!isRunning) {
+                updateStatus('No script is running', 'info');
+                return;
+            }
+            
+            ws.send(JSON.stringify({
+                action: 'stop',
+                scriptId: activeScriptId
+            }));
+            
+            isRunning = false;
+            updateScriptStatus(activeScriptId, 'idle');
+        }
+
+        // Auto Healing
+        function toggleAutoHeal() {
+            if (!activeScriptId) {
+                updateStatus('No script selected', 'warning');
+                return;
+            }
+            
+            const enabled = !autoHealEnabled[activeScriptId];
+            autoHealEnabled[activeScriptId] = enabled;
+            
+            // Update button
+            updateAutoHealButton();
+            
+            // Send to server
+            ws.send(JSON.stringify({
+                action: 'toggleAutoHeal',
+                scriptId: activeScriptId,
+                enabled: enabled
+            }));
+            
+            updateStatus(enabled ? 'Continuous auto-heal enabled' : 'Continuous auto-heal disabled', 'info');
+        }
+        
+        function fixNow() {
+            if (!activeScriptId) {
+                updateStatus('No script selected', 'warning');
+                return;
+            }
+            
+            if (!config.openaiKey) {
+                showModal('API Key Required', 
+                    'Please configure your OpenAI API key in Settings (⚙️) to use Fix Now.\n\n' +
+                    'Get your API key from: https://platform.openai.com/api-keys');
+                return;
+            }
+            
+            const script = scripts[activeScriptId];
+            script.content = document.getElementById('codeEditor').value;
+            
+            updateStatus('Fixing code with AI...', 'info');
+            
+            ws.send(JSON.stringify({
+                action: 'fixNow',
+                scriptId: activeScriptId,
+                content: script.content,
+                apiKey: config.openaiKey
+            }));
+        }
+
+        // Script Analysis
+        function analyzeScript(id) {
+            const script = scripts[id];
+            
+            ws.send(JSON.stringify({
+                action: 'analyze',
+                scriptId: id,
+                content: script.content
+            }));
+        }
+
+        function analyzeWithAI() {
+            if (!activeScriptId) {
+                updateStatus('No script selected', 'warning');
+                return;
+            }
+            
+            if (!config.openaiKey) {
+                showModal('API Key Required', 
+                    'Please configure your OpenAI API key in Settings (⚙️) to use AI features.\n\n' +
+                    'Get your API key from: https://platform.openai.com/api-keys');
+                return;
+            }
+            
+            const script = scripts[activeScriptId];
+            updateStatus('Analyzing with AI...', 'info');
+            
+            ws.send(JSON.stringify({
+                action: 'aiAnalyze',
+                scriptId: activeScriptId,
+                content: script.content,
+                apiKey: config.openaiKey
+            }));
+        }
+
+        // Dependencies
+        function installDependencies() {
+            if (!activeScriptId) {
+                updateStatus('No script selected', 'warning');
+                return;
+            }
+            
+            const script = scripts[activeScriptId];
+            const missing = script.dependencies.filter(d => d.status === 'missing');
+            
+            if (missing.length === 0) {
+                updateStatus('No missing dependencies', 'info');
+                return;
+            }
+            
+            ws.send(JSON.stringify({
+                action: 'installDeps',
+                packages: missing.map(d => d.name)
+            }));
+            
+            switchTool('terminal');
+        }
+
+        // GitHub Copilot
+        function copilotSuggest() {
+            if (!activeScriptId) {
+                updateStatus('No script selected', 'warning');
+                return;
+            }
+            
+            const script = scripts[activeScriptId];
+            const cursorPos = document.getElementById('codeEditor').selectionStart;
+            
+            ws.send(JSON.stringify({
+                action: 'copilot',
+                scriptId: activeScriptId,
+                content: script.content,
+                cursorPosition: cursorPos
+            }));
+        }
+
+        // VS Code Integration
+        function openInVSCode() {
+            if (!activeScriptId) {
+                updateStatus('No script selected', 'warning');
+                return;
+            }
+            
+            ws.send(JSON.stringify({
+                action: 'openVSCode',
+                scriptId: activeScriptId,
+                content: scripts[activeScriptId].content
+            }));
+        }
+
+        // Terminal
+        function executeCommand() {
+            const input = document.getElementById('terminalInput');
+            const command = input.value.trim();
+            if (!command) return;
+            
+            // Add to history
+            terminalHistory.push(command);
+            historyIndex = -1;
+            
+            addTerminalOutput('$ ' + command, 'command');
+            input.value = '';
+            
+            ws.send(JSON.stringify({
+                action: 'terminal',
+                command: command,
+                type: config.terminalType
+            }));
+        }
+
+        function executeQuickCommand(command) {
+            addTerminalOutput('$ ' + command, 'command');
+            
+            ws.send(JSON.stringify({
+                action: 'terminal',
+                command: command,
+                type: config.terminalType
+            }));
+        }
+
+        function terminalKeyPress(event) {
+            if (event.key === 'Enter') {
+                executeCommand();
+            }
+        }
+
+        function clearTerminal() {
+            document.getElementById('terminalOutput').innerHTML = '';
+            addTerminalOutput('Terminal cleared', 'info');
+        }
+
+        function updateTerminalType() {
+            const select = document.getElementById('terminalTypeSelect');
+            config.terminalType = select.value;
+            localStorage.setItem('terminalType', config.terminalType);
+            document.getElementById('terminalType').value = config.terminalType;
+        }
+
+        // UI Updates
+        function updateStatus(message, type = 'info') {
+            const statusText = document.getElementById('statusText');
+            statusText.textContent = message;
+            
+            const indicator = document.querySelector('.status-indicator');
+            indicator.style.background = type === 'error' ? 'var(--error)' : 
+                                       type === 'success' ? 'var(--success)' : 
+                                       type === 'warning' ? 'var(--warning)' :
+                                       'var(--accent)';
+        }
+
+        function updateScriptStatus(id, status) {
+            scripts[id].status = status;
+            const statusEl = document.querySelector(`#script_${id} .script-status`);
+            if (statusEl) {
+                statusEl.className = `script-status ${status}`;
+            }
+        }
+
+        function addOutput(text, type = 'normal') {
+            const output = document.getElementById('outputContainer');
+            const line = document.createElement('div');
+            line.className = `output-line ${type}`;
+            line.textContent = text;
+            output.appendChild(line);
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearOutput() {
+            document.getElementById('outputContainer').innerHTML = '';
+        }
+
+        function addTerminalOutput(text, type = 'output') {
+            const terminal = document.getElementById('terminalOutput');
+            const line = document.createElement('div');
+            line.className = `terminal-output ${type}`;
+            line.textContent = text;
+            terminal.appendChild(line);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        function updateErrorDisplay(errors) {
+            const errorList = document.getElementById('errorList');
+            errorList.innerHTML = '';
+            
+            if (errors.length === 0) {
+                errorList.innerHTML = '<div style="color: var(--text-secondary); text-align: center;">No errors found</div>';
+                return;
+            }
+            
+            errors.forEach(error => {
+                const item = document.createElement('div');
+                item.className = 'error-item';
+                item.innerHTML = `
+                    <div class="error-type">${error.type}</div>
+                    <div class="error-message">Line ${error.line}: ${error.message}</div>
+                `;
+                item.onclick = () => jumpToLine(error.line);
+                errorList.appendChild(item);
+            });
+        }
+
+        function updateDepsDisplay(deps) {
+            const depsList = document.getElementById('depsList');
+            depsList.innerHTML = '';
+            
+            if (deps.length === 0) {
+                depsList.innerHTML = '<div style="color: var(--text-secondary); text-align: center;">No dependencies found</div>';
+                return;
+            }
+            
+            deps.forEach(dep => {
+                const item = document.createElement('div');
+                item.className = `dep-item ${dep.status === 'missing' ? 'dep-missing' : ''}`;
+                item.innerHTML = `
+                    <span>${dep.name}</span>
+                    <span style="color: ${dep.status === 'missing' ? 'var(--warning)' : 'var(--success)'}">${dep.status}</span>
+                `;
+                depsList.appendChild(item);
+            });
+        }
+
+        function jumpToLine(line) {
+            switchTab('editor');
+            const editor = document.getElementById('codeEditor');
+            const lines = editor.value.split('\n');
+            let pos = 0;
+            for (let i = 0; i < line - 1 && i < lines.length; i++) {
+                pos += lines[i].length + 1;
+            }
+            editor.setSelectionRange(pos, pos);
+            editor.focus();
+        }
+
+        // Tab Switching
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.tab:nth-child(${tab === 'editor' ? 1 : 2})`).classList.add('active');
+            
+            if (tab === 'editor') {
+                document.getElementById('codeEditor').style.display = 'block';
+                document.getElementById('outputContainer').style.display = 'none';
+            } else {
+                document.getElementById('codeEditor').style.display = 'none';
+                document.getElementById('outputContainer').style.display = 'block';
+            }
+        }
+
+        function switchTool(tool) {
+            document.querySelectorAll('.tool-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tool-content').forEach(c => c.classList.remove('active'));
+            
+            const tabs = Array.from(document.querySelectorAll('.tool-tab'));
+            const contents = ['errors', 'deps', 'network', 'terminal'];
+            const index = contents.indexOf(tool);
+            
+            if (index >= 0) {
+                tabs[index].classList.add('active');
+                document.getElementById(tool + '-content').classList.add('active');
+            }
+            
+            if (tool === 'network') {
+                drawNetworkVisualization();
+            }
+        }
+
+        // Network Visualization
+        function drawNetworkVisualization() {
+            const canvas = document.getElementById('networkCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = canvas.parentElement.offsetWidth;
+            canvas.height = 280;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Get all scripts and projects
+            const scriptArray = Object.values(scripts);
+            const projectArray = Object.values(projects);
+            
+            if (scriptArray.length === 0) {
+                ctx.fillStyle = '#666';
+                ctx.font = '14px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('No scripts loaded', canvas.width / 2, canvas.height / 2);
+                return;
+            }
+            
+            // Draw project nodes
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const projectRadius = 100;
+            
+            projectArray.forEach((project, i) => {
+                const angle = (i / projectArray.length) * 2 * Math.PI;
+                const x = centerX + projectRadius * Math.cos(angle);
+                const y = centerY + projectRadius * Math.sin(angle);
+                
+                // Draw project node
+                ctx.beginPath();
+                ctx.arc(x, y, 30, 0, 2 * Math.PI);
+                ctx.fillStyle = '#00ff88';
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Draw label
+                ctx.fillStyle = '#000';
+                ctx.font = 'bold 12px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(project.name.substring(0, 10), x, y + 5);
+                
+                // Draw connections to scripts
+                const projectScripts = scriptArray.filter(s => s.projectId === project.id);
+                projectScripts.forEach((script, j) => {
+                    const scriptAngle = angle + (j - projectScripts.length/2) * 0.3;
+                    const sx = x + 80 * Math.cos(scriptAngle);
+                    const sy = y + 80 * Math.sin(scriptAngle);
+                    
+                    // Draw connection
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(sx, sy);
+                    ctx.strokeStyle = '#666';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                    
+                    // Draw script node
+                    ctx.beginPath();
+                    ctx.arc(sx, sy, 15, 0, 2 * Math.PI);
+                    ctx.fillStyle = script.status === 'error' ? '#ff3366' : 
+                                   script.status === 'running' ? '#ffaa00' : 
+                                   '#00ff88';
+                    ctx.fill();
+                    
+                    // Draw script label
+                    ctx.fillStyle = '#fff';
+                    ctx.font = '10px monospace';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(script.name.substring(0, 8), sx, sy + 25);
+                });
+            });
+            
+            // Draw standalone scripts
+            const standaloneScripts = scriptArray.filter(s => !s.projectId);
+            const radius = 80;
+            
+            standaloneScripts.forEach((script, i) => {
+                const angle = (i / standaloneScripts.length) * 2 * Math.PI;
+                const x = centerX + radius * Math.cos(angle);
+                const y = centerY + radius * Math.sin(angle);
+                
+                // Draw node
+                ctx.beginPath();
+                ctx.arc(x, y, 20, 0, 2 * Math.PI);
+                ctx.fillStyle = script.status === 'error' ? '#ff3366' : 
+                               script.status === 'running' ? '#ffaa00' : 
+                               '#00ff88';
+                ctx.fill();
+                
+                // Draw label
+                ctx.fillStyle = '#fff';
+                ctx.font = '10px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(script.name.substring(0, 8), x, y + 30);
+            });
+        }
+
+        // Server Message Handler
+        function handleServerMessage(data) {
+            switch (data.type) {
+                case 'output':
+                    addOutput(data.text, data.outputType);
+                    break;
+                    
+                case 'scriptComplete':
+                    isRunning = false;
+                    updateScriptStatus(data.scriptId, data.success ? 'success' : 'error');
+                    updateStatus(data.success ? 'Script completed' : 'Script failed', 
+                               data.success ? 'success' : 'error');
+                    if (data.success) {
+                        // Hide auto-heal indicator on success
+                        document.getElementById('autoHealIndicator').style.display = 'none';
+                    }
+                    break;
+                    
+                case 'analyzed':
+                    scripts[data.scriptId].errors = data.errors || [];
+                    scripts[data.scriptId].dependencies = data.dependencies || [];
+                    scripts[data.scriptId].warnings = data.warnings || [];
+                    if (data.scriptId === activeScriptId) {
+                        updateErrorDisplay(data.errors || []);
+                        updateDepsDisplay(data.dependencies || []);
+                    }
+                    updateStatus('Analysis complete', 'success');
+                    break;
+                    
+                case 'healed':
+                    scripts[data.scriptId].content = data.healedCode;
+                    if (data.scriptId === activeScriptId) {
+                        document.getElementById('codeEditor').value = data.healedCode;
+                    }
+                    updateStatus(data.message || 'Code fixed!', 'success');
+                    analyzeScript(data.scriptId);
+                    saveScriptsToStorage();
+                    break;
+                    
+                case 'autoHealStatus':
+                    if (data.scriptId === activeScriptId) {
+                        updateStatus(data.message, 'info');
+                        if (data.attempts) {
+                            addOutput(`\n[Auto-Heal] ${data.message}\n`, 'info');
+                            // Show attempt counter
+                            document.getElementById('autoHealIndicator').style.display = 'flex';
+                            document.getElementById('autoHealIndicator').querySelector('span').textContent = 
+                                `Auto-healing... (Attempt ${data.attempts}/${config.maxHealAttempts})`;
+                        }
+                        if (data.stopped || data.enabled === false) {
+                            // Auto-heal stopped
+                            autoHealEnabled[data.scriptId] = false;
+                            updateAutoHealButton();
+                            document.getElementById('autoHealIndicator').style.display = 'none';
+                        }
+                    }
+                    break;
+                    
+                case 'terminalOutput':
+                    addTerminalOutput(data.output, data.error ? 'error' : 'output');
+                    break;
+                    
+                case 'aiSuggestion':
+                    if (data.scriptId === 'test') {
+                        updateStatus('OpenAI connection successful!', 'success');
+                        showModal('Success', 'OpenAI API key is working correctly!\n\nYou can now use AI features.');
+                    } else {
+                        showAISuggestion(data.suggestion);
+                    }
+                    break;
+                    
+                case 'projectCreated':
+                    projects[data.projectId] = {
+                        id: data.projectId,
+                        name: data.projectName,
+                        scripts: []
+                    };
+                    addProjectToList(data.projectId, data.projectName);
+                    selectProject(data.projectId);
+                    updateStatus(`Project '${data.projectName}' created`, 'success');
+                    break;
+                    
+                case 'scriptAddedToProject':
+                    if (projects[data.projectId]) {
+                        projects[data.projectId].scripts.push(data.scriptId);
+                    }
+                    if (scripts[data.scriptId]) {
+                        scripts[data.scriptId].projectId = data.projectId;
+                    }
+                    updateStatus('Script added to project', 'success');
+                    updateScriptList();
+                    break;
+                    
+                case 'error':
+                    updateStatus(data.message, 'error');
+                    if (data.message.length > 50) {
+                        showModal('Error', data.message);
+                    }
+                    break;
+                    
+                case 'info':
+                    updateStatus(data.message, 'info');
+                    break;
+                    
+                case 'copilotSuggestion':
+                    showModal('Copilot Suggestion', data.suggestion);
+                    break;
+            }
+        }
+
+        // AI Suggestion Display
+        function showAISuggestion(suggestion) {
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.style.display = 'flex';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">AI Analysis & Suggestions</div>
+                    <pre style="white-space: pre-wrap; color: var(--text-secondary); max-height: 400px; overflow-y: auto;">${suggestion}</pre>
+                    <button class="btn" onclick="this.parentElement.parentElement.remove()">Close</button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        // General Modal Display
+        function showModal(title, message) {
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.style.display = 'flex';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">${title}</div>
+                    <pre style="white-space: pre-wrap; color: var(--text-secondary);">${message}</pre>
+                    <button class="btn btn-primary" onclick="this.parentElement.parentElement.remove()">OK</button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        // Drag & Drop
+        function setupDragDrop() {
+            const editor = document.getElementById('codeEditor');
+            
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                editor.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                editor.addEventListener(eventName, highlight, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                editor.addEventListener(eventName, unhighlight, false);
+            });
+            
+            function highlight(e) {
+                editor.style.background = 'rgba(0, 255, 136, 0.1)';
+                editor.style.border = '2px dashed var(--accent)';
+            }
+            
+            function unhighlight(e) {
+                editor.style.background = '';
+                editor.style.border = '';
+            }
+            
+            editor.addEventListener('drop', handleDrop, false);
+            
+            function handleDrop(e) {
+                const files = Array.from(e.dataTransfer.files);
+                files.forEach(file => {
+                    if (file && file.name.endsWith('.py')) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            if (activeScriptId) {
+                                // Update current script
+                                scripts[activeScriptId].content = event.target.result;
+                                editor.value = event.target.result;
+                                updateStatus(`Loaded ${file.name}`, 'success');
+                                analyzeScript(activeScriptId);
+                            } else {
+                                // Create new script
+                                const id = 'script_' + Date.now();
+                                const script = {
+                                    id,
+                                    name: file.name,
+                                    content: event.target.result,
+                                    status: 'idle',
+                                    errors: [],
+                                    dependencies: []
+                                };
+                                
+                                scripts[id] = script;
+                                addScriptToList(script);
+                                selectScript(id);
+                                analyzeScript(id);
+                            }
+                            saveScriptsToStorage();
+                        };
+                        reader.readAsText(file);
+                    }
+                });
+            }
+        }
+
+        // Settings
+        function saveSettings() {
+            config.openaiKey = document.getElementById('openaiKey').value;
+            config.githubToken = document.getElementById('githubToken').value;
+            config.terminalType = document.getElementById('terminalType').value;
+            config.maxHealAttempts = parseInt(document.getElementById('maxHealAttempts').value) || 10;
+            
+            localStorage.setItem('openaiKey', config.openaiKey);
+            localStorage.setItem('githubToken', config.githubToken);
+            localStorage.setItem('terminalType', config.terminalType);
+            localStorage.setItem('maxHealAttempts', config.maxHealAttempts.toString());
+            
+            // Update terminal type selector
+            document.getElementById('terminalTypeSelect').value = config.terminalType;
+            
+            document.getElementById('settingsModal').style.display = 'none';
+            updateAIStatus();
+            
+            // Show success message
+            updateStatus('Settings saved successfully', 'success');
+        }
+
+        function testOpenAI() {
+            const apiKey = document.getElementById('openaiKey').value;
+            if (!apiKey) {
+                alert('Please enter an API key first');
+                return;
+            }
+            
+            updateStatus('Testing OpenAI connection...', 'info');
+            
+            // Test with a simple prompt
+            ws.send(JSON.stringify({
+                action: 'aiAnalyze',
+                scriptId: 'test',
+                content: 'print("Hello World")',
+                apiKey: apiKey
+            }));
+        }
+
+        function updateAIStatus() {
+            const status = document.getElementById('aiStatus');
+            if (config.openaiKey) {
+                status.textContent = 'AI: Ready ✓';
+                status.style.color = 'var(--success)';
+            } else {
+                status.textContent = 'AI: Configure API Key';
+                status.style.color = 'var(--warning)';
+            }
+        }
+
+        // Save/Load Scripts
+        function saveScriptsToStorage() {
+            localStorage.setItem('neuralNexusScripts', JSON.stringify(scripts));
+            localStorage.setItem('neuralNexusProjects', JSON.stringify(projects));
+        }
+
+        function loadSavedScripts() {
+            const savedScripts = localStorage.getItem('neuralNexusScripts');
+            const savedProjects = localStorage.getItem('neuralNexusProjects');
+            
+            if (savedProjects) {
+                projects = JSON.parse(savedProjects);
+                Object.values(projects).forEach(project => {
+                    addProjectToList(project.id, project.name);
+                });
+            }
+            
+            if (savedScripts) {
+                scripts = JSON.parse(savedScripts);
+                Object.values(scripts).forEach(script => {
+                    addScriptToList(script);
+                });
+            }
+        }
+
+        // Auto-save
+        setInterval(saveScriptsToStorage, 30000); // Save every 30 seconds
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key.toLowerCase()) {
+                    case 's':
+                        e.preventDefault();
+                        saveScriptsToStorage();
+                        updateStatus('Scripts saved', 'success');
+                        break;
+                    case 'enter':
+                        e.preventDefault();
+                        if (activeProjectId) {
+                            runProject();
+                        } else {
+                            runScript();
+                        }
+                        break;
+                    case 'n':
+                        e.preventDefault();
+                        newScript();
+                        break;
+                    case 'h':
+                        e.preventDefault();
+                        toggleAutoHeal();
+                        break;
+                    case 'f':
+                        e.preventDefault();
+                        fixNow();
+                        break;
+                    case 'p':
+                        e.preventDefault();
+                        createProject();
+                        break;
+                    case 'o':
+                        e.preventDefault();
+                        uploadScript();
+                        break;
+                    case 'd':
+                        e.preventDefault();
+                        analyzeScript(activeScriptId);
+                        break;
+                    case 'i':
+                        e.preventDefault();
+                        installDependencies();
+                        break;
+                }
+                
+                if (e.shiftKey) {
+                    switch(e.key.toUpperCase()) {
+                        case 'A':
+                            e.preventDefault();
+                            addScriptToProject();
+                            break;
+                        case 'R':
+                            e.preventDefault();
+                            if (activeProjectId) {
+                                runProject();
+                            }
+                            break;
+                        case 'S':
+                            e.preventDefault();
+                            stopScript();
+                            break;
+                    }
+                }
+            } else if (e.key === 'F5') {
+                e.preventDefault();
+                if (activeProjectId) {
+                    runProject();
+                } else {
+                    runScript();
+                }
+            } else if (e.shiftKey && e.key === 'F5') {
+                e.preventDefault();
+                stopScript();
+            } else if (e.key === 'Escape') {
+                // Close any open modals
+                document.querySelectorAll('.modal').forEach(modal => {
+                    modal.style.display = 'none';
+                });
+            }
+        });
+    </script>
+</body>
+</html>

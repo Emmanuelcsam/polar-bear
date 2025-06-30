@@ -1,0 +1,23 @@
+# Core dependencies
+flask==3.0.0
+flask-cors==4.0.0
+flask-sock==0.7.0  # WebSocket support
+python-dotenv==1.0.0
+
+# Selenium for browser automation
+selenium==4.16.0
+webdriver-manager==4.0.1  # Automatic driver management
+
+# Optional but recommended
+gunicorn==21.2.0
+werkzeug==3.0.1
+
+# For CAPTCHA handling (optional but recommended)
+opencv-python==4.9.0.80
+pillow==10.2.0
+pytesseract==0.3.10  # If you want OCR support
+
+# For enhanced features
+numpy==1.26.2
+beautifulsoup4==4.12.2
+pandas==2.1.4  # For data export
