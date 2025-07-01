@@ -118,11 +118,10 @@ class TestRunner:
             if img is None:
                 raise ValueError(f"Could not load test image: {test_image}")
             
-            # Test segmentation
-            result = segmenter.segment_image_comprehensive(
-                img, 
-                str(output_dir),
-                save_intermediate=False
+            # Test segmentation using the correct method
+            result = segmenter.process_image(
+                test_image, 
+                str(output_dir)
             )
             
             if result is None:
