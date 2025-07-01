@@ -171,6 +171,6 @@ def reimagine_image(image_path: str,
 if __name__ == '__main__':
     # Ask the user for the image path
     image_to_process = input("Please enter the path to the image you want to reimagine: ")
-    
+
     # Call the function with the user-provided path
     reimagine_image(image_to_process)
