@@ -1,10 +1,9 @@
 import cv2
-
-
 import numpy as np
 import os
-import cv2
-import numpy as np
+from debug_utils import setup_logging
+
+logger = setup_logging(__name__)
 # === Patched by patch_merge_v1 ===
 RAM_ONLY_ENV = os.getenv('FIBER_RAM_ONLY', '0').lower() in ('1','true','yes','y')
 def reimagine_image(image_path: str,
@@ -24,16 +23,19 @@ def reimagine_image(image_path: str,
         Default = opposite of FIBER_RAM_ONLY environment flag.
     """
     # ----------------------------------------------------------
+    logger.debug("Starting reimagine_image for %s", image_path)
     if save_intermediate is None:
         save_intermediate = not (os.getenv("FIBER_RAM_ONLY", "0")
                                  .lower() in {"1", "true", "yes", "y"})
     images_dict: dict[str, np.ndarray] = {}
 
     if not os.path.exists(image_path):
+        logger.error("Image not found: %s", image_path)
         raise FileNotFoundError(f"Image not found: {image_path}")
 
     img = cv2.imread(image_path)
     if img is None:
+        logger.error("Could not read image: %s", image_path)
         raise ValueError(f"Could not read image: {image_path}")
     gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
@@ -160,9 +162,9 @@ def reimagine_image(image_path: str,
 
     if save_intermediate:
         count = len(os.listdir(output_folder))
-        print(f"\nProcessing complete! Saved {count} images to '{output_folder}'.")
+        logger.info("Processing complete - saved %d images to %s", count, output_folder)
     else:
-        print(f"\nProcessing complete! (RAM‑only mode, {len(images_dict)} frames)")
+        logger.info("Processing complete in RAM mode with %d frames", len(images_dict))
 
     return images_dict
 

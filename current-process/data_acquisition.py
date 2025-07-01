@@ -12,6 +12,7 @@ from scipy.ndimage import gaussian_filter
 from sklearn.cluster import DBSCAN
 from typing import Dict, List, Tuple, Optional, Any, Set
 import logging
+from debug_utils import setup_logging
 from datetime import datetime
 from collections import defaultdict
 import shutil
@@ -27,10 +28,7 @@ import numpy as np
 warnings.filterwarnings('ignore')
 
 # Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - [%(levelname)s] - %(message)s'
-)
+logger = setup_logging(__name__)
 
 class DefectAggregator:
     """Aggregates and analyzes defects from multiple detection results with improved data handling"""
@@ -60,8 +58,8 @@ class DefectAggregator:
         self.detection_results = []
         self.region_offsets = {}  # Store region bounding boxes for better mapping
         self.data_integrity_log = []
-        
-        self.logger = logging.getLogger(__name__)
+
+        self.logger = logger
         
     def validate_detection_report(self, report: Dict, file_path: Path) -> bool:
         """Validate the structure and content of a detection report"""
@@ -1274,7 +1272,7 @@ def integrate_with_pipeline(results_base_dir: str, image_name: str,
         raise ValueError(f"Could not find original image for '{image_name}' "
                         f"in any of the search paths: {search_paths}")
         
-    logging.info(f"Found original image: {original_image_path}")
+    logger.info(f"Found original image: {original_image_path}")
     
     # Run analysis
     try:
@@ -1283,7 +1281,7 @@ def integrate_with_pipeline(results_base_dir: str, image_name: str,
         report = aggregator.run_complete_analysis()
         return report
     except Exception as e:
-        logging.error(f"Analysis failed: {str(e)}", exc_info=True)
+        logger.error(f"Analysis failed: {str(e)}", exc_info=True)
         raise
 
 
@@ -1307,7 +1305,7 @@ def main():
     args = parser.parse_args()
     
     # Configure logging
-    logging.getLogger().setLevel(getattr(logging, args.log_level))
+    logger.setLevel(getattr(logging, args.log_level))
     
     try:
         report = integrate_with_pipeline(
@@ -1331,7 +1329,7 @@ def main():
         print("=" * 60)
         
     except Exception as e:
-        logging.error(f"Analysis failed: {str(e)}")
+        logger.error(f"Analysis failed: {str(e)}")
         sys.exit(1)
 
 
