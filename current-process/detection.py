@@ -10,12 +10,10 @@ from typing import Optional, List, Dict, Any, Tuple
 from pathlib import Path
 import logging
 import time
+from debug_utils import setup_logging
 
 # Configure logging system to display timestamps, log levels, and messages
-logging.basicConfig(
-    level=logging.INFO,  # Set minimum log level to INFO (won't show DEBUG messages)
-    format='%(asctime)s - [%(levelname)s] - %(message)s'  # Define log message format with timestamp
-)
+logger = setup_logging(__name__)
 
 
 @dataclass  # Decorator to automatically generate __init__ and other methods
@@ -85,8 +83,8 @@ class OmniFiberAnalyzer:
         }
         # Initialize metadata storage for current image being processed
         self.current_metadata = None
-        # Create logger instance for this class
-        self.logger = logging.getLogger(__name__)
+        # Use shared logger instance
+        self.logger = logger
         # Attempt to load existing knowledge base from disk
         self.load_knowledge_base()
         

@@ -12,6 +12,7 @@ from typing import Dict, List, Tuple, Optional, Any
 import shutil
 import warnings
 import logging
+from debug_utils import setup_logging
 import traceback
 import ast
 import inspect
@@ -21,13 +22,7 @@ warnings.filterwarnings('ignore')
 # ==============================================================================
 # SETUP LOGGING
 # ==============================================================================
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - [%(levelname)s] - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout)
-    ]
-)
+logger = setup_logging(__name__)
 
 # ==============================================================================
 # CHECK OPTIONAL DEPENDENCIES
@@ -257,7 +252,7 @@ class SegmentationResult:
 class EnhancedConsensusSystem:
     """Model-aware voting system with fallback support."""
     def __init__(self):
-        self.logger = logging.getLogger(__name__)
+        self.logger = logger
 
     def _calculate_iou(self, mask1: Optional[np.ndarray], mask2: Optional[np.ndarray]) -> float:
         """Calculates Intersection over Union for two binary masks."""
@@ -425,7 +420,7 @@ class UnifiedSegmentationSystem:
     """Main unifier system that orchestrates all segmentation methods."""
     
     def __init__(self, methods_dir: str = "zone_methods"):
-        self.logger = logging.getLogger(__name__)
+        self.logger = logger
         self.methods_dir = Path(methods_dir)
         self.output_dir = Path("output")
         self.output_dir.mkdir(exist_ok=True)
@@ -833,7 +828,7 @@ def main():
         system = UnifiedSegmentationSystem(methods_dir)
         system.run()
     except Exception as e:
-        logging.critical(f"A fatal error occurred in the main execution: {e}")
+        logger.critical(f"A fatal error occurred in the main execution: {e}")
         traceback.print_exc()
         sys.exit(1)
 

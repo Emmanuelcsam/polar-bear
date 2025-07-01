@@ -9,3 +9,4 @@ gudhi
 pillow
 tqdm
 pandas
+pytest

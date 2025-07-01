@@ -7,18 +7,11 @@ from pathlib import Path
 import logging
 import shlex
 from pathlib import Path
-import logging
+from debug_utils import setup_logging
 from separation import UnifiedSegmentationSystem
 
 # --- Setup Logging ---
-# Configures a logger to print detailed, timestamped messages to the console.
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - [%(levelname)s] - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout)
-    ]
-)
+logger = setup_logging(__name__)
 
 # --- Add script directories to Python path ---
 # This ensures that we can import our custom modules (process, separation, detection, data_acquisition)
@@ -35,10 +28,10 @@ try:
     from separation import UnifiedSegmentationSystem
     from detection import OmniFiberAnalyzer, OmniConfig
     from data_acquisition import integrate_with_pipeline as run_data_acquisition
-    logging.info("Successfully imported all processing & analysis modules including data acquisition.")
+    logger.info("Successfully imported all processing & analysis modules including data acquisition.")
 except ImportError as e:
-    logging.error(f"Fatal Error: Failed to import a required module: {e}")
-    logging.error("Please ensure process.py, separation.py, detection.py, and data_acquisition.py are in the same directory as app.py.")
+    logger.error(f"Fatal Error: Failed to import a required module: {e}")
+    logger.error("Please ensure process.py, separation.py, detection.py, and data_acquisition.py are in the same directory as app.py.")
     sys.exit(1)
 
 
@@ -49,23 +42,23 @@ class PipelineOrchestrator:
     """
     def __init__(self, config_path):
         """Initializes the orchestrator with configuration."""
-        logging.info("Initializing Pipeline Orchestrator...")
+        logger.info("Initializing Pipeline Orchestrator...")
         self.config_path = Path(config_path).resolve()  # Store absolute config path
         self.config = self.load_config(config_path)
         self.config = self.resolve_config_paths(self.config)  # Resolve relative paths
         self.results_base_dir = Path(self.config['paths']['results_dir'])
         self.results_base_dir.mkdir(parents=True, exist_ok=True)  # Create with parents
-        logging.info(f"Results will be saved in: {self.results_base_dir}")
+        logger.info(f"Results will be saved in: {self.results_base_dir}")
 
     def load_config(self, config_path):
         """Loads the JSON configuration file."""
         try:
             with open(config_path, 'r') as f:
                 config = json.load(f)
-            logging.info(f"Successfully loaded configuration from {config_path}")
+            logger.info(f"Successfully loaded configuration from {config_path}")
             return config
         except Exception as e:
-            logging.error(f"Fatal Error: Could not load or parse config.json: {e}")
+            logger.error(f"Fatal Error: Could not load or parse config.json: {e}")
             sys.exit(1)
 
     def resolve_config_paths(self, config):
@@ -88,7 +81,7 @@ class PipelineOrchestrator:
         dedicated folder for its results.
         """
         start_time = time.time()
-        logging.info(f"--- Starting full pipeline for: {input_image_path.name} ---")
+        logger.info(f"--- Starting full pipeline for: {input_image_path.name} ---")
 
         # Create a unique directory for this image's results
         run_dir = self.results_base_dir / input_image_path.stem
@@ -107,12 +100,12 @@ class PipelineOrchestrator:
         final_report = self.run_data_acquisition_stage(input_image_path, run_dir)
 
         end_time = time.time()
-        logging.info(f"--- Pipeline for {input_image_path.name} completed in {end_time - start_time:.2f} seconds ---")
+        logger.info(f"--- Pipeline for {input_image_path.name} completed in {end_time - start_time:.2f} seconds ---")
         
         # Log final summary
         if final_report and 'analysis_summary' in final_report:
             summary = final_report['analysis_summary']
-            logging.info(f"FINAL RESULTS: Status={summary['pass_fail_status']}, "
+            logger.info(f"FINAL RESULTS: Status={summary['pass_fail_status']}, "
                         f"Quality Score={summary['quality_score']}/100, "
                         f"Total Defects={summary['total_merged_defects']}")
         
@@ -120,7 +113,7 @@ class PipelineOrchestrator:
 
     def run_processing_stage(self, input_image_path: Path, run_dir: Path):
         """Stage‑1 : create synthetic variants of the source image."""
-        logging.info(">>> STAGE 1  –  PROCESSING")
+        logger.info(">>> STAGE 1  –  PROCESSING")
         process_cfg = self.config['process_settings']
         reimagined_dir = run_dir / process_cfg['output_folder_name']
 
@@ -132,7 +125,7 @@ class PipelineOrchestrator:
                 save_intermediate=not ram_only          # <-- key change
             )
         except Exception as ex:
-            logging.error("reimagine_image failed: %s", ex, exc_info=True)
+            logger.error("reimagine_image failed: %s", ex, exc_info=True)
             images_dict = {}
 
         # Build list for stage‑2
@@ -142,7 +135,7 @@ class PipelineOrchestrator:
         if ram_only:
             all_images += [(f"RAM_{k}", v) for k, v in images_dict.items()]
 
-        logging.info("Processing stage complete – %d synthetic files, %d RAM frames",
+        logger.info("Processing stage complete – %d synthetic files, %d RAM frames",
                     len(all_images) - 1, len(images_dict))
         return reimagined_dir, all_images
 
@@ -165,7 +158,7 @@ class PipelineOrchestrator:
         all_separated_regions = []
 
         for image_path in image_paths:
-            logging.info(f"Separating image {image_path.name}  (ram_mode={ram_mode})")
+            logger.info(f"Separating image {image_path.name}  (ram_mode={ram_mode})")
             # If ram_mode, we won’t pass a disk output dir
             output_dir = str(separated_dir / image_path.stem) if not ram_mode else None
 
@@ -191,12 +184,12 @@ class PipelineOrchestrator:
 
         # always include original for detection
         detection_inputs = all_separated_regions + [original_image_path]
-        logging.info(f"Separation complete. Regions: {len(all_separated_regions)}")
+        logger.info(f"Separation complete. Regions: {len(all_separated_regions)}")
         return separated_dir, detection_inputs
     
     def run_detection_stage(self, image_paths, run_dir):
         """Runs detection.py to perform defect analysis on all provided images."""
-        logging.info(">>> STAGE 3: DETECTION - Analyzing for defects...")
+        logger.info(">>> STAGE 3: DETECTION - Analyzing for defects...")
         detection_cfg = self.config['detection_settings']
         detection_output_dir = run_dir / detection_cfg['output_folder_name']
         detection_output_dir.mkdir(parents=True, exist_ok=True)
@@ -232,7 +225,7 @@ class PipelineOrchestrator:
             analyzer = OmniFiberAnalyzer(omni_config)
 
             for image_path in image_paths:
-                logging.info(f"Detecting defects in: {image_path.name}")
+                logger.info(f"Detecting defects in: {image_path.name}")
                 # Define the output dir for this specific image's detection report
                 image_detection_output_dir = detection_output_dir / image_path.stem
                 image_detection_output_dir.mkdir(parents=True, exist_ok=True)
@@ -241,19 +234,19 @@ class PipelineOrchestrator:
                 analyzer.analyze_end_face(str(image_path), str(image_detection_output_dir))
         
         except Exception as e:
-            logging.error(f"A critical error occurred in the detection stage: {e}", exc_info=True)
+            logger.error(f"A critical error occurred in the detection stage: {e}", exc_info=True)
         
-        logging.info("Detection stage complete.")
+        logger.info("Detection stage complete.")
 
     def run_data_acquisition_stage(self, original_image_path, run_dir):
         """Runs data_acquisition.py to aggregate and analyze all detection results."""
-        logging.info(">>> STAGE 4: DATA ACQUISITION - Aggregating and analyzing all results...")
+        logger.info(">>> STAGE 4: DATA ACQUISITION - Aggregating and analyzing all results...")
         
         final_overlay_src = run_dir / "4_final_analysis" / f"{original_image_path.stem}_FINAL_OVERLAY.png"
         if final_overlay_src.exists():
             final_overlay_dst = run_dir / "FINAL_DEFECT_OVERLAY.png"
             shutil.copy2(final_overlay_src, final_overlay_dst)
-            logging.info(f"Final overlay saved to: {final_overlay_dst}")
+            logger.info(f"Final overlay saved to: {final_overlay_dst}")
         
         try:
             # Get clustering parameters from config if available
@@ -270,7 +263,7 @@ class PipelineOrchestrator:
             if final_report:
                 # Log summary of final results
                 summary = final_report.get('analysis_summary', {})
-                logging.info(f"Data acquisition complete. Final status: {summary.get('pass_fail_status', 'UNKNOWN')}")
+                logger.info(f"Data acquisition complete. Final status: {summary.get('pass_fail_status', 'UNKNOWN')}")
                 
                 # Create a summary file in the root results directory for easy access
                 summary_path = run_dir / "FINAL_SUMMARY.txt"
@@ -291,12 +284,12 @@ class PipelineOrchestrator:
                 
                 return final_report
             else:
-                logging.error("Data acquisition stage failed to produce a report")
+                logger.error("Data acquisition stage failed to produce a report")
                 return None
 
     
         except Exception as e:
-            logging.error(f"Error during data acquisition stage: {e}", exc_info=True)
+            logger.error(f"Error during data acquisition stage: {e}", exc_info=True)
             return None
 
 # --- New Interactive Functions ---
@@ -326,7 +319,7 @@ def ask_for_images() -> list[Path]:
             invalid_paths.append(str(path))
             
     if invalid_paths:
-        logging.warning(f"The following paths were not found and will be skipped: {', '.join(invalid_paths)}")
+        logger.warning(f"The following paths were not found and will be skipped: {', '.join(invalid_paths)}")
         
     return valid_paths
 
@@ -346,7 +339,7 @@ def ask_for_folder() -> Path | None:
     if folder_path.is_dir():
         return folder_path
     else:
-        logging.error(f"Directory not found: {folder_path}")
+        logger.error(f"Directory not found: {folder_path}")
         return None
 
 def main():
@@ -375,7 +368,7 @@ def main():
     
     config_path = Path(config_path_str)
     if not config_path.exists():
-        logging.error(f"Fatal Error: Configuration file not found at: {config_path}")
+        logger.error(f"Fatal Error: Configuration file not found at: {config_path}")
         print("\nPlease run setup.py first to create the necessary files and directories.")
         sys.exit(1)
         
@@ -383,7 +376,7 @@ def main():
     try:
         orchestrator = PipelineOrchestrator(str(config_path))
     except Exception as e:
-        logging.error(f"Failed to initialize pipeline: {e}")
+        logger.error(f"Failed to initialize pipeline: {e}")
         print("\nPlease check your configuration file and ensure all required directories exist.")
         print("You may need to run setup.py first.")
         sys.exit(1)
@@ -400,10 +393,10 @@ def main():
         if choice == '1':
             image_paths = ask_for_images()
             if not image_paths:
-                logging.warning("No valid image paths provided.")
+                logger.warning("No valid image paths provided.")
                 continue
             
-            logging.info(f"Starting processing for {len(image_paths)} image(s).")
+            logger.info(f"Starting processing for {len(image_paths)} image(s).")
             for image_path in image_paths:
                 try:
                     final_report = orchestrator.run_full_pipeline(image_path)
@@ -418,16 +411,16 @@ def main():
                         print(f"\n✗ {image_path.name}: Processing failed")
                         
                 except Exception as e:
-                    logging.error(f"Failed to process {image_path}: {e}")
+                    logger.error(f"Failed to process {image_path}: {e}")
                     continue
-            logging.info("Finished processing all specified images.")
+            logger.info("Finished processing all specified images.")
             
         elif choice == '2':
             folder_path = ask_for_folder()
             if not folder_path:
                 continue
                 
-            logging.info(f"Searching for images in directory: {folder_path}")
+            logger.info(f"Searching for images in directory: {folder_path}")
             image_extensions = ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.tif']
             image_files = []
             
@@ -439,10 +432,10 @@ def main():
             image_files = list(set(image_files))
             
             if not image_files:
-                logging.warning(f"No images with extensions ({', '.join(image_extensions)}) found in {folder_path}")
+                logger.warning(f"No images with extensions ({', '.join(image_extensions)}) found in {folder_path}")
                 continue
             
-            logging.info(f"Found {len(image_files)} images to process. Starting batch.")
+            logger.info(f"Found {len(image_files)} images to process. Starting batch.")
             
             # Summary statistics
             passed = 0
@@ -467,7 +460,7 @@ def main():
                         print(f"\n✗ {image_file.name}: Processing error")
                         
                 except Exception as e:
-                    logging.error(f"Failed to process {image_file}: {e}")
+                    logger.error(f"Failed to process {image_file}: {e}")
                     errors += 1
                     continue
                     
@@ -486,7 +479,7 @@ def main():
             break
             
         else:
-            logging.warning("Invalid choice. Please enter a number from 1 to 3.")
+            logger.warning("Invalid choice. Please enter a number from 1 to 3.")
 
 if __name__ == "__main__":
     main()
