@@ -151,13 +151,13 @@ class TestRunner:
             output_dir = self.temp_results_dir / "detection_test"
             output_dir.mkdir(exist_ok=True)
             
-            # Test detection
-            results = analyzer.analyze_fiber_defects(str(test_image), str(output_dir))
+            # Test detection using the correct method
+            results = analyzer.analyze_end_face(str(test_image), str(output_dir))
             
             if results is None:
                 raise ValueError("Detection returned None")
                 
-            self.test_results['detection'] = {'status': 'PASS', 'details': f'Detection completed, found {len(results.get("defects", []))} potential defects'}
+            self.test_results['detection'] = {'status': 'PASS', 'details': f'Detection completed successfully'}
             logging.info("Detection module test PASSED")
             
         except Exception as e:
@@ -174,6 +174,10 @@ class TestRunner:
             test_image = next(self.test_dir.glob("*.png"))
             results_dir = self.temp_results_dir / "data_acquisition_test"
             results_dir.mkdir(exist_ok=True)
+            
+            # Copy the test image to the expected location
+            original_image_dest = results_dir / test_image.name
+            shutil.copy2(test_image, original_image_dest)
             
             # Create a minimal detection result file for testing
             mock_detection_result = {
@@ -195,9 +199,8 @@ class TestRunner:
             with open(detection_result_file, 'w') as f:
                 json.dump(mock_detection_result, f, indent=2)
             
-            # Test data acquisition
-            config = {"data_acquisition_settings": {"clustering_eps": 30.0, "min_cluster_size": 1}}
-            result = integrate_with_pipeline(str(results_dir), str(test_image), config)
+            # Test data acquisition with correct parameters
+            result = integrate_with_pipeline(str(results_dir), test_image.name, clustering_eps=30.0)
             
             if result is None:
                 raise ValueError("Data acquisition returned None")
@@ -223,9 +226,11 @@ class TestRunner:
             orchestrator = PipelineOrchestrator(str(self.config_path))
             
             # Update config to use our temporary directory
-            orchestrator.config['paths']['results_dir'] = str(self.temp_results_dir / "full_pipeline")
-            orchestrator.results_base_dir = Path(orchestrator.config['paths']['results_dir'])
-            orchestrator.results_base_dir.mkdir(parents=True, exist_ok=True)
+            if self.temp_results_dir:
+                full_pipeline_dir = self.temp_results_dir / "full_pipeline"
+                orchestrator.config['paths']['results_dir'] = str(full_pipeline_dir)
+                orchestrator.results_base_dir = Path(orchestrator.config['paths']['results_dir'])
+                orchestrator.results_base_dir.mkdir(parents=True, exist_ok=True)
             
             # Test with a sample image
             test_image = next(self.test_dir.glob("*.png"))

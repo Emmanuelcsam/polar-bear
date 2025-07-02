@@ -56,6 +56,9 @@ class NumpyEncoder(json.JSONEncoder):
         # Convert numpy float types to Python float for JSON compatibility
         if isinstance(obj, (np.floating, np.float64)):
             return float(obj)
+        # Convert numpy boolean types to Python bool for JSON compatibility
+        if isinstance(obj, np.bool_):
+            return bool(obj)
         # Convert numpy arrays to Python lists for JSON compatibility
         if isinstance(obj, np.ndarray):
             return obj.tolist()
@@ -156,6 +159,10 @@ class OmniFiberAnalyzer:
             report_path = output_path / f"{Path(image_path).stem}_report.json"
             with open(report_path, 'w') as f:
                 json.dump(empty_report, f, indent=2)
+            return empty_report
+        
+        # Return the pipeline report
+        return pipeline_report
     
     def _convert_to_pipeline_format(self, results: Dict, image_path: str) -> Dict:
         """Convert internal results format to pipeline-expected format"""

@@ -232,15 +232,10 @@ class PipelineOrchestrator:
             data_acq_cfg = self.config.get('data_acquisition_settings', {})
             clustering_eps = data_acq_cfg.get('clustering_eps', 30.0)
             
-            # Ensure the original image is available in the results directory for data acquisition
-            original_image_dest = run_dir / original_image_path.name
-            if not original_image_dest.exists():
-                shutil.copy2(original_image_path, original_image_dest)
-            
             # Run data acquisition analysis
             final_report = run_data_acquisition(
                 str(run_dir), 
-                original_image_path.name,  # Use full filename not just stem
+                original_image_path.stem,
                 clustering_eps=clustering_eps
             )
             
