@@ -1,254 +1,22 @@
-#!/usr/bin/env python3
-"""
-Part 1: Configuration, Data Structures, and Initial Setup
-Advanced Fiber Optic End Face Defect Detection System
-=====================================================
-This script implements a highly accurate, multi-method approach to detecting defects
-on fiber optic connector end faces. It combines DO2MR (Difference of Min-Max Ranking)
-for region-based defects and LEI (Linear Enhancement Inspector) for scratch detection,
-with significant improvements over the original research paper implementation.
+from pathlib import Path
+from typing import Dict, List, Tuple, Optional, Any
+from datetime import datetime
+import cv2
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from config import InspectorConfig
+from data_structures import (
+    FiberSpecifications,
+    ZoneDefinition,
+    DetectedZoneInfo,
+    DefectMeasurement,
+    DefectInfo,
+    ImageAnalysisStats,
+    ImageResult,
+)
+from utils import _log_message, _start_timer, _log_duration
 
-Author: Gemini AI
-Date: June 4, 2025
-Version: 1.0
-"""
-
-# Import all necessary libraries for image processing, numerical operations, and visualization
-import cv2  # OpenCV for image processing operations
-import numpy as np  # NumPy for efficient numerical computations
-import matplotlib.pyplot as plt  # Matplotlib for generating plots and visualizations
-import os  # Operating system interface for file operations
-import csv  # CSV file handling for report generation
-import json  # JSON handling for configuration and calibration data
-from datetime import datetime  # Datetime for timestamping operations
-from pathlib import Path  # Path handling for cross-platform compatibility
-import warnings  # Warning handling to suppress non-critical warnings
-from typing import Dict, List, Tuple, Optional, Union, Any  # Type hints for better code clarity
-import time  # Time tracking for performance monitoring
-import pandas as pd  # Pandas for easy CSV writing of batch summary
-from dataclasses import dataclass, field  # Dataclasses for structured data
-# Note: concurrent.futures will be used in later parts.
-
-# Suppress warnings that might clutter the output
-warnings.filterwarnings('ignore')  # Ignores runtime warnings, e.g., from division by zero in calculations.
-
-# --- Data Structures ---
-
-@dataclass
-class FiberSpecifications:
-    """Data structure to hold user-provided or default fiber optic specifications."""
-    core_diameter_um: Optional[float] = None  # Diameter of the fiber core in micrometers.
-    cladding_diameter_um: Optional[float] = 125.0  # Diameter of the fiber cladding in micrometers (default for many fibers).
-    ferrule_diameter_um: Optional[float] = 250.0  # Outer diameter of the ferrule in micrometers (approximate).
-    fiber_type: str = "unknown"  # Type of fiber, e.g., "single-mode", "multi-mode".
-
-@dataclass
-class ZoneDefinition:
-    """Data structure to define parameters for a fiber zone."""
-    name: str  # Name of the zone (e.g., "core", "cladding").
-    # Relative factors to the primary detected radius (e.g., cladding radius) if in pixel_only mode,
-    # or absolute radii in microns if specs are provided.
-    r_min_factor_or_um: float  # Minimum radius factor (relative to main radius) or absolute radius in um.
-    r_max_factor_or_um: float  # Maximum radius factor (relative to main radius) or absolute radius in um.
-    color_bgr: Tuple[int, int, int]  # BGR color for visualizing this zone.
-    max_defect_size_um: Optional[float] = None  # Maximum allowable defect size in this zone in micrometers (for pass/fail).
-    defects_allowed: bool = True  # Whether defects are generally allowed in this zone.
-
-@dataclass
-class DetectedZoneInfo:
-    """Data structure to hold information about a detected zone in an image."""
-    name: str  # Name of the zone.
-    center_px: Tuple[int, int]  # Center coordinates (x, y) in pixels.
-    radius_px: float  # Radius in pixels.
-    radius_um: Optional[float] = None  # Radius in micrometers (if conversion is available).
-    mask: Optional[np.ndarray] = None  # Binary mask for the zone.
-
-@dataclass
-class DefectMeasurement:
-    """Data structure for defect measurements."""
-    value_px: Optional[float] = None  # Measurement in pixels.
-    value_um: Optional[float] = None  # Measurement in micrometers.
-
-@dataclass
-class DefectInfo:
-    """Data structure to hold detailed information about a detected defect."""
-    defect_id: int  # Unique identifier for the defect within an image.
-    zone_name: str  # Name of the zone where the defect is primarily located.
-    defect_type: str  # Type of defect (e.g., "Region", "Scratch").
-    centroid_px: Tuple[int, int]  # Centroid coordinates (x, y) in pixels.
-    bounding_box_px: Tuple[int, int, int, int]  # Bounding box (x, y, width, height) in pixels.
-    area: DefectMeasurement = field(default_factory=DefectMeasurement)  # Area of the defect.
-    perimeter: DefectMeasurement = field(default_factory=DefectMeasurement)  # Perimeter of the defect.
-    major_dimension: DefectMeasurement = field(default_factory=DefectMeasurement)  # Primary dimension (e.g. length of scratch, diameter of pit)
-    minor_dimension: DefectMeasurement = field(default_factory=DefectMeasurement)  # Secondary dimension (e.g. width of scratch)
-    confidence_score: float = 0.0  # Confidence score for the detection (0.0 to 1.0).
-    detection_methods: List[str] = field(default_factory=list)  # List of methods that identified this defect.
-    contour: Optional[np.ndarray] = None  # The contour of the defect in pixels.
-
-@dataclass
-class ImageAnalysisStats:
-    """Statistics for a single image analysis."""
-    total_defects: int = 0  # Total number of defects found.
-    core_defects: int = 0  # Number of defects in the core.
-    cladding_defects: int = 0  # Number of defects in the cladding.
-    ferrule_defects: int = 0  # Number of defects in the ferrule.
-    adhesive_defects: int = 0  # Number of defects in the adhesive area.
-    processing_time_s: float = 0.0  # Time taken to process the image in seconds.
-    status: str = "Pending"  # Pass/Fail/Review status.
-    microns_per_pixel: Optional[float] = None  # Calculated conversion ratio for this image.
-
-@dataclass
-class ImageResult:
-    """Data structure to store all results for a single processed image."""
-    filename: str  # Original filename of the image.
-    timestamp: datetime  # Timestamp of when the analysis was performed.
-    fiber_specs_used: FiberSpecifications  # Fiber specifications used for this image.
-    operating_mode: str  # "PIXEL_ONLY" or "MICRON_CALCULATED" or "MICRON_INFERRED".
-    detected_zones: Dict[str, DetectedZoneInfo] = field(default_factory=dict)  # Information about detected zones.
-    defects: List[DefectInfo] = field(default_factory=list)  # List of detected defects.
-    stats: ImageAnalysisStats = field(default_factory=ImageAnalysisStats)  # Summary statistics for the image.
-    annotated_image_path: Optional[Path] = None  # Path to the saved annotated image.
-    report_csv_path: Optional[Path] = None  # Path to the saved CSV report for this image.
-    histogram_path: Optional[Path] = None  # Path to the saved defect distribution histogram.
-    error_message: Optional[str] = None  # Error message if processing failed.
-    intermediate_defect_maps: Dict[str, np.ndarray] = field(default_factory=dict)  # For debugging.
-    timing_log: Dict[str, float] = field(default_factory=dict)  # Store per-step durations
-
-# --- Configuration Class ---
-
-@dataclass
-class InspectorConfig:
-    """Class to hold all configuration parameters for the fiber inspection process."""
-    # General Settings
-    OUTPUT_DIR_NAME: str = "fiber_inspection_output"  # Name of the directory to save results.
-    MIN_DEFECT_AREA_PX: int = 10  # Minimum area in pixels for a contour to be considered a defect.
-    PERFORM_CALIBRATION: bool = False  # Whether to attempt system calibration with a target.
-    CALIBRATION_IMAGE_PATH: Optional[str] = None  # Path to the calibration target image.
-    CALIBRATION_DOT_SPACING_UM: float = 10.0  # Known spacing of dots on calibration target in microns.
-    CALIBRATION_FILE_JSON: str = "calibration_data.json"  # File to save/load calibration data.
-
-    # Fiber Zone Definitions (Default for PIXEL_ONLY mode, scaled if cladding detected)
-    DEFAULT_ZONES: List[ZoneDefinition] = field(default_factory=lambda: [
-        ZoneDefinition(
-            name="core",
-            r_min_factor_or_um=0.0,
-            r_max_factor_or_um=0.4,
-            color_bgr=(255, 0, 0),
-            max_defect_size_um=5.0,
-            defects_allowed=True
-        ),
-        ZoneDefinition(
-            name="cladding",
-            r_min_factor_or_um=0.4,
-            r_max_factor_or_um=1.0,
-            color_bgr=(0, 255, 0),
-            max_defect_size_um=10.0,
-            defects_allowed=True
-        ),
-        ZoneDefinition(
-            name="ferrule_contact",
-            r_min_factor_or_um=1.0,
-            r_max_factor_or_um=2.0,
-            color_bgr=(0, 0, 255),
-            max_defect_size_um=25.0,
-            defects_allowed=True
-        ),
-        ZoneDefinition(
-            name="adhesive",
-            r_min_factor_or_um=2.0,
-            r_max_factor_or_um=2.2,
-            color_bgr=(0, 255, 255),
-            max_defect_size_um=50.0,
-            defects_allowed=False
-        )
-    ])
-
-    # Image Preprocessing
-    GAUSSIAN_BLUR_KERNEL_SIZE: Tuple[int, int] = (7, 7)  # Kernel size for Gaussian blur.
-    GAUSSIAN_BLUR_SIGMA: int = 2  # Sigma for Gaussian blur.
-    BILATERAL_FILTER_D: int = 9  # Diameter of each pixel neighborhood for bilateral filter.
-    BILATERAL_FILTER_SIGMA_COLOR: int = 75  # Filter sigma in the color space.
-    BILATERAL_FILTER_SIGMA_SPACE: int = 75  # Filter sigma in the coordinate space.
-    CLAHE_CLIP_LIMIT: float = 2.0  # Clip limit for CLAHE.
-    CLAHE_TILE_GRID_SIZE: Tuple[int, int] = (8, 8)  # Tile grid size for CLAHE.
-
-    # Hough Circle Transform Parameters (multiple sets for robustness)
-    HOUGH_DP_VALUES: List[float] = field(default_factory=lambda: [1.0, 1.2, 1.5])  # Inverse ratio of accumulator resolution.
-    HOUGH_MIN_DIST_FACTOR: float = 0.25  # Minimum distance between centers of detected circles, as a factor of image smaller dimension.
-    HOUGH_PARAM1_VALUES: List[int] = field(default_factory=lambda: [70, 100, 130])  # Upper threshold for Canny edge detector in Hough.
-    HOUGH_PARAM2_VALUES: List[int] = field(default_factory=lambda: [35, 45, 55])  # Accumulator threshold for circle detection.
-    HOUGH_MIN_RADIUS_FACTOR: float = 0.1  # Minimum circle radius as a factor of image smaller dimension.
-    HOUGH_MAX_RADIUS_FACTOR: float = 0.45  # Maximum circle radius as a factor of image smaller dimension.
-    CIRCLE_CONFIDENCE_THRESHOLD: float = 0.3  # Minimum confidence for a detected circle to be considered valid.
-
-    # DO2MR (Region-Based Defect) Parameters
-    DO2MR_KERNEL_SIZES: List[Tuple[int, int]] = field(default_factory=lambda: [(5, 5), (9, 9), (13, 13)])  # Structuring element sizes.
-    DO2MR_GAMMA_VALUES: List[float] = field(default_factory=lambda: [2.0, 2.5, 3.0])  # Sensitivity parameter for thresholding residual.
-    DO2MR_MEDIAN_BLUR_KERNEL_SIZE: int = 5  # Kernel size for median blur on residual image.
-    DO2MR_MORPH_OPEN_KERNEL_SIZE: Tuple[int, int] = (3, 3)  # Kernel for morphological opening post-threshold.
-
-    # LEI (Scratch Detection) Parameters
-    LEI_KERNEL_LENGTHS: List[int] = field(default_factory=lambda: [11, 17, 23])  # Lengths of the linear detector.
-    LEI_ANGLE_STEP: int = 15  # Angular resolution for scratch detection (degrees).
-    LEI_THRESHOLD_FACTOR: float = 2.0  # Factor for Otsu or adaptive thresholding on response map.
-    LEI_MORPH_CLOSE_KERNEL_SIZE: Tuple[int, int] = (5, 1)  # Kernel for morphological closing (elongated for scratches).
-    LEI_MIN_SCRATCH_AREA_PX: int = 15  # Minimum area for a scratch.
-
-    # Additional Defect Detection Parameters
-    CANNY_LOW_THRESHOLD: int = 50  # Low threshold for Canny edge detection.
-    CANNY_HIGH_THRESHOLD: int = 150  # High threshold for Canny edge detection.
-    ADAPTIVE_THRESH_BLOCK_SIZE: int = 11  # Block size for adaptive thresholding.
-    ADAPTIVE_THRESH_C: int = 2  # Constant subtracted from the mean in adaptive thresholding.
-
-    # Ensemble/Confidence Parameters
-    MIN_METHODS_FOR_CONFIRMED_DEFECT: int = 2  # Min number of methods that must detect a defect.
-    CONFIDENCE_WEIGHTS: Dict[str, float] = field(default_factory=lambda: {  # Weights for different detection methods.
-        "do2mr": 1.0,
-        "lei": 1.0,
-        "canny": 0.6,
-        "adaptive_thresh": 0.7,
-        "otsu_global": 0.5,
-    })
-
-    # Visualization Parameters
-    DEFECT_COLORS: Dict[str, Tuple[int, int, int]] = field(default_factory=lambda: {  # BGR colors for defect types.
-        "Region": (0, 255, 255),  # Yellow
-        "Scratch": (255, 0, 255),  # Magenta
-        "Contamination": (255, 165, 0),  # Orange
-        "Pit": (0, 128, 255),  # Light Orange
-        "Chip": (128, 0, 128),  # Purple
-        "Linear Region": (255, 105, 180)  # Hot Pink for Linear Region
-    })
-    FONT_SCALE: float = 0.5  # Font scale for annotations.
-    LINE_THICKNESS: int = 1  # Line thickness for drawing.
-
-    # Reporting
-    BATCH_SUMMARY_FILENAME: str = "batch_inspection_summary.csv"  # Filename for the overall batch summary.
-    DETAILED_REPORT_PER_IMAGE: bool = True  # Whether to generate a detailed CSV for each image.
-    SAVE_ANNOTATED_IMAGE: bool = True  # Whether to save the annotated image.
-    SAVE_DEFECT_MAPS: bool = False  # Whether to save intermediate defect maps (for debugging).
-    SAVE_HISTOGRAM: bool = True  # Whether to save the polar defect distribution histogram.
-
-# --- Utility Functions ---
-
-def _log_message(message: str, level: str = "INFO"):
-    """Prints a timestamped log message to the console."""
-    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-    print(f"[{current_time}] [{level.upper()}] {message}")
-
-def _start_timer() -> float:
-    """Returns the current time to start a timer."""
-    return time.perf_counter()
-
-def _log_duration(operation_name: str, start_time: float, image_result: Optional[ImageResult] = None):
-    """Logs the duration of an operation and stores it."""
-    duration = time.perf_counter() - start_time
-    _log_message(f"Operation '{operation_name}' completed in {duration:.4f} seconds.")
-    if image_result and hasattr(image_result, "timing_log"):
-        image_result.timing_log[operation_name] = duration
-    return duration
-
-# --- Main Inspector Class (Initial Structure) ---
 
 class FiberInspector:
     """
@@ -865,7 +633,8 @@ class FiberInspector:
     def _combine_defect_masks(self, all_defect_maps: Dict[str, Optional[np.ndarray]], image_shape: Tuple[int, int]) -> np.ndarray:
         """
         Combines all intermediate defect maps into one final binary mask.
-        We simply OR all non‐None masks together so that any pixel flagged by at least one method remains.
+        We simply OR all non
+None masks together so that any pixel flagged by at least one method remains.
         """
         combined = np.zeros(image_shape, dtype=np.uint8)
         for key, mask in all_defect_maps.items():
@@ -1154,7 +923,7 @@ class FiberInspector:
     def _save_individual_image_report_csv(self, image_res: ImageResult, output_dir: Path):
         """
         Saves a detailed CSV listing every defect found in a single image.
-        Each row has: ID, Zone, Type, Centroid_px, Centroid_um (if available), 
+        Each row has: ID, Zone, Type, Centroid_px, Centroid_um (if available),
         BBox_px, BBox_um, Area_px, Area_um, Perim_px, Perim_um, Major_px, Major_um, Minor_px, Minor_um, Confidence, Methods
         """
         report_path = output_dir / f"{Path(image_res.filename).stem}_report.csv"
@@ -1338,40 +1107,3 @@ class FiberInspector:
             _log_message(f"Batch summary report saved to {summary_path}")
         except Exception as e:
             _log_message(f"Error saving batch summary report: {e}", level="ERROR")
-
-# --- Main Execution Function ---
-
-def main():
-    """Main function to drive the fiber inspection script."""
-    print("=" * 70)
-    print(" Advanced Automated Optical Fiber End Face Inspector")
-    print("=" * 70)
-    script_start_time = _start_timer()
-
-    try:
-        config = InspectorConfig()
-        inspector = FiberInspector(config)
-        inspector._get_user_specifications()
-
-        image_paths = inspector._get_image_paths_from_user()
-        if not image_paths:
-            _log_message("No images to process. Exiting.", level="INFO")
-            return
-
-        inspector.process_image_batch(image_paths)
-    except FileNotFoundError as fnf_error:
-        _log_message(f"Error: {fnf_error}", level="CRITICAL")
-    except ValueError as val_error:
-        _log_message(f"Input Error: {val_error}", level="CRITICAL")
-    except Exception as e:
-        _log_message(f"An unexpected error occurred: {e}", level="CRITICAL")
-        import traceback; traceback.print_exc()
-    finally:
-        _log_duration("Total Script Execution", script_start_time)
-        print("=" * 70)
-        print("Inspection Run Finished.")
-        print("=" * 70)
-
-# --- Script Entry Point ---
-if __name__ == "__main__":
-    main()

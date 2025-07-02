@@ -1,0 +1,65 @@
+================================================================================
+ULTRA-COMPREHENSIVE ANOMALY DETECTION REPORT
+================================================================================
+
+FILE INFORMATION
+----------------------------------------
+Test File: region_ferrule.png
+Analysis Date: 2025-07-02_15:51:24
+Image Dimensions: (864, 1152)
+
+OVERALL VERDICT
+----------------------------------------
+Status: ANOMALOUS
+Confidence: 100.0%
+
+GLOBAL STATISTICAL ANALYSIS
+----------------------------------------
+Mahalanobis Distance: 59035054289190904.0000
+Comparison Scores:
+  - Mean: 100.0000
+  - Std: 0.0000
+  - Min: 100.0000
+  - Max: 100.0000
+
+TOP DEVIANT FEATURES (Z-Score > 2)
+----------------------------------------
+fft_total_power                Z=590350542301558528.00  Test=59742989990535160.0000  Ref=707935701344256.3750
+norm_l1                        Z=2330332797.67  Test=235860210.0000  Ref=2826930.0000
+fft_dc_component               Z=2330332797.67  Test=235860210.0000  Ref=2826930.0000
+fft_max_magnitude              Z=2330332797.67  Test=235860210.0000  Ref=2826930.0000
+laplacian_L1_energy            Z=1484896338.52  Test=153249770.0000  Ref=4760136.0000
+laplacian_L0_energy            Z=1232930478.77  Test=130003296.0000  Ref=6710248.0000
+pyramid_detail_L1_energy       Z=547767749.45  Test=57064388.0000  Ref=2287613.0000
+pyramid_detail_L2_energy       Z=272752989.73  Test=28623434.0000  Ref=1348135.0000
+gradient_magnitude_sum         Z=82111231.45  Test=8977503.9587  Ref=766380.8051
+morph_gradient_sum             Z=47613599.95  Test=5246880.0000  Ref=485520.0000
+
+STRUCTURAL ANALYSIS
+----------------------------------------
+SSIM Index: 0.0458
+Luminance Similarity: 0.0472
+Contrast Similarity: 0.9628
+Structure Similarity: 1.0000
+
+LOCAL ANOMALY REGIONS
+----------------------------------------
+Total Regions Found: 0
+
+SPECIFIC DEFECTS DETECTED
+----------------------------------------
+Scratches: 4
+Digs: 0
+Blobs: 1
+Edge Irregularities: 0
+
+ANOMALY CRITERIA SUMMARY
+----------------------------------------
+Mahalanobis Threshold Exceeded: Yes
+Comparison Threshold Exceeded: Yes
+Low Structural Similarity: Yes
+Multiple Local Anomalies: No
+
+================================================================================
+END OF REPORT
+================================================================================
