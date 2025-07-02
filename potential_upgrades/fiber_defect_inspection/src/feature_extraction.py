@@ -1,7 +1,7 @@
 # src/feature_extraction.py
 import cv2
 import numpy as np
-from skimage.feature import greycomatrix, greycoprops
+from skimage.feature.texture import graycomatrix, graycoprops
 
 def extract_features(image, defect_regions, zone_masks, metrics):
     """
