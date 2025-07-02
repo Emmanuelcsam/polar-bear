@@ -1,0 +1,54 @@
+### Where your codebase stands today
+
+The pipeline you uploaded is 100 % NumPy/OpenCV/SciPy/Scikit‑learn.
+There is **no deep‑learning framework imported anywhere**—for example the top of `detection.py` only brings in `cv2`, `numpy`, `scipy.ndimage`, `sklearn.cluster.DBSCAN`, etc., but nothing like `torch` or `tensorflow` .
+
+That means you’re free to pick whichever DL stack meshes best with:
+
+* heavy image pre‑/post‑processing in OpenCV,
+* custom clustering / geometrical logic already written in NumPy,
+* pure‑Python orchestration (no Java/Go serving layer yet).
+
+---
+
+## PyTorch vs TensorFlow for *this* kind of project
+
+| Goal in your pipeline                                          | PyTorch (torch)                                                                                                                                                                | TensorFlow 2 / Keras                                                                            |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| **Prototype quickly** (dynamic graphs, Py‑native control flow) | ✅ Eager‑by‑default feels like regular Python (your code already relies on that style).                                                                                         | Keras’ subclassing API comes close, but TF still encourages defining a `tf.function` for speed. |
+| **Integrate with OpenCV/Numpy code paths**                     | ✅ Tensors are inter‑operable via `torch.from_numpy` / `tensor.numpy()` with *no* copy when dtypes match—perfect for bolting a CNN on top of the NumPy images you already load. | Requires `tf.convert_to_tensor` (copies if dtypes/contiguity differ).                           |
+| **Research CV models & community examples**                    | Very strong—most recent academic CV repos are PyTorch‑first.                                                                                                                   | Many examples too, but a lot of CV GitHub code you’ll find is in PyTorch.                       |
+| **Mobile / edge deployment**                                   | TorchScript → Metal / Android NNAPI; OR convert to ONNX → CoreML/TensorRT. Workflow improving but still more manual.                                                           | TFLite and TF Micro are mature, one‑step conversion for ≤ int8 models.                          |
+| **Production serving at scale**                                | TorchServe or Triton (via TorchScript / ONNX) — good, but fewer turnkey ops features.                                                                                          | TF‑Serving is battle‑tested; Google Cloud, Vertex, AWS SageMaker first‑class.                   |
+| **Multi‑language (C++, Java, Go) APIs**                        | C++ libtorch; no official Java client.                                                                                                                                         | Official TF C, Java, Go, JS bindings; easier if you later add a non‑Python component.           |
+| **Long‑term community health**                                 | Backed by Meta & Linux‑Foundation; fast‑moving; small but breaking API changes rare since 1.0.                                                                                 | Backed by Google; large‑scale enterprises, ML Ops tools; API semi‑stable.                       |
+
+---
+
+### Recommendation
+
+* **Primary choice:** **PyTorch**
+
+  * Fits your *Pythonic* style and OpenCV/Numpy heavy workflow with minimal friction.
+  * Every major CV architecture (UNet, DeepLabV3+, YOLOv8, Segment‑Anything) has clean PyTorch reference implementations you can lift straight into your detection step.
+* **Inter‑operability path:** export trained models to **ONNX**, then load via `onnxruntime` in the detection stage. This lets you:
+
+  * keep the training code in PyTorch,
+  * have a plain‑C/CPU/GPU runtime independent of either framework when you ship.
+
+If you have a hard requirement for **mobile inference** on Android/iOS *today*, or you expect to scale behind **TensorFlow Serving** in GCP, picking TensorFlow/Keras from the start can reduce dev‑ops friction—but you’d give up the research‑friendly ergonomics that are valuable while you’re still iterating on model ideas.
+
+---
+
+### How to slot PyTorch into the existing pipeline quickly
+
+1. **Insert a new “Stage 3a – Neural Detection”** right before or inside `OmniFiberAnalyzer` in `detection.py`.
+2. Wrap the CV‑preprocessed region tensors (`cv2.cvtColor → torch.from_numpy(img).permute(2,0,1)/255`) and feed a CNN that outputs defect masks / bounding boxes.
+3. Pass the network’s outputs straight into your existing clustering logic (it already expects arrays of coordinates).
+4. When ready to ship, script the model (`torch.jit.script`) or export ONNX so that `PipelineOrchestrator` can load the weight file without pulling all of PyTorch into production if size is a concern.
+
+---
+
+### TL;DR
+
+*Use **PyTorch** as your main DL framework; export to ONNX for portability. Implementing “both” frameworks usually doubles your maintenance load without clear benefit.*
