@@ -1,0 +1,71 @@
+================================================================================
+ULTRA-COMPREHENSIVE ANOMALY DETECTION REPORT
+================================================================================
+
+FILE INFORMATION
+----------------------------------------
+Test File: region_cladding.png
+Analysis Date: 2025-07-01_19:09:15
+Image Dimensions: (512, 512)
+
+OVERALL VERDICT
+----------------------------------------
+Status: ANOMALOUS
+Confidence: 100.0%
+
+GLOBAL STATISTICAL ANALYSIS
+----------------------------------------
+Mahalanobis Distance: 1350854948159488.7500
+Comparison Scores:
+  - Mean: 100.0000
+  - Std: 0.0000
+  - Min: 100.0000
+  - Max: 100.0000
+
+TOP DEVIANT FEATURES (Z-Score > 2)
+----------------------------------------
+fft_total_power                Z=13508549468086330.00  Test=1559358892933120.0000  Ref=208503944773632.0000
+laplacian_L0_energy            Z=205693639.79  Test=27630408.0000  Ref=7061044.0000
+fft_dc_component               Z=203237549.80  Test=23482695.0000  Ref=3158940.0000
+fft_max_magnitude              Z=203237549.80  Test=23482695.0000  Ref=3158940.0000
+norm_l1                        Z=203237549.80  Test=23482695.0000  Ref=3158940.0000
+laplacian_L1_energy            Z=146074979.85  Test=19636080.0000  Ref=5028582.0000
+pyramid_detail_L1_energy       Z=70191369.93  Test=9435436.0000  Ref=2416299.0000
+pyramid_detail_L2_energy       Z=41470229.96  Test=5560369.0000  Ref=1413346.0000
+gradient_magnitude_sum         Z=23521382.48  Test=3161925.2379  Ref=809786.9879
+pyramid_detail_L3_energy       Z=21550199.98  Test=2901053.0000  Ref=746033.0000
+
+STRUCTURAL ANALYSIS
+----------------------------------------
+SSIM Index: 0.5788
+Luminance Similarity: 0.5905
+Contrast Similarity: 0.9569
+Structure Similarity: 0.9786
+
+LOCAL ANOMALY REGIONS
+----------------------------------------
+Total Regions Found: 1
+
+Region 1:
+  - Location: (156, 156, 200, 200)
+  - Area: 38593 pixels
+  - Confidence: 1.692
+  - Centroid: (255, 255)
+
+SPECIFIC DEFECTS DETECTED
+----------------------------------------
+Scratches: 2
+Digs: 0
+Blobs: 1
+Edge Irregularities: 0
+
+ANOMALY CRITERIA SUMMARY
+----------------------------------------
+Mahalanobis Threshold Exceeded: Yes
+Comparison Threshold Exceeded: Yes
+Low Structural Similarity: Yes
+Multiple Local Anomalies: No
+
+================================================================================
+END OF REPORT
+================================================================================
