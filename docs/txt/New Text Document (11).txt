@@ -1,0 +1,185 @@
+Below is a **high‑level recipe** for converting your current OpenCV‑based fibre‑optic pipeline into a *vision‑language* system fine‑tuned from **Llama‑3.2‑Vision** (architecturally similar to LLaVA‑1.6).  It is organised in four phases so you can adopt it incrementally without breaking the working code that is already in `app.py`, `detection.py`, `data_acquisition.py`, `separation.py`, and `process.py`.
+
+---
+
+## 1  Clarify the role of Llama‑3.2‑Vision in your stack
+
+| Layer                                  | Current component                                              | Llama‑3.2‑Vision role                                                                                                      | Why keep/replace? |
+| -------------------------------------- | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| **Pre‑processing / augmentation**      | `process.reimagine_image`                                      | *Unchanged* – still valuable for data augmentation.                                                                        |                   |
+| **Region zoning**                      | `separation.UnifiedSegmentationSystem`                         | *Optional* – you may still zone first and let the VLM reason per zone.                                                     |                   |
+| **Pixel‑level anomaly scoring**        | `detection.OmniFiberAnalyzer` (hand‑engineered 100 + features) | Move to a *proposal generator* (“find anything suspicious fast”). Retain it to create *pseudo‑labels* while you bootstrap. |                   |
+| **Semantic reasoning / final verdict** | Rule logic in `detection` + `data_acquisition`                 | Will be replaced by a **fine‑tuned Llama‑3.2‑Vision** that produces structured JSON (bbox/mask + severity + explanation).  |                   |
+
+> **Key idea** – treat the VLM as a *natural‑language interface* that outputs a structured JSON description of defects.  Everything else becomes a helper that supplies crops, prompts or pseudo‑labels.
+
+---
+
+## 2  Build a training set the VLM can understand
+
+1. **Collect ground truth.**
+
+   * Starting point: the JSON reports already emitted by `OmniFiberAnalyzer.analyze_end_face()` contain bounding boxes, centroids, defect type & severity.  Write a small script that walks your historical `*_report.json` files and exports each defect as:
+
+```json
+{"image": "core_17.png",
+ "text": "Identify the defects in this fibre‑optic end‑face image and return JSON.",
+ "target": {"defects":[
+     {"bbox":[x,y,w,h], "type":"SCRATCH", "severity":"MEDIUM"},
+     …]}}
+```
+
+2. **Zone‑level crops (optional).**
+   You can also crop *core*, *cladding* and *ferrule* regions using masks already produced by `separation` so the model sees class‑balanced close‑ups.
+
+3. **Auto‑label to expand data.**
+   Run your existing detector on unlabelled images, filter high‑confidence detections (`confidence>0.9` in the JSON), and use these as *pseudo‑labels* to enlarge the training set cheaply.
+
+4. **Follow the LLaVA JSONL format.**
+   Convert each record to the format expected by the LLaVA/Llama‑3 Vision training script:
+
+```json
+{"image": "path/to/img.jpg",
+ "conversations": [
+   {"from":"human","value":"<image>\nPlease list every defect you can find. Return JSON with keys bbox (x,y,w,h), type, severity."},
+   {"from":"gpt","value":"<target JSON from step 1>"}
+ ]}
+```
+
+---
+
+## 3  Fine‑tune Llama‑3.2‑Vision with LoRA / QLoRA
+
+### 3.1 Environment
+
+```bash
+conda create -n llama3v python=3.10
+conda activate llama3v
+
+pip install torch==2.2.2 torchvision --index-url https://download.pytorch.org/whl/cu121
+pip install --upgrade transformers accelerate bitsandbytes peft trl datasets sentencepiece
+# Flash‑Attention 2 speeds up multi‑modal Llama‑3:
+pip install flash-attn==2.3.3 --no-build-isolation
+```
+
+GPU: ≥ 24 GB (for 8 B) or 2× 24 GB using Deepspeed ZeRO‑3 for 70 B.
+
+### 3.2 Training command (single‑GPU LoRA example)
+
+```bash
+export MODEL_NAME="llava-hf/llava-1.6-llama3-8b"
+export DATA_DIR="/data/fiber_defects_jsonl"
+export OUTPUT_DIR="/checkpoints/fiber_llama3v_lora"
+
+python -m llava.train.train \
+  --model_name_or_path $MODEL_NAME \
+  --vision_tower openai/clip-vit-large-patch14-336 \
+  --data_path $DATA_DIR \
+  --image_folder "/data/images" \
+  --report_to wandb \
+  --adapter_type "lora" \
+  --lora_r 64 --lora_alpha 16 --lora_dropout 0.05 \
+  --output_dir $OUTPUT_DIR \
+  --num_train_epochs 3 \
+  --per_device_train_batch_size 4 \
+  --gradient_accumulation_steps 8 \
+  --learning_rate 5e-5 \
+  --warmup_ratio 0.05 \
+  --bf16 \
+  --save_steps 1000 \
+  --evaluation_strategy "no"
+```
+
+*Changes to make for multi‑GPU / Deepspeed are the same as in the LLaVA repo.*
+
+### 3.3 Decoding to structured JSON
+
+Add a *system prompt* template during fine‑tune:
+
+```
+You are a manufacturing‑grade fibre end‑face inspector.
+Return strictly valid JSON with this schema:
+{ "defects":[{"bbox":[x,y,w,h],"type":"...","severity":"..."}],
+  "pass_fail":"PASS|FAIL",
+  "explanation":"<short>" }
+```
+
+The model will learn to emit parseable JSON that your pipeline can ingest directly.
+
+---
+
+## 4  Integrate the fine‑tuned model back into your codebase
+
+### 4.1 Light‑touch shim
+
+Create `llama_inference.py`:
+
+```python
+from transformers import AutoProcessor, AutoModelForCausalLM
+import torch, json, cv2
+
+MODEL = "checkpoints/fiber_llama3v_lora"
+device = "cuda"
+
+processor = AutoProcessor.from_pretrained(MODEL)
+model = AutoModelForCausalLM.from_pretrained(
+        MODEL, torch_dtype=torch.bfloat16, device_map="auto")
+
+def analyse_image(img_path:str)->dict:
+    prompt = "<image>\nPlease list every defect ..."
+    img = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2RGB)
+    inputs = processor(prompt, images=img, return_tensors="pt").to(device)
+    with torch.cuda.amp.autocast():
+        out = model.generate(**inputs, max_new_tokens=512, temperature=0.0)
+    answer = processor.decode(out[0], skip_special_tokens=True).strip()
+    return json.loads(answer)
+```
+
+### 4.2 Swap into `OmniFiberAnalyzer`
+
+*Inside* `detect_anomalies_comprehensive()` (or higher‑level in `app.py`):
+
+```python
+from llama_inference import analyse_image
+
+if self.config.use_llama:
+    llama_report = analyse_image(test_path)
+    # convert llama_report['defects'] to the format expected downstream
+    return self._convert_llama_output(llama_report, test_path)
+```
+
+Keep the old OpenCV path behind a flag (`use_llama=False`) until you trust the new model.
+
+### 4.3 Post‑processing & metrics
+
+Because the VLM produces discrete bboxes, you can still feed them into the existing clustering / quality‑score logic in `data_acquisition.DefectAggregator`.  No large refactor is needed.&#x20;
+
+---
+
+## 5  Validation & continuous self‑training
+
+1. **Offline evaluation** – adapt the mAP/F1 scripts from COCO; compute “does every critical defect appear in top‑k bboxes”.
+2. **Online teacher‑student loop** – run the VLM and `OmniFiberAnalyzer` in parallel, compare outputs, and add *disagreement cases* back into the fine‑tuning set every week.
+3. **Catastrophic error guard** – retain the original statistical thresholds (`mahalanobis_distance`, etc.) as a *watch‑dog*; if the VLM misses an obvious global anomaly, fall back to the old verdict.
+
+---
+
+## 6  Hardware & deployment tips
+
+* **Quantisation** – after LoRA merge, you can load the model with 4‑bit + Flash‑Attention for ≈ 10 GB VRAM.
+* **Latency** – batched inference for *core / cladding / ferrule* crops is faster than single large frame; you already have masks to crop.
+* **Edge deployment** – if you need < 2 GB, train a distilled vision encoder (e.g. MobileViT) and attach it to the same LoRA‑tuned language head.
+
+---
+
+### Summary checklist
+
+| Step                                                 | Done? |
+| ---------------------------------------------------- | ----- |
+| Export historical defect JSON + images → LLaVA JSONL | ☐     |
+| Fine‑tune Llama‑3.2‑Vision with LoRA (3 epochs)      | ☐     |
+| Add `llama_inference.py` shim                        | ☐     |
+| Gate in `app.py` to choose VLM vs OpenCV             | ☐     |
+| Weekly disagreement mining for continual learning    | ☐     |
+
+Once those boxes are ticked, your existing pipeline turns into a *self‑improving*, multimodal AI inspector that speaks JSON.

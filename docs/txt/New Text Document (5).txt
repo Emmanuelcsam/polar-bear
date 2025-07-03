@@ -1,0 +1,48 @@
+I've assembled a 25‑slide deck that walks through — in meticulous detail — how the existing OmniFiber pipeline ( `process.py`, `separation.py`, `detection.py`, `data_acquisition.py` ) can be super‑charged with **TensorFlow *and* PyTorch**, clearly comparing and contrasting the two frameworks at every stage:
+
+| #      | Section                | Framework focus | Highlight                                                   |
+| ------ | ---------------------- | --------------- | ----------------------------------------------------------- |
+|  1     | Title & purpose        | Both            | Why we’re doing this                                        |
+|  2     | Current pipeline       | —               | Where DL plugs in                                           |
+|  3–4   | Core architecture      | TF / PT         | Graph style, tensors, GPU                                   |
+|  5–6   | “Why TF” vs “Why PT”   | TF / PT         | Strengths for fiber optics                                  |
+|  7–8   | Segmentation U‑Nets    | TF / PT         | Replace 11‑method consensus                                 |
+|  9–10  | Defect classifiers     | TF / PT         | EfficientNet vs ResNet                                      |
+|  11–12 | Anomaly detection      | TF / PT         | Autoencoder vs VAE                                          |
+|  13–14 | Quality & data pipes   | TF              | tf.data / PT DataLoader                                     |
+|  15–16 | Training pipelines     | TF / PT         | Callbacks vs manual loop                                    |
+|  17–18 | Custom loss functions  | TF / PT         | Focal/Perceptual vs FiberDefectLoss                         |
+|  19–20 | Inference optimisation | TF / PT         | TensorRT vs TorchScript                                     |
+|  21    | Deployment showdown    | Both            | Serving, mobile, TPU/GPU                                    |
+|  22    | Benchmarks             | Both            | 28× speed‑up & +7.6 pp accuracy                             |
+|  23    | Roadmap                | Both            | Phased roll‑out                                             |
+|  24    | Script integration     | Both            | `TensorFlowEnhancedAnalyzer` & `EnhancedOmniFiberAnalyzer`  |
+|  25    | Key take‑aways         | Both            | Which to choose & next steps                                |
+
+### Download the slide images
+
+All 25 slides were rendered to high‑resolution PNGs and zipped for convenience:
+[Download the slides (ZIP)](sandbox:/mnt/data/tf_pt_slides.zip)
+
+Feel free to unzip and review or drop them straight into PowerPoint / Keynote. Each slide has ample whitespace so you can overlay the neural‑network or pipeline diagrams of your choice, or annotate further before presenting.
+
+---
+
+**Where the content comes from**
+
+* The slide bullets summarise the TensorFlow and PyTorch integration plans you drafted, while explicitly tying into the current code‑base:
+
+  * `process.py` image re‑imagining&#x20;
+  * `separation.py` consensus segmentation&#x20;
+  * `detection.py` enhanced analyser hooks&#x20;
+  * `data_acquisition.py` final aggregation and reporting&#x20;
+
+* Performance and roadmap lines mirror the benchmark and phase breakdowns in your draft.
+
+You can now:
+
+1. **Insert visuals** — swap in architecture diagrams or screenshots where slide notes say “U‑Net” or “Autoencoder”.
+2. **Export** to PDF or any additional formats.
+3. **Present** the end‑to‑end story of how TensorFlow and PyTorch each enhance your fiber‑optic inspection workflow.
+
+Let me know if you’d like any stylistic tweaks, extra diagrams, or deeper dives into particular integration steps!
