@@ -1,0 +1,962 @@
+{
+  "image": "img(303).jpg",
+  "analysis_date": "2025-07-03",
+  "summary": {
+    "total_defects": 99,
+    "scratches": 27,
+    "digs": 68,
+    "blobs": 1,
+    "edge_irregularities": 3,
+    "total_regions": 94,
+    "status": "FAIL",
+    "confidence": "100.0%"
+  },
+  "defect_regions": [
+    {
+      "id": 1,
+      "x": 288,
+      "y": 91,
+      "w": 524,
+      "h": 553,
+      "area": 140215,
+      "confidence": 1.0,
+      "type": "major_defect"
+    },
+    {
+      "id": 2,
+      "x": 615,
+      "y": 441,
+      "w": 7,
+      "h": 19,
+      "area": 114,
+      "confidence": 1.0,
+      "type": "scratch"
+    },
+    {
+      "id": 3,
+      "x": 903,
+      "y": 671,
+      "w": 24,
+      "h": 25,
+      "area": 555,
+      "confidence": 1.0,
+      "type": "dig"
+    },
+    {
+      "id": 4,
+      "x": 608,
+      "y": 169,
+      "w": 61,
+      "h": 54,
+      "area": 2150,
+      "confidence": 1.0,
+      "type": "blob"
+    },
+    {
+      "id": 5,
+      "x": 789,
+      "y": 557,
+      "w": 28,
+      "h": 30,
+      "area": 750,
+      "confidence": 1.0,
+      "type": "dig"
+    },
+    {
+      "id": 6,
+      "x": 463,
+      "y": 442,
+      "w": 122,
+      "h": 81,
+      "area": 5222,
+      "confidence": 0.828,
+      "type": "core_defect"
+    },
+    {
+      "id": 7,
+      "x": 552,
+      "y": 377,
+      "w": 63,
+      "h": 82,
+      "area": 1776,
+      "confidence": 0.736,
+      "type": "scratch"
+    },
+    {
+      "id": 8,
+      "x": 592,
+      "y": 489,
+      "w": 15,
+      "h": 15,
+      "area": 207,
+      "confidence": 0.727,
+      "type": "dig"
+    },
+    {
+      "id": 9,
+      "x": 466,
+      "y": 402,
+      "w": 54,
+      "h": 31,
+      "area": 1282,
+      "confidence": 0.697,
+      "type": "scratch"
+    },
+    {
+      "id": 10,
+      "x": 450,
+      "y": 353,
+      "w": 190,
+      "h": 190,
+      "area": 27991,
+      "confidence": 1.787,
+      "type": "cladding_defect"
+    },
+    {
+      "id": 11,
+      "x": 518,
+      "y": 599,
+      "w": 37,
+      "h": 9,
+      "area": 1567,
+      "confidence": 0.6758360919044584,
+      "type": "dig"
+    },
+    {
+      "id": 12,
+      "x": 377,
+      "y": 101,
+      "w": 32,
+      "h": 5,
+      "area": 2248,
+      "confidence": 0.9967493486689002,
+      "type": "dig"
+    },
+    {
+      "id": 13,
+      "x": 416,
+      "y": 354,
+      "w": 49,
+      "h": 9,
+      "area": 1164,
+      "confidence": 0.8850623133594075,
+      "type": "dig"
+    },
+    {
+      "id": 14,
+      "x": 347,
+      "y": 255,
+      "w": 50,
+      "h": 41,
+      "area": 1521,
+      "confidence": 0.8097249921267748,
+      "type": "dig"
+    },
+    {
+      "id": 15,
+      "x": 500,
+      "y": 335,
+      "w": 26,
+      "h": 11,
+      "area": 1549,
+      "confidence": 0.5292443894625752,
+      "type": "dig"
+    },
+    {
+      "id": 16,
+      "x": 329,
+      "y": 289,
+      "w": 35,
+      "h": 48,
+      "area": 950,
+      "confidence": 0.8500526677750708,
+      "type": "edge_irregularity"
+    },
+    {
+      "id": 17,
+      "x": 882,
+      "y": 248,
+      "w": 42,
+      "h": 24,
+      "area": 2004,
+      "confidence": 0.5586857528173492,
+      "type": "dig"
+    },
+    {
+      "id": 18,
+      "x": 446,
+      "y": 313,
+      "w": 29,
+      "h": 40,
+      "area": 861,
+      "confidence": 0.7564225314799055,
+      "type": "edge_irregularity"
+    },
+    {
+      "id": 19,
+      "x": 386,
+      "y": 480,
+      "w": 34,
+      "h": 13,
+      "area": 2073,
+      "confidence": 0.915518595820449,
+      "type": "scratch"
+    },
+    {
+      "id": 20,
+      "x": 231,
+      "y": 227,
+      "w": 21,
+      "h": 25,
+      "area": 733,
+      "confidence": 0.8715307778196947,
+      "type": "scratch"
+    },
+    {
+      "id": 21,
+      "x": 351,
+      "y": 457,
+      "w": 9,
+      "h": 7,
+      "area": 128,
+      "confidence": 0.5353322299798868,
+      "type": "blob"
+    },
+    {
+      "id": 22,
+      "x": 333,
+      "y": 673,
+      "w": 44,
+      "h": 10,
+      "area": 1774,
+      "confidence": 0.5013130993521607,
+      "type": "dig"
+    },
+    {
+      "id": 23,
+      "x": 785,
+      "y": 247,
+      "w": 35,
+      "h": 14,
+      "area": 1391,
+      "confidence": 0.8976914940047048,
+      "type": "scratch"
+    },
+    {
+      "id": 24,
+      "x": 577,
+      "y": 590,
+      "w": 49,
+      "h": 12,
+      "area": 705,
+      "confidence": 0.7679637460284788,
+      "type": "dig"
+    },
+    {
+      "id": 25,
+      "x": 186,
+      "y": 198,
+      "w": 8,
+      "h": 44,
+      "area": 70,
+      "confidence": 0.6430053930797778,
+      "type": "blob"
+    },
+    {
+      "id": 26,
+      "x": 800,
+      "y": 532,
+      "w": 46,
+      "h": 10,
+      "area": 945,
+      "confidence": 0.9845895041015522,
+      "type": "scratch"
+    },
+    {
+      "id": 27,
+      "x": 439,
+      "y": 338,
+      "w": 17,
+      "h": 46,
+      "area": 2339,
+      "confidence": 0.9225345897186159,
+      "type": "scratch"
+    },
+    {
+      "id": 28,
+      "x": 855,
+      "y": 339,
+      "w": 22,
+      "h": 5,
+      "area": 163,
+      "confidence": 0.7665828924695963,
+      "type": "edge_irregularity"
+    },
+    {
+      "id": 29,
+      "x": 134,
+      "y": 626,
+      "w": 13,
+      "h": 34,
+      "area": 1528,
+      "confidence": 0.7188558774768729,
+      "type": "blob"
+    },
+    {
+      "id": 30,
+      "x": 255,
+      "y": 677,
+      "w": 14,
+      "h": 50,
+      "area": 1718,
+      "confidence": 0.8964801998908848,
+      "type": "dig"
+    },
+    {
+      "id": 31,
+      "x": 213,
+      "y": 446,
+      "w": 17,
+      "h": 16,
+      "area": 272,
+      "confidence": 0.7734582650318458,
+      "type": "blob"
+    },
+    {
+      "id": 32,
+      "x": 688,
+      "y": 548,
+      "w": 25,
+      "h": 10,
+      "area": 63,
+      "confidence": 0.8802465835310052,
+      "type": "blob"
+    },
+    {
+      "id": 33,
+      "x": 688,
+      "y": 248,
+      "w": 9,
+      "h": 30,
+      "area": 1633,
+      "confidence": 0.8138814234108607,
+      "type": "scratch"
+    },
+    {
+      "id": 34,
+      "x": 273,
+      "y": 679,
+      "w": 36,
+      "h": 25,
+      "area": 1633,
+      "confidence": 0.7216558980123535,
+      "type": "dig"
+    },
+    {
+      "id": 35,
+      "x": 212,
+      "y": 523,
+      "w": 8,
+      "h": 50,
+      "area": 1189,
+      "confidence": 0.6732975719621628,
+      "type": "scratch"
+    },
+    {
+      "id": 36,
+      "x": 375,
+      "y": 288,
+      "w": 17,
+      "h": 26,
+      "area": 70,
+      "confidence": 0.5769482683376645,
+      "type": "edge_irregularity"
+    },
+    {
+      "id": 37,
+      "x": 172,
+      "y": 671,
+      "w": 31,
+      "h": 27,
+      "area": 1226,
+      "confidence": 0.5080452344861993,
+      "type": "blob"
+    },
+    {
+      "id": 38,
+      "x": 497,
+      "y": 287,
+      "w": 9,
+      "h": 8,
+      "area": 1368,
+      "confidence": 0.8418811944709612,
+      "type": "edge_irregularity"
+    },
+    {
+      "id": 39,
+      "x": 354,
+      "y": 236,
+      "w": 46,
+      "h": 23,
+      "area": 1379,
+      "confidence": 0.5604067423662924,
+      "type": "blob"
+    },
+    {
+      "id": 40,
+      "x": 163,
+      "y": 555,
+      "w": 37,
+      "h": 40,
+      "area": 469,
+      "confidence": 0.6935306608172215,
+      "type": "scratch"
+    },
+    {
+      "id": 41,
+      "x": 755,
+      "y": 506,
+      "w": 14,
+      "h": 22,
+      "area": 2460,
+      "confidence": 0.6158629651279446,
+      "type": "scratch"
+    },
+    {
+      "id": 42,
+      "x": 483,
+      "y": 232,
+      "w": 22,
+      "h": 23,
+      "area": 903,
+      "confidence": 0.6477884215564287,
+      "type": "dig"
+    },
+    {
+      "id": 43,
+      "x": 544,
+      "y": 646,
+      "w": 17,
+      "h": 6,
+      "area": 693,
+      "confidence": 0.61954204945041,
+      "type": "dig"
+    },
+    {
+      "id": 44,
+      "x": 630,
+      "y": 473,
+      "w": 46,
+      "h": 49,
+      "area": 2302,
+      "confidence": 0.94304074924463,
+      "type": "edge_irregularity"
+    },
+    {
+      "id": 45,
+      "x": 737,
+      "y": 281,
+      "w": 41,
+      "h": 20,
+      "area": 1848,
+      "confidence": 0.8976424608787532,
+      "type": "edge_irregularity"
+    },
+    {
+      "id": 46,
+      "x": 300,
+      "y": 543,
+      "w": 33,
+      "h": 18,
+      "area": 2125,
+      "confidence": 0.6410514726682517,
+      "type": "edge_irregularity"
+    },
+    {
+      "id": 47,
+      "x": 151,
+      "y": 622,
+      "w": 26,
+      "h": 20,
+      "area": 977,
+      "confidence": 0.5804846134437136,
+      "type": "scratch"
+    },
+    {
+      "id": 48,
+      "x": 710,
+      "y": 304,
+      "w": 13,
+      "h": 35,
+      "area": 1311,
+      "confidence": 0.6510312233086101,
+      "type": "edge_irregularity"
+    },
+    {
+      "id": 49,
+      "x": 744,
+      "y": 360,
+      "w": 19,
+      "h": 16,
+      "area": 2048,
+      "confidence": 0.6823952541247962,
+      "type": "edge_irregularity"
+    },
+    {
+      "id": 50,
+      "x": 639,
+      "y": 685,
+      "w": 11,
+      "h": 36,
+      "area": 228,
+      "confidence": 0.7814074639276062,
+      "type": "scratch"
+    },
+    {
+      "id": 51,
+      "x": 575,
+      "y": 248,
+      "w": 42,
+      "h": 14,
+      "area": 883,
+      "confidence": 0.7414010061308884,
+      "type": "scratch"
+    },
+    {
+      "id": 52,
+      "x": 461,
+      "y": 129,
+      "w": 27,
+      "h": 42,
+      "area": 2079,
+      "confidence": 0.7300780207651529,
+      "type": "dig"
+    },
+    {
+      "id": 53,
+      "x": 381,
+      "y": 349,
+      "w": 43,
+      "h": 44,
+      "area": 771,
+      "confidence": 0.5109728992071066,
+      "type": "scratch"
+    },
+    {
+      "id": 54,
+      "x": 624,
+      "y": 169,
+      "w": 27,
+      "h": 41,
+      "area": 130,
+      "confidence": 0.5891233446824029,
+      "type": "scratch"
+    },
+    {
+      "id": 55,
+      "x": 242,
+      "y": 362,
+      "w": 13,
+      "h": 15,
+      "area": 217,
+      "confidence": 0.6618819172772951,
+      "type": "scratch"
+    },
+    {
+      "id": 56,
+      "x": 113,
+      "y": 634,
+      "w": 5,
+      "h": 5,
+      "area": 1405,
+      "confidence": 0.5371517744714404,
+      "type": "edge_irregularity"
+    },
+    {
+      "id": 57,
+      "x": 153,
+      "y": 212,
+      "w": 34,
+      "h": 19,
+      "area": 717,
+      "confidence": 0.894288645345471,
+      "type": "edge_irregularity"
+    },
+    {
+      "id": 58,
+      "x": 579,
+      "y": 658,
+      "w": 27,
+      "h": 19,
+      "area": 1130,
+      "confidence": 0.8526984774483148,
+      "type": "scratch"
+    },
+    {
+      "id": 59,
+      "x": 387,
+      "y": 397,
+      "w": 30,
+      "h": 50,
+      "area": 2031,
+      "confidence": 0.556001741641124,
+      "type": "edge_irregularity"
+    },
+    {
+      "id": 60,
+      "x": 894,
+      "y": 623,
+      "w": 38,
+      "h": 14,
+      "area": 51,
+      "confidence": 0.5246818835772362,
+      "type": "scratch"
+    },
+    {
+      "id": 61,
+      "x": 262,
+      "y": 565,
+      "w": 15,
+      "h": 16,
+      "area": 2133,
+      "confidence": 0.5992406198975442,
+      "type": "dig"
+    },
+    {
+      "id": 62,
+      "x": 643,
+      "y": 279,
+      "w": 28,
+      "h": 22,
+      "area": 2432,
+      "confidence": 0.8939750556618513,
+      "type": "scratch"
+    },
+    {
+      "id": 63,
+      "x": 236,
+      "y": 458,
+      "w": 21,
+      "h": 10,
+      "area": 1234,
+      "confidence": 0.5873754988546718,
+      "type": "edge_irregularity"
+    },
+    {
+      "id": 64,
+      "x": 854,
+      "y": 215,
+      "w": 12,
+      "h": 37,
+      "area": 2192,
+      "confidence": 0.9739626975683628,
+      "type": "dig"
+    },
+    {
+      "id": 65,
+      "x": 524,
+      "y": 186,
+      "w": 30,
+      "h": 20,
+      "area": 1013,
+      "confidence": 0.9998077782765509,
+      "type": "scratch"
+    },
+    {
+      "id": 66,
+      "x": 507,
+      "y": 448,
+      "w": 47,
+      "h": 37,
+      "area": 1321,
+      "confidence": 0.621558684429238,
+      "type": "edge_irregularity"
+    },
+    {
+      "id": 67,
+      "x": 412,
+      "y": 622,
+      "w": 15,
+      "h": 12,
+      "area": 149,
+      "confidence": 0.5058098977974124,
+      "type": "blob"
+    },
+    {
+      "id": 68,
+      "x": 782,
+      "y": 506,
+      "w": 20,
+      "h": 30,
+      "area": 2280,
+      "confidence": 0.8692472193526197,
+      "type": "edge_irregularity"
+    },
+    {
+      "id": 69,
+      "x": 232,
+      "y": 109,
+      "w": 37,
+      "h": 29,
+      "area": 693,
+      "confidence": 0.5159050733045268,
+      "type": "edge_irregularity"
+    },
+    {
+      "id": 70,
+      "x": 381,
+      "y": 625,
+      "w": 34,
+      "h": 18,
+      "area": 1824,
+      "confidence": 0.5725156248826581,
+      "type": "scratch"
+    },
+    {
+      "id": 71,
+      "x": 730,
+      "y": 560,
+      "w": 11,
+      "h": 38,
+      "area": 145,
+      "confidence": 0.8501229054917929,
+      "type": "edge_irregularity"
+    },
+    {
+      "id": 72,
+      "x": 309,
+      "y": 211,
+      "w": 31,
+      "h": 22,
+      "area": 938,
+      "confidence": 0.863342761124146,
+      "type": "dig"
+    },
+    {
+      "id": 73,
+      "x": 413,
+      "y": 314,
+      "w": 22,
+      "h": 28,
+      "area": 925,
+      "confidence": 0.666390515244234,
+      "type": "edge_irregularity"
+    },
+    {
+      "id": 74,
+      "x": 482,
+      "y": 198,
+      "w": 19,
+      "h": 39,
+      "area": 455,
+      "confidence": 0.8521496407644257,
+      "type": "edge_irregularity"
+    },
+    {
+      "id": 75,
+      "x": 815,
+      "y": 346,
+      "w": 19,
+      "h": 25,
+      "area": 1220,
+      "confidence": 0.9992351871838625,
+      "type": "edge_irregularity"
+    },
+    {
+      "id": 76,
+      "x": 706,
+      "y": 663,
+      "w": 44,
+      "h": 50,
+      "area": 158,
+      "confidence": 0.6096410413297715,
+      "type": "dig"
+    },
+    {
+      "id": 77,
+      "x": 481,
+      "y": 142,
+      "w": 33,
+      "h": 36,
+      "area": 1292,
+      "confidence": 0.5031764320313342,
+      "type": "scratch"
+    },
+    {
+      "id": 78,
+      "x": 689,
+      "y": 459,
+      "w": 39,
+      "h": 30,
+      "area": 1582,
+      "confidence": 0.6534415619632221,
+      "type": "dig"
+    },
+    {
+      "id": 79,
+      "x": 156,
+      "y": 430,
+      "w": 15,
+      "h": 37,
+      "area": 215,
+      "confidence": 0.8872628576473929,
+      "type": "edge_irregularity"
+    },
+    {
+      "id": 80,
+      "x": 437,
+      "y": 141,
+      "w": 29,
+      "h": 33,
+      "area": 894,
+      "confidence": 0.8745969328046255,
+      "type": "blob"
+    },
+    {
+      "id": 81,
+      "x": 509,
+      "y": 554,
+      "w": 34,
+      "h": 36,
+      "area": 1190,
+      "confidence": 0.5398473046058215,
+      "type": "blob"
+    },
+    {
+      "id": 82,
+      "x": 700,
+      "y": 538,
+      "w": 46,
+      "h": 11,
+      "area": 2203,
+      "confidence": 0.9132612686572228,
+      "type": "scratch"
+    },
+    {
+      "id": 83,
+      "x": 774,
+      "y": 179,
+      "w": 50,
+      "h": 5,
+      "area": 1789,
+      "confidence": 0.5304578500633008,
+      "type": "edge_irregularity"
+    },
+    {
+      "id": 84,
+      "x": 503,
+      "y": 634,
+      "w": 6,
+      "h": 47,
+      "area": 66,
+      "confidence": 0.8573682464582995,
+      "type": "blob"
+    },
+    {
+      "id": 85,
+      "x": 233,
+      "y": 228,
+      "w": 49,
+      "h": 19,
+      "area": 393,
+      "confidence": 0.6715543137618447,
+      "type": "blob"
+    },
+    {
+      "id": 86,
+      "x": 872,
+      "y": 581,
+      "w": 11,
+      "h": 37,
+      "area": 1704,
+      "confidence": 0.6615815820790691,
+      "type": "scratch"
+    },
+    {
+      "id": 87,
+      "x": 568,
+      "y": 336,
+      "w": 9,
+      "h": 22,
+      "area": 1697,
+      "confidence": 0.5330614911585962,
+      "type": "edge_irregularity"
+    },
+    {
+      "id": 88,
+      "x": 482,
+      "y": 453,
+      "w": 47,
+      "h": 19,
+      "area": 1076,
+      "confidence": 0.850936081993507,
+      "type": "blob"
+    },
+    {
+      "id": 89,
+      "x": 749,
+      "y": 317,
+      "w": 11,
+      "h": 9,
+      "area": 2184,
+      "confidence": 0.7428522660539945,
+      "type": "scratch"
+    },
+    {
+      "id": 90,
+      "x": 424,
+      "y": 636,
+      "w": 49,
+      "h": 32,
+      "area": 2251,
+      "confidence": 0.5777047229014995,
+      "type": "edge_irregularity"
+    },
+    {
+      "id": 91,
+      "x": 363,
+      "y": 157,
+      "w": 46,
+      "h": 22,
+      "area": 339,
+      "confidence": 0.8898358898958154,
+      "type": "dig"
+    },
+    {
+      "id": 92,
+      "x": 733,
+      "y": 634,
+      "w": 34,
+      "h": 30,
+      "area": 67,
+      "confidence": 0.669190211743376,
+      "type": "dig"
+    },
+    {
+      "id": 93,
+      "x": 666,
+      "y": 312,
+      "w": 33,
+      "h": 10,
+      "area": 1984,
+      "confidence": 0.708342275582758,
+      "type": "scratch"
+    },
+    {
+      "id": 94,
+      "x": 351,
+      "y": 330,
+      "w": 10,
+      "h": 34,
+      "area": 2078,
+      "confidence": 0.9011719664955506,
+      "type": "edge_irregularity"
+    }
+  ],
+  "recommendations": [
+    "This fiber optic cable has failed quality inspection",
+    "99 defects detected across 94 anomaly regions",
+    "Major issues include 68 digs/pits and 27 scratches",
+    "Cable should be rejected and not used in production"
+  ]
+}
