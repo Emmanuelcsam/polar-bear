@@ -1,0 +1,17 @@
+# Core requirements for Geometry Detection System
+opencv-python>=4.8.0
+opencv-contrib-python>=4.8.0
+numpy>=1.24.0
+psutil>=5.9.0
+
+# Optional but recommended
+scipy>=1.10.0
+matplotlib>=3.7.0
+pandas>=2.0.0
+pillow>=10.0.0
+
+# Optional for GPU monitoring
+gputil>=1.4.0
+
+# Optional for Basler cameras
+# pypylon  # Uncomment if using Basler cameras
