@@ -14,10 +14,10 @@ import time
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "current-process"))
 
-from enhanced_app import EnhancedApplication, DataAcquisition
-from enhanced_process import EnhancedProcessor
-from enhanced_separation import EnhancedSeparator
-from enhanced_detection import EnhancedDetector
+from app import EnhancedApplication, DataAcquisition
+from process import EnhancedProcessor
+from separation import EnhancedSeparator
+from detection import EnhancedDetector
 from realtime_processor import (
     RealtimeProcessor, FrameBuffer, OptimizedPipeline, FrameResult
 )

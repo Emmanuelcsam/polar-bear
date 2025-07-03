@@ -20,9 +20,9 @@ import shutil
 
 from config_manager import get_config_manager, get_config
 from enhanced_logging import get_logger, ProgressLogger
-from enhanced_process import EnhancedProcessor
-from enhanced_separation import EnhancedSeparator
-from enhanced_detection import EnhancedDetector, Defect
+from process import EnhancedProcessor
+from separation import EnhancedSeparator
+from detection import EnhancedDetector, Defect
 from realtime_processor import RealtimeProcessor
 
 logger = get_logger(__name__)
@@ -92,8 +92,48 @@ class DataAcquisition:
         """Generate all visualization outputs"""
         visualizations = {}
         
-        # Defect overlay
+        # Enhanced defect overlay with measurements
         overlay = image.copy()
+        
+        # Calculate zone centers and diameters
+        zone_info = self._calculate_zone_properties(zones)
+        
+        # Draw zone boundaries and centers
+        for zone_name, info in zone_info.items():
+            if info is None:
+                continue
+                
+            color = {
+                'core': (0, 255, 0),
+                'cladding': (255, 255, 0),
+                'ferrule': (255, 0, 0)
+            }.get(zone_name, (255, 255, 255))
+            
+            # Draw center
+            cv2.circle(overlay, info['center'], 3, color, -1)
+            cv2.circle(overlay, info['center'], info['radius'], color, 1)
+            
+            # Add diameter label
+            label = f"{zone_name}: Ø{info['diameter']}px"
+            cv2.putText(overlay, label, 
+                       (info['center'][0] - 60, info['center'][1] - info['radius'] - 10),
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+        
+        # Calculate and display concentricity
+        if 'core' in zone_info and 'cladding' in zone_info:
+            core_center = zone_info['core']['center']
+            clad_center = zone_info['cladding']['center']
+            offset = np.sqrt((core_center[0] - clad_center[0])**2 + 
+                           (core_center[1] - clad_center[1])**2)
+            
+            # Draw concentricity line
+            cv2.line(overlay, core_center, clad_center, (0, 255, 255), 2)
+            
+            # Add concentricity label
+            cv2.putText(overlay, f"Concentricity: {offset:.1f}px",
+                       (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+        
+        # Draw defects
         for defect in defects:
             color = self.config.visualization.defect_colors.get(
                 defect.type, (255, 0, 255)
@@ -146,6 +186,40 @@ class DataAcquisition:
         
         return visualizations
     
+    def _calculate_zone_properties(self, zones: Dict[str, np.ndarray]) -> Dict:
+        """Calculate center and diameter for each zone"""
+        zone_info = {}
+        
+        for zone_name, mask in zones.items():
+            if mask is None or np.sum(mask) == 0:
+                zone_info[zone_name] = None
+                continue
+                
+            # Find contours
+            contours, _ = cv2.findContours(mask.astype(np.uint8), 
+                                          cv2.RETR_EXTERNAL, 
+                                          cv2.CHAIN_APPROX_SIMPLE)
+            
+            if not contours:
+                zone_info[zone_name] = None
+                continue
+                
+            # Get largest contour
+            largest_contour = max(contours, key=cv2.contourArea)
+            
+            # Calculate center and radius
+            (x, y), radius = cv2.minEnclosingCircle(largest_contour)
+            center = (int(x), int(y))
+            radius = int(radius)
+            
+            zone_info[zone_name] = {
+                'center': center,
+                'radius': radius,
+                'diameter': radius * 2
+            }
+        
+        return zone_info
+    
     def _calculate_metrics(self, image: np.ndarray, 
                          zones: Dict[str, np.ndarray], 
                          defects: List[Defect]) -> Dict:
@@ -154,8 +228,31 @@ class DataAcquisition:
             'total_area': image.shape[0] * image.shape[1],
             'defect_density': len(defects) / (image.shape[0] * image.shape[1]) * 10000,
             'average_severity': np.mean([d.severity for d in defects]) if defects else 0,
-            'zone_defects': {}
+            'zone_defects': {},
+            'zone_measurements': {}
         }
+        
+        # Calculate zone properties
+        zone_info = self._calculate_zone_properties(zones)
+        
+        # Add zone measurements
+        for zone_name, info in zone_info.items():
+            if info is not None:
+                metrics['zone_measurements'][zone_name] = {
+                    'diameter_pixels': info['diameter'],
+                    'center': info['center'],
+                    'area_pixels': int(np.sum(zones.get(zone_name, 0) > 0))
+                }
+        
+        # Calculate concentricity
+        if 'core' in zone_info and 'cladding' in zone_info:
+            if zone_info['core'] and zone_info['cladding']:
+                core_center = zone_info['core']['center']
+                clad_center = zone_info['cladding']['center']
+                offset = np.sqrt((core_center[0] - clad_center[0])**2 + 
+                               (core_center[1] - clad_center[1])**2)
+                metrics['concentricity_offset_pixels'] = offset
+                metrics['concentricity_percentage'] = (offset / zone_info['cladding']['radius']) * 100
         
         # Count defects per zone
         for zone_name in zones:
@@ -329,24 +426,75 @@ class EnhancedApplication:
     def _run_test_mode(self):
         """Run system tests"""
         print("\n--- Running Tests ---")
+        print("1. Run unit tests")
+        print("2. Process test image (img(303).jpg)")
         
-        # Import and run tests
-        try:
-            import subprocess
-            result = subprocess.run(
-                [sys.executable, "-m", "pytest", "-v", "tests/"],
-                capture_output=True,
-                text=True,
-                cwd=Path(__file__).parent
-            )
-            
-            print(result.stdout)
-            if result.stderr:
-                print(result.stderr)
+        choice = input("\nSelect test mode (1-2): ").strip()
+        
+        if choice == '1':
+            # Import and run tests
+            try:
+                import subprocess
+                result = subprocess.run(
+                    [sys.executable, "-m", "pytest", "-v", "tests/"],
+                    capture_output=True,
+                    text=True,
+                    cwd=Path(__file__).parent
+                )
                 
-        except Exception as e:
-            logger.error(f"Failed to run tests: {e}")
-            print("Make sure pytest is installed: pip install pytest")
+                print(result.stdout)
+                if result.stderr:
+                    print(result.stderr)
+                    
+            except Exception as e:
+                logger.error(f"Failed to run tests: {e}")
+                print("Make sure pytest is installed: pip install pytest")
+        
+        elif choice == '2':
+            # Process test image
+            test_image_path = Path(__file__).parent / "test_image" / "img(303).jpg"
+            if not test_image_path.exists():
+                logger.error(f"Test image not found: {test_image_path}")
+                return
+                
+            print(f"\nProcessing test image: {test_image_path}")
+            result = self._process_image(test_image_path)
+            
+            if result:
+                print(f"\nResult: {'PASS' if result['pass'] else 'FAIL'}")
+                print(f"Defects found: {result['report']['total_defects']}")
+                
+                # Show detailed metrics
+                print("\n=== Detailed Metrics ===")
+                metrics = result['report']['metrics']
+                print(f"Total area: {metrics['total_area']} pixels")
+                print(f"Defect density: {metrics['defect_density']:.2f}")
+                print(f"Average severity: {metrics['average_severity']:.2f}")
+                
+                # Zone measurements
+                print("\n=== Zone Measurements ===")
+                for zone_name, measurements in metrics.get('zone_measurements', {}).items():
+                    print(f"{zone_name}:")
+                    print(f"  - Diameter: {measurements['diameter_pixels']} pixels")
+                    print(f"  - Center: {measurements['center']}")
+                    print(f"  - Area: {measurements['area_pixels']} pixels")
+                
+                # Concentricity
+                if 'concentricity_offset_pixels' in metrics:
+                    print("\n=== Concentricity ===")
+                    print(f"Offset: {metrics['concentricity_offset_pixels']:.2f} pixels")
+                    print(f"Percentage: {metrics['concentricity_percentage']:.2f}%")
+                
+                # Zone defects
+                print("\n=== Zone Defects ===")
+                for zone_name, defect_info in metrics['zone_defects'].items():
+                    print(f"{zone_name}: {defect_info['count']} defects")
+                    if defect_info['types']:
+                        print(f"  Types: {', '.join(defect_info['types'])}")
+                
+                # Show visualizations
+                if input("\nShow visualizations? [yes/no]: ").strip().lower() in ['yes', 'y']:
+                    self._display_visualizations(result['visualizations'])
     
     def _reconfigure(self):
         """Reconfigure system"""

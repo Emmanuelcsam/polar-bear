@@ -22,9 +22,10 @@ def run_tests():
     
     # Test files to run
     test_files = [
-        "test_enhanced_process.py",
-        "test_enhanced_separation.py", 
-        "test_enhanced_detection.py",
+        "test_app.py",
+        "test_process.py",
+        "test_separation.py", 
+        "test_detection.py",
         "test_integration.py"
     ]
     

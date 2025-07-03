@@ -19,9 +19,9 @@ from datetime import datetime
 
 from config_manager import get_config
 from enhanced_logging import get_logger, log_execution, log_performance
-from enhanced_process import EnhancedProcessor
-from enhanced_separation import EnhancedSeparator
-from enhanced_detection import EnhancedDetector, Defect
+from process import EnhancedProcessor
+from separation import EnhancedSeparator
+from detection import EnhancedDetector, Defect
 
 logger = get_logger(__name__)
 

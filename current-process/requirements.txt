@@ -10,3 +10,4 @@ pillow
 tqdm
 pandas
 pytest
+pyyaml
