@@ -205,3 +205,97 @@
 2025-07-05 05:33:06,570 [INFO] Applying script: gamma_correction.py with params: {}
 2025-07-05 05:33:06,574 [INFO] Applying script: bilateral_filter.py with params: {}
 2025-07-05 05:33:06,583 [INFO] Parameter log saved to .studio_cache_v2/parameters_20250705_053306.json
+2025-07-05 05:38:52,553 [WARNING] Failed to load scripts/image_map.py: module 'cv2' has no attribute 'COLORMAP_GIST_EARTH'
+2025-07-05 05:38:53,324 [WARNING] Failed to load scripts/batch_processing.py: invalid syntax (batch_processing.py, line 905)
+2025-07-05 05:38:53,430 [WARNING] Failed to load scripts/graphicalcsv.py: No module named 'matplotlib.tri.triangulation'
+2025-07-05 05:38:53,438 [WARNING] Failed to load scripts/cli_tool.py: No module named 'circle_detector'
+2025-07-05 05:38:53,478 [WARNING] Failed to load scripts/run_defect_analysis.py: No module named 'defect_detection2'
+2025-07-05 05:38:53,501 [WARNING] Failed to load scripts/cleaned/image_map.py: module 'cv2' has no attribute 'COLORMAP_GIST_EARTH'
+2025-07-05 05:38:53,567 [WARNING] Failed to load scripts/cleaned/cli_tool.py: No module named 'circle_detector'
+2025-07-05 05:38:53,573 [WARNING] Failed to load scripts/misc/image_map.py: module 'cv2' has no attribute 'COLORMAP_GIST_EARTH'
+2025-07-05 05:38:54,296 [INFO] Applying script: clahe_preprocessing.py with params: {}
+2025-07-05 05:38:54,679 [ERROR] Error in wrapped script clahe_preprocessing.py: 'tuple' object does not support item assignment
+2025-07-05 05:38:54,912 [INFO] Applying script: histogram_equalization (1).py with params: {}
+2025-07-05 05:38:55,348 [INFO] Applying script: gamma_correction.py with params: {}
+2025-07-05 05:38:55,570 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:38:55,971 [INFO] Applying script: gamma_correction.py with params: {}
+2025-07-05 05:38:56,170 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:38:56,566 [INFO] Applying script: gamma_correction.py with params: {}
+2025-07-05 05:38:56,783 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:38:57,177 [INFO] Applying script: gamma_correction.py with params: {}
+2025-07-05 05:38:57,380 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:38:57,773 [INFO] Applying script: gamma_correction.py with params: {}
+2025-07-05 05:38:57,993 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:38:58,398 [INFO] Applying script: edge_detection/structured_edges.py with params: {}
+2025-07-05 05:39:17,604 [INFO] Applying script: clahe_preprocessing.py with params: {}
+2025-07-05 05:39:17,946 [INFO] Applying script: histogram_equalization (1).py with params: {}
+2025-07-05 05:39:18,162 [INFO] Applying script: histogram_enhancement.py with params: {}
+2025-07-05 05:39:18,189 [ERROR] Error in wrapped script histogram_enhancement.py: 'numpy.ndarray' object has no attribute 'enhanced_image'
+2025-07-05 05:39:18,429 [INFO] Applying script: show_histogram.py with params: {}
+2025-07-05 05:39:18,658 [INFO] Applying script: clahe_script_1.py with params: {}
+2025-07-05 05:39:19,095 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:39:19,507 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:39:19,912 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:39:20,359 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:39:20,793 [INFO] Applying script: posterize_effect.py with params: {}
+2025-07-05 05:39:21,205 [INFO] Applying script: morphological opening.py with params: {}
+2025-07-05 05:39:21,421 [INFO] Applying script: morph_opening.py with params: {}
+2025-07-05 05:39:21,657 [INFO] Applying script: final_morphological_cleanup.py with params: {}
+2025-07-05 05:39:21,718 [ERROR] Error in wrapped script final_morphological_cleanup.py: 'numpy.ndarray' object has no attribute 'final_cleaned_mask'
+2025-07-05 05:39:21,962 [INFO] Applying script: morphology_cleanup.py with params: {}
+2025-07-05 05:39:22,212 [INFO] Applying script: opening.py with params: {}
+2025-07-05 05:39:22,627 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:39:23,020 [INFO] Applying script: posterize_effect.py with params: {}
+2025-07-05 05:39:23,240 [INFO] Applying script: solarize_effect.py with params: {}
+2025-07-05 05:39:23,474 [INFO] Applying script: vignette_effect.py with params: {}
+2025-07-05 05:39:23,712 [INFO] Applying script: mosaic_effect.py with params: {}
+2025-07-05 05:39:24,054 [INFO] Applying script: vintage_effect.py with params: {}
+2025-07-05 05:39:24,657 [INFO] Applying script: clahe_preprocessing.py with params: {}
+2025-07-05 05:39:25,022 [INFO] Applying script: histogram_equalization (1).py with params: {}
+2025-07-05 05:39:25,248 [INFO] Applying script: histogram_enhancement.py with params: {}
+2025-07-05 05:39:25,273 [ERROR] Error in wrapped script histogram_enhancement.py: 'numpy.ndarray' object has no attribute 'enhanced_image'
+2025-07-05 05:39:25,492 [INFO] Applying script: show_histogram.py with params: {}
+2025-07-05 05:39:25,717 [INFO] Applying script: clahe_script_1.py with params: {}
+2025-07-05 05:39:26,100 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:39:26,496 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:39:26,887 [INFO] Applying script: morphological opening.py with params: {}
+2025-07-05 05:39:27,106 [INFO] Applying script: morph_opening.py with params: {}
+2025-07-05 05:39:27,340 [INFO] Applying script: final_morphological_cleanup.py with params: {}
+2025-07-05 05:39:27,379 [ERROR] Error in wrapped script final_morphological_cleanup.py: 'numpy.ndarray' object has no attribute 'final_cleaned_mask'
+2025-07-05 05:39:27,592 [INFO] Applying script: morphology_cleanup.py with params: {}
+2025-07-05 05:39:27,817 [INFO] Applying script: opening.py with params: {}
+2025-07-05 05:39:28,221 [INFO] Applying script: morphological opening.py with params: {}
+2025-07-05 05:39:28,456 [INFO] Applying script: morph_opening.py with params: {}
+2025-07-05 05:39:28,670 [INFO] Applying script: final_morphological_cleanup.py with params: {}
+2025-07-05 05:39:28,711 [ERROR] Error in wrapped script final_morphological_cleanup.py: 'numpy.ndarray' object has no attribute 'final_cleaned_mask'
+2025-07-05 05:39:28,930 [INFO] Applying script: morphology_cleanup.py with params: {}
+2025-07-05 05:39:29,162 [INFO] Applying script: opening.py with params: {}
+2025-07-05 05:39:29,538 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:39:29,923 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:39:30,316 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:39:30,542 [INFO] Trying successful sequence #5 with 1 scripts
+2025-07-05 05:39:30,542 [INFO] Applying script from sequence: nlm_denoise.py
+2025-07-05 05:39:31,152 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:39:31,365 [INFO] Trying successful sequence #11 with 1 scripts
+2025-07-05 05:39:31,366 [INFO] Applying script from sequence: gaussian_smooth.py
+2025-07-05 05:39:31,528 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:39:31,756 [INFO] Trying successful sequence #15 with 1 scripts
+2025-07-05 05:39:31,757 [INFO] Applying script from sequence: posterize_effect.py
+2025-07-05 05:39:31,938 [INFO] Applying script: posterize_effect.py with params: {}
+2025-07-05 05:39:32,159 [INFO] Applying script: solarize_effect.py with params: {}
+2025-07-05 05:39:32,374 [INFO] Applying script: vignette_effect.py with params: {}
+2025-07-05 05:39:32,597 [INFO] Applying script: mosaic_effect.py with params: {}
+2025-07-05 05:39:32,938 [INFO] Applying script: vintage_effect.py with params: {}
+2025-07-05 05:39:33,367 [INFO] Trying successful sequence #13 with 1 scripts
+2025-07-05 05:39:33,368 [INFO] Applying script from sequence: histogram_equalization (1).py
+2025-07-05 05:39:33,529 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:39:33,754 [INFO] Trying successful sequence #14 with 1 scripts
+2025-07-05 05:39:33,754 [INFO] Applying script from sequence: edge_detection/structured_edges.py
+2025-07-05 05:39:42,178 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:39:42,401 [INFO] Trying successful sequence #3 with 1 scripts
+2025-07-05 05:39:42,402 [INFO] Applying script from sequence: clahe_preprocessing.py
+2025-07-05 05:39:42,697 [INFO] Applying script: gamma_correction.py with params: {}
+2025-07-05 05:39:42,929 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:39:43,175 [INFO] Trying successful sequence #2 with 1 scripts
+2025-07-05 05:39:43,175 [INFO] Applying script from sequence: histogram_equalization (1).py
+2025-07-05 05:39:43,178 [INFO] Parameter log saved to .studio_cache_v2/parameters_20250705_053943.json

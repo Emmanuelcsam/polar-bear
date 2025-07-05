@@ -1,0 +1,41 @@
+
+Automated Image Processing Report
+=================================
+Generated: 2025-07-05 05:40:02
+
+SUMMARY
+-------
+Success: False
+Final Similarity Score: 0.2057
+Total Iterations: 30
+Processing Time: 49.53 seconds
+Scripts Applied: 4
+
+PROCESSING PIPELINE
+------------------
+  1. histogram_equalization (1).py
+  2. edge_detection/structured_edges.py
+  3. posterize_effect.py
+  4. opening.py
+
+IMPROVEMENT STATISTICS
+----------------------
+Total Improvements: 4
+Average Improvement: 0.1621
+Best Improvement: 0.3142
+
+LEARNING STATISTICS
+-------------------
+Total Scripts Available: 570
+Successful Sequences Learned: 17
+Most Successful Scripts:
+  - morphological opening.py: 0.040 success rate (1 uses)
+  - opening.py: 0.031 success rate (1 uses)
+  - edge_detection/structured_edges.py: 0.028 success rate (1 uses)
+  - posterize_effect.py: 0.023 success rate (2 uses)
+  - clahe_preprocessing.py: 0.008 success rate (1 uses)
+  - histogram_equalization (1).py: 0.005 success rate (2 uses)
+  - histogram_equalization.py: 0.003 success rate (1 uses)
+  - bilateral_filter.py: 0.000 success rate (3 uses)
+  - nlm_denoise.py: 0.000 success rate (1 uses)
+  - gaussian_smooth.py: 0.000 success rate (2 uses)
