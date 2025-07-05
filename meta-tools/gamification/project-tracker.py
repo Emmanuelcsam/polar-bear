@@ -10,9 +10,14 @@ import subprocess
 from pathlib import Path
 from datetime import datetime
 import json
+from utils.config_loader import ConfigLoader
+from utils.interactive_config import get_interactive_project_config
 
 class ProjectTracker:
-    def __init__(self):
+    def __init__(self, project_path=None, config=None):
+        self.config = config or ConfigLoader()
+        self.project_path = project_path or "."
+        self.stats_dir = self.config.get_stats_directory(Path(self.project_path))
         self.scripts = {
             '1': {
                 'name': 'Quick Stats',
@@ -50,9 +55,6 @@ class ProjectTracker:
                 'desc': 'Comprehensive overview of all metrics'
             }
         }
-        
-        self.project_path = "."
-        self.stats_dir = Path('.project-stats')
         
     def display_menu(self):
         """Display main menu"""
@@ -329,17 +331,15 @@ class ProjectTracker:
         print("-" * 40)
         print(f"Current: {Path(self.project_path).resolve()}")
         
-        new_path = input("\nEnter new path (or Enter to cancel): ").strip()
+        # Use interactive config to select new project
+        project_path, _ = get_interactive_project_config("Select New Project")
         
-        if new_path:
-            if os.path.exists(new_path) and os.path.isdir(new_path):
-                self.project_path = new_path
-                self.stats_dir = Path(new_path) / '.project-stats'
-                print(f"\n✅ Changed to: {Path(new_path).resolve()}")
-            else:
-                print("\n❌ Invalid directory path")
+        if project_path:
+            self.project_path = str(project_path)
+            self.stats_dir = self.config.get_stats_directory(project_path)
+            print(f"\n✅ Changed to: {project_path}")
             
-            input("\nPress Enter to continue...")
+        input("\nPress Enter to continue...")
     
     def _show_help(self):
         """Show help information"""
@@ -398,14 +398,13 @@ def main():
     print("\n🚀 Welcome to Project Tracker!")
     print("   Your comprehensive project analysis suite\n")
     
-    tracker = ProjectTracker()
+    # Use interactive configuration
+    project_path, config = get_interactive_project_config("Project Tracker Master")
     
-    # Check if running with a path argument
-    if len(sys.argv) > 1:
-        path = sys.argv[1]
-        if os.path.exists(path) and os.path.isdir(path):
-            tracker.project_path = path
-            tracker.stats_dir = Path(path) / '.project-stats'
+    if project_path is None:
+        return
+    
+    tracker = ProjectTracker(str(project_path), config)
     
     try:
         tracker.display_menu()

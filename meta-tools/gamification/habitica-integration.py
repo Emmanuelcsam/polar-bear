@@ -13,12 +13,15 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 import time
 import sys
+from utils.config_loader import ConfigLoader
+from utils.interactive_config import get_interactive_project_config
 
 class HabiticaProjectGamification:
-    def __init__(self, user_id=None, api_key=None):
+    def __init__(self, user_id=None, api_key=None, config=None):
         """Initialize Habitica integration"""
         self.base_url = "https://habitica.com/api/v3"
-        self.stats_dir = Path('.project-stats')
+        self.config = config or ConfigLoader()
+        self.stats_dir = None  # Will be set based on project path
         
         # Load credentials
         self.user_id = user_id or os.environ.get('HABITICA_USER_ID')
@@ -89,9 +92,33 @@ class HabiticaProjectGamification:
                 f.write(f"HABITICA_API_KEY={self.api_key}\n")
             print("✅ Credentials saved to .env")
     
+    def _get_or_create_tag(self, tag_name):
+        """Get existing tag ID or create a new tag"""
+        try:
+            # Get all tags
+            tags = self._api_request('GET', '/tags')
+            
+            # Check if tag already exists
+            for tag in tags:
+                if tag.get('name') == tag_name:
+                    return tag['id']
+            
+            # Create new tag if it doesn't exist
+            print(f"Creating tag: {tag_name}")
+            new_tag = self._api_request('POST', '/tags', {'name': tag_name})
+            if new_tag:
+                return new_tag['id']
+            
+        except Exception as e:
+            print(f"⚠️  Could not create tag: {e}")
+            return None
+    
     def setup_project_habits(self):
         """Create or find project-related habits in Habitica"""
         print("\n🎯 Setting up project habits...")
+        
+        # First, check if we need to create a tag for project-tracker
+        tag_id = self._get_or_create_tag('project-tracker')
         
         habits = [
             {
@@ -100,9 +127,9 @@ class HabiticaProjectGamification:
                 'up': True,
                 'down': True,
                 'notes': 'Track your daily project development activities',
-                'tags': ['project-tracker'],
+                'tags': [tag_id] if tag_id else [],
                 'attribute': 'int',
-                'id': 'project-development'
+                'alias': 'project-development'
             },
             {
                 'text': '📝 Code Documentation',
@@ -110,9 +137,9 @@ class HabiticaProjectGamification:
                 'up': True,
                 'down': False,
                 'notes': 'Write documentation, comments, and READMEs',
-                'tags': ['project-tracker'],
+                'tags': [tag_id] if tag_id else [],
                 'attribute': 'per',
-                'id': 'code-documentation'
+                'alias': 'code-documentation'
             },
             {
                 'text': '🧹 Code Cleanup',
@@ -120,9 +147,9 @@ class HabiticaProjectGamification:
                 'up': True,
                 'down': False,
                 'notes': 'Remove duplicates, refactor, improve code quality',
-                'tags': ['project-tracker'],
+                'tags': [tag_id] if tag_id else [],
                 'attribute': 'con',
-                'id': 'code-cleanup'
+                'alias': 'code-cleanup'
             },
             {
                 'text': '🚀 Productivity Streak',
@@ -130,9 +157,9 @@ class HabiticaProjectGamification:
                 'up': True,
                 'down': True,
                 'notes': 'Maintain consistent development productivity',
-                'tags': ['project-tracker'],
+                'tags': [tag_id] if tag_id else [],
                 'attribute': 'str',
-                'id': 'productivity-streak'
+                'alias': 'productivity-streak'
             },
             {
                 'text': '⚠️ Bad Development Habits',
@@ -140,9 +167,9 @@ class HabiticaProjectGamification:
                 'up': False,
                 'down': True,
                 'notes': 'Poor naming, no tests, security issues, etc.',
-                'tags': ['project-tracker'],
+                'tags': [tag_id] if tag_id else [],
                 'attribute': 'str',
-                'id': 'bad-dev-habits'
+                'alias': 'bad-dev-habits'
             }
         ]
         
@@ -151,35 +178,38 @@ class HabiticaProjectGamification:
             'text': '📅 Daily Project Work',
             'type': 'daily',
             'notes': 'Work on your project every day to maintain streak',
-            'tags': ['project-tracker'],
+            'tags': [tag_id] if tag_id else [],
             'attribute': 'str',
-            'id': 'daily-project-work'
+            'alias': 'daily-project-work'
         }
         
         # Check existing tasks
         existing_tasks = self._api_request('GET', '/tasks/user')
-        existing_ids = {task.get('alias', task.get('id')): task['id'] for task in existing_tasks}
+        if not existing_tasks:
+            existing_tasks = []
+        existing_aliases = {task.get('alias', ''): task['id'] for task in existing_tasks if task.get('alias')}
         
         # Create habits if they don't exist
         for habit in habits:
-            habit_id = habit['id']
-            if habit_id not in existing_ids:
+            habit_alias = habit['alias']
+            if habit_alias not in existing_aliases:
                 print(f"Creating habit: {habit['text']}")
                 response = self._api_request('POST', '/tasks/user', habit)
                 if response:
-                    self.task_ids[habit_id.replace('-', '_')] = response['id']
+                    self.task_ids[habit_alias.replace('-', '_')] = response['id']
             else:
-                self.task_ids[habit_id.replace('-', '_')] = existing_ids[habit_id]
+                self.task_ids[habit_alias.replace('-', '_')] = existing_aliases[habit_alias]
                 print(f"Found existing habit: {habit['text']}")
         
         # Create daily
-        if daily['id'] not in existing_ids:
+        daily_alias = daily['alias']
+        if daily_alias not in existing_aliases:
             print(f"Creating daily: {daily['text']}")
             response = self._api_request('POST', '/tasks/user', daily)
             if response:
                 self.task_ids['daily_commit'] = response['id']
         else:
-            self.task_ids['daily_commit'] = existing_ids[daily['id']]
+            self.task_ids['daily_commit'] = existing_aliases[daily_alias]
             print(f"Found existing daily: {daily['text']}")
         
         print("✅ Project habits setup complete!")
@@ -188,8 +218,10 @@ class HabiticaProjectGamification:
         """Analyze project changes and calculate rewards/punishments"""
         print("\n🔍 Analyzing project changes...")
         
-        project_path = Path(project_path)
-        stats_dir = project_path / '.project-stats'
+        project_path = Path(project_path).expanduser().resolve()
+        # Set stats directory based on project path
+        self.stats_dir = self.config.get_stats_directory(project_path)
+        stats_dir = self.stats_dir
         
         if not stats_dir.exists():
             print("❌ No project stats found. Run project tracker tools first!")
@@ -608,27 +640,22 @@ class HabiticaProjectGamification:
 
 def main():
     """Main entry point"""
-    import argparse
+    # Use interactive configuration
+    project_path, config = get_interactive_project_config("Habitica Project Gamification")
     
-    parser = argparse.ArgumentParser(
-        description='Gamify your project development with Habitica'
-    )
-    parser.add_argument('path', nargs='?', default='.',
-                       help='Project path to analyze')
-    parser.add_argument('--user-id', help='Habitica User ID')
-    parser.add_argument('--api-key', help='Habitica API Key')
-    parser.add_argument('--setup', action='store_true',
-                       help='Setup Habitica habits')
+    if project_path is None:
+        return
     
-    args = parser.parse_args()
+    # Initialize with config
+    gamification = HabiticaProjectGamification(config=config)
     
-    # Initialize
-    gamification = HabiticaProjectGamification(args.user_id, args.api_key)
+    # Ask for setup mode
+    setup_mode = input("\nSetup Habitica habits? (y/N): ").strip().lower() == 'y'
     
     # Setup habits if requested
-    if args.setup:
+    if setup_mode:
         gamification.setup_project_habits()
-        print("\n✅ Setup complete! Run without --setup to start gamification.")
+        print("\n✅ Setup complete! Run again without setup to start gamification.")
         return
     
     # Check if habits are setup
@@ -648,7 +675,13 @@ def main():
         gamification.setup_project_habits()
     
     # Run gamification
-    gamification.run_gamification(args.path)
+    gamification.run_gamification(str(project_path))
+    
+    # Ask if user wants to analyze another project
+    print("\n" + "-"*50)
+    another = input("Gamify another project? (y/n): ").strip().lower()
+    if another == 'y':
+        main()
 
 
 if __name__ == "__main__":

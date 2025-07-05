@@ -12,11 +12,14 @@ from pathlib import Path
 from datetime import datetime, timedelta
 from collections import Counter, defaultdict
 import hashlib
+from utils.config_loader import ConfigLoader
+from utils.interactive_config import get_interactive_project_config
 
 class ProjectDashboard:
-    def __init__(self, path="."):
+    def __init__(self, path=".", config=None):
         self.root = Path(path).resolve()
-        self.stats_dir = Path('.project-stats')
+        self.config = config or ConfigLoader()
+        self.stats_dir = self.config.get_stats_directory(self.root)
         self.dashboard_data = {
             'overview': {},
             'languages': {},
@@ -61,8 +64,9 @@ class ProjectDashboard:
         file_types = Counter()
         
         for root, dirs, files in os.walk(self.root):
-            # Skip hidden directories
-            dirs[:] = [d for d in dirs if not d.startswith('.') and d not in ['node_modules', '__pycache__']]
+            # Skip hidden and ignored directories
+            ignore_patterns = self.config.get_ignore_patterns()
+            dirs[:] = [d for d in dirs if not d.startswith('.') and not any(d == pattern.replace('*', '') for pattern in ignore_patterns)]
             
             total_dirs += len(dirs)
             
@@ -522,14 +526,20 @@ class ProjectDashboard:
         return f"{size:.1f} TB"
 
 def main():
-    import argparse
-    parser = argparse.ArgumentParser(description='Comprehensive project dashboard')
-    parser.add_argument('path', nargs='?', default='.', help='Directory to analyze')
+    # Use interactive configuration
+    project_path, config = get_interactive_project_config("Comprehensive Project Dashboard")
     
-    args = parser.parse_args()
+    if project_path is None:
+        return
     
-    dashboard = ProjectDashboard(args.path)
+    dashboard = ProjectDashboard(project_path, config)
     dashboard.generate_dashboard()
+    
+    # Ask if user wants to analyze another project
+    print("\n" + "-"*50)
+    another = input("Generate dashboard for another project? (y/n): ").strip().lower()
+    if another == 'y':
+        main()
 
 if __name__ == "__main__":
     main()

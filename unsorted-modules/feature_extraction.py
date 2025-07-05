@@ -17,7 +17,11 @@ def extract_features(image, defect_regions, zone_masks, metrics):
         A list of feature vectors for each defect.
     """
     features_list = []
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    # Handle both grayscale and color images
+    if len(image.shape) == 2:
+        gray = image
+    else:
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     
     for i, defect in enumerate(defect_regions):
         features = {}

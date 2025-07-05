@@ -63,7 +63,11 @@ def detect_defects(image, masks, config):
     Returns:
         A tuple containing the defect mask and a list of defect regions.
     """
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    # Handle both grayscale and color images
+    if len(image.shape) == 2:
+        gray = image
+    else:
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     
     # Detect region-based defects (pits, dirt)
     region_defects = _do2mr_detection(gray, 

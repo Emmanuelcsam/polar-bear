@@ -14,9 +14,11 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from matplotlib.patches import Rectangle
 import numpy as np
-
+from utils.interactive_config import get_interactive_project_config
+from utils.config_loader import ConfigLoader
 class ProductivityTracker:
-    def __init__(self):
+    def __init__(self, config=None):
+        self.config = config or ConfigLoader()
         self.db_path = Path.home() / '.project-productivity' / 'productivity.db'
         self.db_path.parent.mkdir(exist_ok=True)
         self.setup_database()

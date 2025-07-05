@@ -1,0 +1,24 @@
+
+Automated Processing Studio Report
+=================================
+Generated: 2025-07-05 02:10:46
+
+Processing Summary:
+------------------
+Success: True
+Iterations: 5
+Processing Time: 2.80 seconds
+Final Similarity: 0.0301
+
+Pipeline:
+---------
+1. cleaned/fiber_localization.py
+2. cleaned/AdaptiveThresholding.py
+3. misc/image_to_map.py
+4. load_img/loadnproc.py
+
+Learning Statistics:
+-------------------
+Epsilon (exploration rate): 0.9801
+Successful combinations: 1
+Failed combinations: 0

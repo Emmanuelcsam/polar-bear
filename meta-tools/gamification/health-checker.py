@@ -10,10 +10,13 @@ from pathlib import Path
 from datetime import datetime, timedelta
 import json
 import mimetypes
+from utils.config_loader import ConfigLoader
+from utils.interactive_config import get_interactive_project_config
 
 class HealthChecker:
-    def __init__(self, path="."):
+    def __init__(self, path=".", config=None):
         self.root = Path(path).resolve()
+        self.config = config or ConfigLoader()
         self.issues = {
             'critical': [],
             'warning': [],
@@ -426,8 +429,8 @@ class HealthChecker:
     
     def _save_report(self):
         """Save health report"""
-        stats_dir = Path('.project-stats')
-        stats_dir.mkdir(exist_ok=True)
+        stats_dir = self.config.get_stats_directory(self.root)
+        stats_dir.mkdir(exist_ok=True, parents=True)
         
         report_file = stats_dir / f"health_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         
@@ -489,15 +492,24 @@ class HealthChecker:
         return f"{size:.1f} TB"
 
 def main():
-    import argparse
-    parser = argparse.ArgumentParser(description='Check project health and best practices')
-    parser.add_argument('path', nargs='?', default='.', help='Directory to check')
+    # Use interactive configuration
+    project_path, config = get_interactive_project_config("Project Health Checker")
     
-    args = parser.parse_args()
+    if project_path is None:
+        return
     
-    checker = HealthChecker(args.path)
+    print(f"\n🏥 Starting health check...")
+    print("="*60)
+    
+    checker = HealthChecker(project_path, config)
     checker.run_checks()
     checker.display_results()
+    
+    # Ask if user wants to check another project
+    print("\n" + "-"*50)
+    another = input("Check health of another project? (y/n): ").strip().lower()
+    if another == 'y':
+        main()
 
 if __name__ == "__main__":
     main()

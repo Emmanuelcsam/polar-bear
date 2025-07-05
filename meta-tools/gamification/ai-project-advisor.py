@@ -12,10 +12,28 @@ from datetime import datetime, timedelta
 import requests
 from typing import Dict, List, Optional, Tuple
 import time
+# Try to load environment variables
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    # Manual .env loading if dotenv not available
+    env_file = Path('.env')
+    if env_file.exists():
+        with open(env_file, 'r') as f:
+            for line in f:
+                if line.strip() and not line.startswith('#'):
+                    if '=' in line:
+                        key, value = line.strip().split('=', 1)
+                        os.environ[key] = value
+
+from utils.config_loader import ConfigLoader
+from utils.interactive_config import InteractiveConfig
 
 class AIProjectAdvisor:
-    def __init__(self):
-        self.stats_dir = Path('.project-stats')
+    def __init__(self, config=None):
+        self.config = config or ConfigLoader()
+        self.stats_dir = None  # Will be set based on project path
         self.provider = None
         self.api_key = None
         self.model = None
@@ -123,9 +141,12 @@ class AIProjectAdvisor:
         """Collect all available project data"""
         print("\n📊 Collecting project data...")
         
+        # Ensure we're using the proper Path object
+        project_path = Path(project_path).expanduser().resolve()
+        
         project_data = {
-            'path': project_path,
-            'name': Path(project_path).name,
+            'path': str(project_path),
+            'name': project_path.name,
             'timestamp': datetime.now().isoformat(),
             'has_data': False
         }
@@ -441,8 +462,11 @@ PROJECT DATA SUMMARY:
     
     def interactive_analysis(self, project_path: str):
         """Run interactive analysis session"""
+        # Ensure project_path is properly resolved
+        project_path = Path(project_path).expanduser().resolve()
+        
         # Collect project data
-        project_data = self.collect_project_data(project_path)
+        project_data = self.collect_project_data(str(project_path))
         if not project_data:
             return
         
@@ -517,61 +541,57 @@ PROJECT DATA SUMMARY:
 
 def main():
     """Main entry point"""
-    import argparse
+    # Use interactive configuration
+    interactive = InteractiveConfig()
+    project_path, config = interactive.get_project_choice("AI Project Advisor")
     
-    parser = argparse.ArgumentParser(
-        description='Get AI-powered suggestions for your project'
-    )
-    parser.add_argument('path', nargs='?', default='.',
-                       help='Project path to analyze')
-    parser.add_argument('--provider', choices=['openai', 'claude', 'gemini', 'huggingface'],
-                       help='AI provider to use')
-    parser.add_argument('--api-key', help='API key for the provider')
-    parser.add_argument('--model', help='Specific model to use')
-    parser.add_argument('--focus', choices=list(AIProjectAdvisor().analysis_areas.keys()),
-                       help='Focus area for analysis')
-    parser.add_argument('--quick', action='store_true',
-                       help='Quick analysis without interactive mode')
-    
-    args = parser.parse_args()
+    if project_path is None:
+        return
     
     # Initialize advisor
-    advisor = AIProjectAdvisor()
+    advisor = AIProjectAdvisor(config)
     
-    # Setup provider
-    if args.provider and args.api_key:
-        advisor.provider = args.provider
-        advisor.api_key = args.api_key
-        advisor.model = args.model or advisor.providers[args.provider]['default_model']
-        print(f"✓ Using {advisor.providers[args.provider]['name']} with {advisor.model}")
-    else:
-        advisor.setup_provider()
+    # Set stats directory for the project
+    advisor.stats_dir = config.get_stats_directory(project_path)
     
     # Check for project stats
     if not advisor.stats_dir.exists():
         print("\n❌ No project statistics found!")
-        print("   Run these commands first:")
-        print("   python quick-stats.py")
-        print("   python health-checker.py")
-        print("   python project-dashboard.py")
-        return
+        print("   You need to run analysis tools first:")
+        print("   - python quick-stats.py")
+        print("   - python health-checker.py") 
+        print("   - python project-dashboard.py")
+        
+        run_now = input("\nWould you like to run quick-stats now? (y/n): ").strip().lower()
+        if run_now == 'y':
+            from quick_stats import QuickStats
+            print("\n📊 Running quick stats...")
+            stats = QuickStats(str(project_path), config)
+            stats.scan()
+            stats.display()
+            advisor.stats_dir = config.get_stats_directory(project_path)
+            
+            if not advisor.stats_dir.exists():
+                print("\n❌ Still no stats directory. Exiting.")
+                return
+        else:
+            return
     
-    print(f"\n📁 Analyzing project: {Path(args.path).resolve()}")
+    print(f"\n📁 Analyzing project: {project_path}")
     
-    if args.quick and args.focus:
-        # Quick single analysis
-        project_data = advisor.collect_project_data(args.path)
-        if project_data:
-            prompt = advisor.create_analysis_prompt(project_data, args.focus)
-            suggestions = advisor.get_ai_suggestions(prompt)
-            if suggestions:
-                advisor.display_suggestions(suggestions, args.focus)
-                advisor.save_suggestions(suggestions, args.focus, project_data['name'])
-    else:
-        # Interactive mode
-        advisor.interactive_analysis(args.path)
+    # Setup AI provider
+    advisor.setup_provider()
+    
+    # Interactive analysis
+    advisor.interactive_analysis(str(project_path))
     
     print("\n✨ Analysis complete!")
+    
+    # Ask if user wants to analyze another project
+    print("\n" + "-"*50)
+    another = input("Get AI advice for another project? (y/n): ").strip().lower()
+    if another == 'y':
+        main()
 
 
 if __name__ == "__main__":

@@ -1,0 +1,36 @@
+# Mock requirements file
+# Note: These are the dependencies detected in the codebase
+# Install with: pip install -r requirements.txt
+
+# Deep Learning
+torch>=1.9.0
+torchvision>=0.10.0
+tensorflow>=2.6.0
+transformers>=4.20.0
+peft>=0.3.0
+
+# Computer Vision
+opencv-python>=4.5.0
+scikit-image>=0.18.0
+Pillow>=8.0.0
+
+# Data Science
+numpy>=1.19.0
+pandas>=1.3.0
+scikit-learn>=0.24.0
+scipy>=1.7.0
+matplotlib>=3.4.0
+
+# Web/Realtime
+flask>=2.0.0
+websockets>=10.0
+asyncio
+serial
+pynmea2
+
+# Database
+sqlite3
+
+# Utils
+tqdm
+pathlib

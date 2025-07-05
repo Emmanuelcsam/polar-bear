@@ -12,9 +12,13 @@ from collections import defaultdict, Counter
 import json
 import calendar
 
+from utils.interactive_config import get_interactive_project_config
+from utils.config_loader import ConfigLoader
+
 class TimelineTracker:
-    def __init__(self, path="."):
+    def __init__(self, path=".", config=None):
         self.root = Path(path).resolve()
+        self.config = config or ConfigLoader()
         self.timeline = defaultdict(lambda: {'created': 0, 'modified': 0, 'size': 0})
         self.file_events = []
         self.daily_activity = defaultdict(int)
@@ -193,7 +197,7 @@ class TimelineTracker:
     
     def _save_timeline(self):
         """Save timeline data"""
-        stats_dir = Path('.project-stats')
+        stats_dir = self.config.get_stats_directory(self.root) if self.config else Path('.project-stats')
         stats_dir.mkdir(exist_ok=True)
         
         timeline_file = stats_dir / f"timeline_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
@@ -220,7 +224,7 @@ class TimelineTracker:
     
     def _compare_growth(self):
         """Compare with previous snapshots"""
-        stats_dir = Path('.project-stats')
+        stats_dir = self.config.get_stats_directory(self.root) if self.config else Path('.project-stats')
         if not stats_dir.exists():
             return
         
@@ -255,8 +259,13 @@ class TimelineTracker:
         return f"{size:.1f} TB"
 
 def main():
-    path = sys.argv[1] if len(sys.argv) > 1 else "."
-    tracker = TimelineTracker(path)
+    # Get project configuration interactively
+    project_path, config = get_interactive_project_config("Timeline Tracker")
+    
+    if not project_path:
+        return
+    
+    tracker = TimelineTracker(project_path, config)
     tracker.analyze_timeline()
     tracker.display_timeline()
 

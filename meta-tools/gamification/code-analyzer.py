@@ -11,10 +11,13 @@ from pathlib import Path
 from collections import defaultdict, Counter
 import json
 from datetime import datetime
+from utils.config_loader import ConfigLoader
+from utils.interactive_config import get_interactive_project_config
 
 class CodeAnalyzer:
-    def __init__(self, path="."):
+    def __init__(self, path=".", config=None):
         self.root = Path(path).resolve()
+        self.config = config or ConfigLoader()
         self.dependencies = defaultdict(set)
         self.imports = defaultdict(set)
         self.functions = defaultdict(list)
@@ -333,8 +336,8 @@ class CodeAnalyzer:
     
     def _save_analysis(self):
         """Save code analysis results"""
-        stats_dir = Path('.project-stats')
-        stats_dir.mkdir(exist_ok=True)
+        stats_dir = self.config.get_stats_directory(self.root)
+        stats_dir.mkdir(exist_ok=True, parents=True)
         
         analysis_file = stats_dir / f"code_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         
@@ -359,15 +362,24 @@ class CodeAnalyzer:
         return round(100 * part / whole, 1) if whole > 0 else 0
 
 def main():
-    import argparse
-    parser = argparse.ArgumentParser(description='Analyze code structure and dependencies')
-    parser.add_argument('path', nargs='?', default='.', help='Directory to analyze')
+    # Use interactive configuration
+    project_path, config = get_interactive_project_config("Code Structure Analyzer")
     
-    args = parser.parse_args()
+    if project_path is None:
+        return
     
-    analyzer = CodeAnalyzer(args.path)
+    print(f"\n🔍 Starting code analysis...")
+    print("="*60)
+    
+    analyzer = CodeAnalyzer(project_path, config)
     analyzer.analyze_code()
     analyzer.display_analysis()
+    
+    # Ask if user wants to analyze another project
+    print("\n" + "-"*50)
+    another = input("Analyze code in another project? (y/n): ").strip().lower()
+    if another == 'y':
+        main()
 
 if __name__ == "__main__":
     main()

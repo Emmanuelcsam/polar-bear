@@ -2,3 +2,11 @@
 decrepit-versions/version732025/results/fiber_defective/2_separated/recolor_colormap_autumn/consensus_report.json
 *.json
 *.npy
+*.ttf
+*.pyi
+*.env
+*.0
+*.so
+*.pkl
+*.afm
+*.csv

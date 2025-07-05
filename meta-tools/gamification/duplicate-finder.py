@@ -10,10 +10,13 @@ from pathlib import Path
 from collections import defaultdict
 import json
 from datetime import datetime
+from utils.config_loader import ConfigLoader
+from utils.interactive_config import get_interactive_project_config
 
 class DuplicateFinder:
-    def __init__(self, path=".", min_size=1024):
+    def __init__(self, path=".", config=None, min_size=1024):
         self.root = Path(path).resolve()
+        self.config = config or ConfigLoader()
         self.min_size = min_size  # Minimum file size to check
         self.file_hashes = defaultdict(list)
         self.duplicates = []
@@ -31,8 +34,9 @@ class DuplicateFinder:
         size_map = defaultdict(list)
         
         for root, dirs, files in os.walk(self.root):
-            # Skip hidden directories
-            dirs[:] = [d for d in dirs if not d.startswith('.')]
+            # Skip hidden and ignored directories
+            ignore_patterns = self.config.get_ignore_patterns()
+            dirs[:] = [d for d in dirs if not d.startswith('.') and not any(d == pattern.replace('*', '') for pattern in ignore_patterns)]
             
             for file in files:
                 if file.startswith('.'):
@@ -158,8 +162,8 @@ class DuplicateFinder:
     
     def _save_report(self):
         """Save detailed duplicate report"""
-        report_dir = Path('.project-stats')
-        report_dir.mkdir(exist_ok=True)
+        report_dir = self.config.get_stats_directory(self.root)
+        report_dir.mkdir(exist_ok=True, parents=True)
         
         report = {
             'timestamp': datetime.now().isoformat(),
@@ -213,16 +217,38 @@ class DuplicateFinder:
         return datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M')
 
 def main():
-    import argparse
-    parser = argparse.ArgumentParser(description='Find duplicate files in your project')
-    parser.add_argument('path', nargs='?', default='.', help='Directory to scan')
-    parser.add_argument('--min-size', type=int, default=1024, help='Minimum file size in bytes (default: 1KB)')
+    # Use interactive configuration
+    project_path, config = get_interactive_project_config("Duplicate File Finder")
     
-    args = parser.parse_args()
+    if project_path is None:
+        return
     
-    finder = DuplicateFinder(args.path, args.min_size)
+    # Ask for minimum file size
+    print("\n⚙️  Additional Options")
+    print("-"*30)
+    size_input = input("Minimum file size to check (default: 1KB, press Enter for default): ").strip()
+    
+    min_size = 1024  # Default 1KB
+    if size_input:
+        if size_input.endswith('KB'):
+            min_size = int(size_input[:-2]) * 1024
+        elif size_input.endswith('MB'):
+            min_size = int(size_input[:-2]) * 1024 * 1024
+        elif size_input.isdigit():
+            min_size = int(size_input)
+    
+    print(f"\n🔍 Starting duplicate search...")
+    print("="*60)
+    
+    finder = DuplicateFinder(project_path, config, min_size)
     finder.find_duplicates()
     finder.display_results()
+    
+    # Ask if user wants to analyze another project
+    print("\n" + "-"*50)
+    another = input("Find duplicates in another project? (y/n): ").strip().lower()
+    if another == 'y':
+        main()
 
 if __name__ == "__main__":
     main()

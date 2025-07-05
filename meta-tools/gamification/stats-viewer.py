@@ -4,6 +4,8 @@ Project Stats Viewer - Web-based viewer for project statistics
 Provides a simple web interface to browse and visualize project data
 """
 
+from utils.config_loader import ConfigLoader
+from utils.interactive_config import InteractiveConfig
 import os
 import json
 import http.server
@@ -317,11 +319,21 @@ class StatsViewerHandler(http.server.SimpleHTTPRequestHandler):
         projects = []
         
         # Search for projects with .project-stats directories
-        search_paths = [
+        config = ConfigLoader()
+        
+        # Add configured projects first
+        search_paths = []
+        for project in config.list_projects():
+            project_path = Path(project['path']).expanduser().resolve()
+            if project_path.exists():
+                search_paths.append(project_path)
+        
+        # Also check common locations
+        search_paths.extend([
             Path.home(),  # User home
             Path.cwd(),   # Current directory
             Path.cwd().parent,  # Parent directory
-        ]
+        ])
         
         # Also check common project directories
         for base in [Path.home(), Path.cwd()]:
@@ -329,8 +341,7 @@ class StatsViewerHandler(http.server.SimpleHTTPRequestHandler):
                 path = base / subdir
                 if path.exists():
                     search_paths.append(path)
-        
-        # Remove duplicates
+                # Remove duplicates
         search_paths = list(set(search_paths))
         
         for search_path in search_paths:
@@ -457,7 +468,9 @@ class StatsViewerHandler(http.server.SimpleHTTPRequestHandler):
             self.send_error(400, "Missing parameters")
             return
         
-        file_path = Path(project_path) / '.project-stats' / report_file
+        config = ConfigLoader()
+        stats_dir = config.get_stats_directory(Path(project_path))
+        file_path = stats_dir / report_file
         
         if not file_path.exists():
             self.send_error(404, "Report not found")

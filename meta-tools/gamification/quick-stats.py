@@ -10,10 +10,13 @@ from pathlib import Path
 from datetime import datetime
 from collections import Counter
 import json
+from utils.config_loader import ConfigLoader
+from utils.interactive_config import get_interactive_project_config
 
 class QuickStats:
-    def __init__(self, path="."):
+    def __init__(self, path=".", config=None):
         self.root = Path(path).resolve()
+        self.config = config or ConfigLoader()
         self.stats = {
             'files': 0,
             'dirs': 0,
@@ -31,8 +34,9 @@ class QuickStats:
         all_files = []
         
         for root, dirs, files in os.walk(self.root):
-            # Skip hidden and common ignore dirs
-            dirs[:] = [d for d in dirs if not d.startswith('.') and d not in ['node_modules', '__pycache__', 'venv', 'env']]
+            # Skip hidden and ignored directories
+            ignore_patterns = self.config.get_ignore_patterns()
+            dirs[:] = [d for d in dirs if not d.startswith('.') and not any(d == pattern.replace('*', '') for pattern in ignore_patterns)]
             
             self.stats['dirs'] += len(dirs)
             
@@ -98,8 +102,8 @@ class QuickStats:
     
     def _save_snapshot(self):
         """Save stats snapshot for tracking"""
-        snapshot_dir = Path('.project-stats')
-        snapshot_dir.mkdir(exist_ok=True)
+        snapshot_dir = self.config.get_stats_directory(self.root)
+        snapshot_dir.mkdir(exist_ok=True, parents=True)
         
         snapshot = {
             'timestamp': datetime.now().isoformat(),
@@ -119,10 +123,24 @@ class QuickStats:
         print(f"\n💾 Snapshot saved to: {snapshot_file}")
 
 def main():
-    path = sys.argv[1] if len(sys.argv) > 1 else "."
-    stats = QuickStats(path)
+    # Use interactive configuration
+    project_path, config = get_interactive_project_config("Quick Project Statistics")
+    
+    if project_path is None:
+        return
+    
+    print(f"\n📊 Starting analysis...")
+    print("="*60)
+    
+    stats = QuickStats(project_path, config)
     stats.scan()
     stats.display()
+    
+    # Ask if user wants to analyze another project
+    print("\n" + "-"*50)
+    another = input("Analyze another project? (y/n): ").strip().lower()
+    if another == 'y':
+        main()
 
 if __name__ == "__main__":
     main()

@@ -10,11 +10,15 @@ from pathlib import Path
 from datetime import datetime, timedelta
 from collections import defaultdict
 import subprocess
+from utils.interactive_config import get_interactive_project_config
+from utils.config_loader import ConfigLoader
+
 
 class GrowthMonitor:
-    def __init__(self, path="."):
+    def __init__(self, path=".", config=None):
         self.root = Path(path).resolve()
-        self.stats_dir = Path('.project-stats')
+        self.config = config or ConfigLoader()
+        self.stats_dir = self.config.get_stats_directory(self.root)
         self.current_stats = {}
         self.snapshots = []
         self.growth_data = {}
@@ -493,13 +497,13 @@ class GrowthMonitor:
         return f"{size:.1f} TB"
 
 def main():
-    import argparse
-    parser = argparse.ArgumentParser(description='Monitor project growth over time')
-    parser.add_argument('path', nargs='?', default='.', help='Directory to monitor')
+    # Get project configuration interactively
+    project_path, config = get_interactive_project_config("Growth Monitor")
     
-    args = parser.parse_args()
+    if not project_path:
+        return
     
-    monitor = GrowthMonitor(args.path)
+    monitor = GrowthMonitor(project_path, config)
     monitor.load_snapshots()
     monitor.collect_current_stats()
     monitor.analyze_growth()
