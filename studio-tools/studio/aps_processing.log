@@ -1,0 +1,207 @@
+2025-07-05 03:37:40,699 [WARNING] Failed to load scripts/image_map.py: module 'cv2' has no attribute 'COLORMAP_GIST_EARTH'
+2025-07-05 03:37:41,396 [WARNING] Failed to load scripts/batch_processing.py: invalid syntax (batch_processing.py, line 905)
+2025-07-05 03:37:41,498 [WARNING] Failed to load scripts/graphicalcsv.py: No module named 'matplotlib.tri.triangulation'
+2025-07-05 03:37:41,506 [WARNING] Failed to load scripts/cli_tool.py: No module named 'circle_detector'
+2025-07-05 03:37:41,549 [WARNING] Failed to load scripts/run_defect_analysis.py: No module named 'defect_detection2'
+2025-07-05 03:37:41,571 [WARNING] Failed to load scripts/cleaned/image_map.py: module 'cv2' has no attribute 'COLORMAP_GIST_EARTH'
+2025-07-05 03:37:41,638 [WARNING] Failed to load scripts/cleaned/cli_tool.py: No module named 'circle_detector'
+2025-07-05 03:37:41,644 [WARNING] Failed to load scripts/misc/image_map.py: module 'cv2' has no attribute 'COLORMAP_GIST_EARTH'
+2025-07-05 03:37:41,676 [INFO] Running in debug mode
+2025-07-05 03:37:41,676 [INFO] Starting debug mode with 5 cycles
+2025-07-05 03:37:41,692 [INFO] 
+==================================================
+2025-07-05 03:37:41,692 [INFO] Debug cycle 1/5
+2025-07-05 03:37:41,692 [INFO] ==================================================
+2025-07-05 03:37:41,692 [INFO] Running test suite with 2 test pairs
+2025-07-05 03:37:41,692 [INFO] Test 1/2: .studio_cache_v2/test_images/test1_input.png -> .studio_cache_v2/test_images/test1_target.png
+2025-07-05 03:37:41,744 [INFO] Applying script: gaussian_blur_script.py with params: {}
+2025-07-05 03:37:41,755 [INFO] Applying script: transformations/rotate_180.py with params: {}
+2025-07-05 03:37:41,767 [INFO] Applying script: rgb_to_hsv.py with params: {}
+2025-07-05 03:37:41,784 [INFO] Applying script: effects/solarize_effect.py with params: {}
+2025-07-05 03:37:41,800 [INFO] Applying script: resize_double.py with params: {}
+2025-07-05 03:37:41,826 [INFO] Applying script: save_image_script (1).py with params: {}
+2025-07-05 03:37:41,838 [INFO] Applying script: thresholding/adaptive_gaussian.py with params: {}
+2025-07-05 03:37:41,849 [INFO] Applying script: residual_generation.py with params: {}
+2025-07-05 03:37:41,853 [ERROR] Error in wrapped script residual_generation.py: 'numpy.ndarray' object has no attribute 'residual_map'
+2025-07-05 03:37:41,868 [INFO] Applying script: filtering/sobel_x.py with params: {}
+2025-07-05 03:37:41,883 [INFO] Applying script: rgb_to_lab.py with params: {}
+2025-07-05 03:37:42,140 [INFO] Applying script: bilateral_filter.py with params: {}
+2025-07-05 03:37:42,162 [INFO] Applying script: gamma_correction.py with params: {}
+2025-07-05 03:37:42,185 [INFO] Applying script: bilateral_filter.py with params: {}
+2025-07-05 03:37:42,198 [INFO] Applying script: histogram_equalization.py with params: {}
+2025-07-05 03:37:42,221 [INFO] Applying script: morphological opening.py with params: {}
+2025-07-05 03:37:42,232 [INFO] Applying script: morph_opening.py with params: {}
+2025-07-05 03:37:42,244 [INFO] Applying script: final_morphological_cleanup.py with params: {}
+2025-07-05 03:37:42,249 [ERROR] Error in wrapped script final_morphological_cleanup.py: 'numpy.ndarray' object has no attribute 'final_cleaned_mask'
+2025-07-05 03:37:42,259 [INFO] Applying script: morphology_cleanup.py with params: {}
+2025-07-05 03:37:42,271 [INFO] Applying script: opening.py with params: {}
+2025-07-05 03:37:42,292 [INFO] Applying script: bilateral_filter.py with params: {}
+2025-07-05 03:37:42,306 [INFO] Applying script: histogram_equalization.py with params: {}
+2025-07-05 03:37:42,329 [INFO] Applying script: bilateral_filter.py with params: {}
+2025-07-05 03:37:42,342 [INFO] Applying script: histogram_equalization.py with params: {}
+2025-07-05 03:37:42,363 [INFO] Applying script: bilateral_filter.py with params: {}
+2025-07-05 03:37:42,376 [INFO] Applying script: histogram_equalization.py with params: {}
+2025-07-05 03:37:42,400 [INFO] Applying script: bilateral_filter.py with params: {}
+2025-07-05 03:37:42,415 [INFO] Applying script: histogram_equalization.py with params: {}
+2025-07-05 03:37:42,437 [INFO] Applying script: display_fiber_script.py with params: {}
+2025-07-05 03:37:42,449 [INFO] Applying script: huf_elim.py with params: {}
+2025-07-05 03:37:42,460 [INFO] Applying script: cleaned/jake.py with params: {}
+2025-07-05 03:37:42,471 [INFO] Applying script: detect_edges_script.py with params: {}
+2025-07-05 03:37:42,484 [INFO] Applying script: isolate_cladding.py with params: {}
+2025-07-05 03:37:42,505 [INFO] Applying script: posterize_effect.py with params: {}
+2025-07-05 03:37:42,516 [INFO] Applying script: solarize_effect.py with params: {}
+2025-07-05 03:37:42,529 [INFO] Applying script: vignette_effect.py with params: {}
+2025-07-05 03:37:42,541 [INFO] Applying script: mosaic_effect.py with params: {}
+2025-07-05 03:37:42,559 [INFO] Applying script: vintage_effect.py with params: {}
+2025-07-05 03:37:42,592 [INFO] Applying script: bilateral_filter.py with params: {}
+2025-07-05 03:37:42,605 [INFO] Applying script: histogram_equalization.py with params: {}
+2025-07-05 03:37:42,630 [INFO] Applying script: bilateral_filter.py with params: {}
+2025-07-05 03:37:42,642 [INFO] Applying script: histogram_equalization.py with params: {}
+2025-07-05 03:37:42,655 [INFO] Trying successful sequence #1 with 1 scripts
+2025-07-05 03:37:42,655 [INFO] Applying script from sequence: gamma_correction.py
+2025-07-05 03:37:42,666 [INFO] Applying script: bilateral_filter.py with params: {}
+2025-07-05 03:37:42,679 [INFO] Applying script: histogram_equalization.py with params: {}
+2025-07-05 03:37:42,690 [INFO] Trying successful sequence #1 with 1 scripts
+2025-07-05 03:37:42,690 [INFO] Applying script from sequence: gamma_correction.py
+2025-07-05 03:37:42,702 [INFO] Applying script: clahe_preprocessing.py with params: {}
+2025-07-05 03:37:42,738 [INFO] Applying script: morphological opening.py with params: {}
+2025-07-05 03:37:42,750 [INFO] Applying script: morph_opening.py with params: {}
+2025-07-05 03:37:42,762 [INFO] Applying script: final_morphological_cleanup.py with params: {}
+2025-07-05 05:30:57,670 [WARNING] Failed to load scripts/image_map.py: module 'cv2' has no attribute 'COLORMAP_GIST_EARTH'
+2025-07-05 05:30:58,318 [WARNING] Failed to load scripts/batch_processing.py: invalid syntax (batch_processing.py, line 905)
+2025-07-05 05:30:58,411 [WARNING] Failed to load scripts/graphicalcsv.py: No module named 'matplotlib.tri.triangulation'
+2025-07-05 05:30:58,418 [WARNING] Failed to load scripts/cli_tool.py: No module named 'circle_detector'
+2025-07-05 05:30:58,456 [WARNING] Failed to load scripts/run_defect_analysis.py: No module named 'defect_detection2'
+2025-07-05 05:30:58,475 [WARNING] Failed to load scripts/cleaned/image_map.py: module 'cv2' has no attribute 'COLORMAP_GIST_EARTH'
+2025-07-05 05:30:58,537 [WARNING] Failed to load scripts/cleaned/cli_tool.py: No module named 'circle_detector'
+2025-07-05 05:30:58,543 [WARNING] Failed to load scripts/misc/image_map.py: module 'cv2' has no attribute 'COLORMAP_GIST_EARTH'
+2025-07-05 05:32:36,972 [WARNING] Failed to load scripts/image_map.py: module 'cv2' has no attribute 'COLORMAP_GIST_EARTH'
+2025-07-05 05:32:37,616 [WARNING] Failed to load scripts/batch_processing.py: invalid syntax (batch_processing.py, line 905)
+2025-07-05 05:32:37,703 [WARNING] Failed to load scripts/graphicalcsv.py: No module named 'matplotlib.tri.triangulation'
+2025-07-05 05:32:37,710 [WARNING] Failed to load scripts/cli_tool.py: No module named 'circle_detector'
+2025-07-05 05:32:37,748 [WARNING] Failed to load scripts/run_defect_analysis.py: No module named 'defect_detection2'
+2025-07-05 05:32:37,769 [WARNING] Failed to load scripts/cleaned/image_map.py: module 'cv2' has no attribute 'COLORMAP_GIST_EARTH'
+2025-07-05 05:32:37,827 [WARNING] Failed to load scripts/cleaned/cli_tool.py: No module named 'circle_detector'
+2025-07-05 05:32:37,832 [WARNING] Failed to load scripts/misc/image_map.py: module 'cv2' has no attribute 'COLORMAP_GIST_EARTH'
+2025-07-05 05:32:38,457 [INFO] Applying script: bilateral_filter.py with params: {}
+2025-07-05 05:32:38,887 [INFO] Applying script: gamma_correction.py with params: {}
+2025-07-05 05:32:39,088 [INFO] Applying script: histogram_equalization.py with params: {}
+2025-07-05 05:32:39,471 [INFO] Applying script: clahe_preprocessing.py with params: {}
+2025-07-05 05:32:39,851 [ERROR] Error in wrapped script clahe_preprocessing.py: 'tuple' object does not support item assignment
+2025-07-05 05:32:40,078 [INFO] Applying script: histogram_equalization (1).py with params: {}
+2025-07-05 05:32:40,458 [INFO] Applying script: gamma_correction.py with params: {}
+2025-07-05 05:32:40,665 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:32:41,036 [INFO] Applying script: gamma_correction.py with params: {}
+2025-07-05 05:32:41,243 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:32:41,620 [INFO] Applying script: gamma_correction.py with params: {}
+2025-07-05 05:32:41,825 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:32:42,195 [INFO] Applying script: gamma_correction.py with params: {}
+2025-07-05 05:32:42,400 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:32:42,771 [INFO] Applying script: clahe_preprocessing.py with params: {}
+2025-07-05 05:32:43,272 [INFO] Applying script: gaussian_smooth.py with params: {}
+2025-07-05 05:32:43,472 [INFO] Applying script: box_filter.py with params: {}
+2025-07-05 05:32:43,684 [INFO] Applying script: Gradient Filter.py with params: {}
+2025-07-05 05:32:43,894 [INFO] Applying script: nlm_denoise.py with params: {}
+2025-07-05 05:32:44,496 [INFO] Applying script: gaussian_blur_strong.py with params: {}
+2025-07-05 05:32:44,862 [INFO] Applying script: gamma_correction.py with params: {}
+2025-07-05 05:32:45,064 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:32:45,296 [INFO] Parameter log saved to .studio_cache_v2/parameters_20250705_053245.json
+2025-07-05 05:32:48,054 [INFO] Applying script: posterize_effect.py with params: {}
+2025-07-05 05:32:48,470 [INFO] Applying script: gaussian_smooth.py with params: {}
+2025-07-05 05:32:48,677 [INFO] Applying script: box_filter.py with params: {}
+2025-07-05 05:32:48,888 [INFO] Applying script: Gradient Filter.py with params: {}
+2025-07-05 05:32:49,100 [INFO] Applying script: nlm_denoise.py with params: {}
+2025-07-05 05:32:50,484 [INFO] Applying script: gaussian_smooth.py with params: {}
+2025-07-05 05:32:50,700 [INFO] Applying script: box_filter.py with params: {}
+2025-07-05 05:32:51,117 [INFO] Applying script: clahe_preprocessing.py with params: {}
+2025-07-05 05:32:51,258 [ERROR] Error in wrapped script clahe_preprocessing.py: 'tuple' object does not support item assignment
+2025-07-05 05:32:51,474 [INFO] Applying script: histogram_equalization (1).py with params: {}
+2025-07-05 05:32:51,692 [INFO] Applying script: histogram_enhancement.py with params: {}
+2025-07-05 05:32:51,718 [ERROR] Error in wrapped script histogram_enhancement.py: 'numpy.ndarray' object has no attribute 'enhanced_image'
+2025-07-05 05:32:51,928 [INFO] Applying script: show_histogram.py with params: {}
+2025-07-05 05:32:52,144 [INFO] Applying script: clahe_script_1.py with params: {}
+2025-07-05 05:32:52,548 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:32:52,957 [INFO] Applying script: morphological opening.py with params: {}
+2025-07-05 05:32:53,334 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:32:53,714 [INFO] Applying script: posterize_effect.py with params: {}
+2025-07-05 05:32:53,928 [INFO] Applying script: solarize_effect.py with params: {}
+2025-07-05 05:32:54,146 [INFO] Applying script: vignette_effect.py with params: {}
+2025-07-05 05:32:54,372 [INFO] Applying script: mosaic_effect.py with params: {}
+2025-07-05 05:32:54,723 [INFO] Applying script: vintage_effect.py with params: {}
+2025-07-05 05:32:55,313 [INFO] Applying script: clahe_preprocessing.py with params: {}
+2025-07-05 05:32:55,660 [INFO] Applying script: histogram_equalization (1).py with params: {}
+2025-07-05 05:32:55,878 [INFO] Applying script: histogram_enhancement.py with params: {}
+2025-07-05 05:32:55,899 [ERROR] Error in wrapped script histogram_enhancement.py: 'numpy.ndarray' object has no attribute 'enhanced_image'
+2025-07-05 05:32:56,113 [INFO] Applying script: show_histogram.py with params: {}
+2025-07-05 05:32:56,323 [INFO] Applying script: clahe_script_1.py with params: {}
+2025-07-05 05:32:56,692 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:32:57,061 [INFO] Applying script: gaussian_smooth.py with params: {}
+2025-07-05 05:32:57,270 [INFO] Applying script: box_filter.py with params: {}
+2025-07-05 05:32:57,496 [INFO] Applying script: Gradient Filter.py with params: {}
+2025-07-05 05:32:57,708 [INFO] Applying script: nlm_denoise.py with params: {}
+2025-07-05 05:32:58,333 [INFO] Applying script: gaussian_blur_strong.py with params: {}
+2025-07-05 05:32:58,699 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:32:59,067 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:32:59,438 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:32:59,800 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:33:00,181 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:33:00,395 [INFO] Trying successful sequence #1 with 1 scripts
+2025-07-05 05:33:00,395 [INFO] Applying script from sequence: histogram_equalization.py
+2025-07-05 05:33:00,558 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:33:00,788 [INFO] Trying successful sequence #3 with 1 scripts
+2025-07-05 05:33:00,788 [INFO] Applying script from sequence: clahe_preprocessing.py
+2025-07-05 05:33:01,074 [INFO] Applying script: gamma_correction.py with params: {}
+2025-07-05 05:33:01,291 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:33:01,519 [INFO] Trying successful sequence #1 with 1 scripts
+2025-07-05 05:33:01,519 [INFO] Applying script from sequence: histogram_equalization.py
+2025-07-05 05:33:01,679 [INFO] Applying script: gamma_correction.py with params: {}
+2025-07-05 05:33:01,903 [INFO] Applying script: clahe.py with params: {}
+2025-07-05 05:33:02,134 [INFO] Trying successful sequence #3 with 1 scripts
+2025-07-05 05:33:02,134 [INFO] Applying script from sequence: clahe_preprocessing.py
+2025-07-05 05:33:02,431 [INFO] Applying script: save_inten_csv_cord.py with params: {}
+2025-07-05 05:33:02,644 [INFO] Applying script: maxneighdiff.py with params: {}
+2025-07-05 05:33:02,851 [INFO] Applying script: features/shi_tomasi.py with params: {}
+2025-07-05 05:33:03,086 [INFO] Applying script: load_img/basic_load.py with params: {}
+2025-07-05 05:33:03,309 [INFO] Applying script: transformations/flip_vertical.py with params: {}
+2025-07-05 05:33:03,577 [INFO] Trying successful sequence #3 with 1 scripts
+2025-07-05 05:33:03,577 [INFO] Applying script from sequence: clahe_preprocessing.py
+2025-07-05 05:33:03,714 [INFO] Parameter log saved to .studio_cache_v2/parameters_20250705_053303.json
+2025-07-05 05:33:06,374 [INFO] Applying script: clahe_preprocessing.py with params: {}
+2025-07-05 05:33:06,380 [ERROR] Error in wrapped script clahe_preprocessing.py: 'tuple' object does not support item assignment
+2025-07-05 05:33:06,383 [INFO] Applying script: histogram_equalization (1).py with params: {}
+2025-07-05 05:33:06,386 [INFO] Applying script: histogram_enhancement.py with params: {}
+2025-07-05 05:33:06,392 [ERROR] Error in wrapped script histogram_enhancement.py: 'numpy.ndarray' object has no attribute 'enhanced_image'
+2025-07-05 05:33:06,395 [INFO] Applying script: show_histogram.py with params: {}
+2025-07-05 05:33:06,399 [INFO] Applying script: clahe_script_1.py with params: {}
+2025-07-05 05:33:06,405 [INFO] Applying script: gamma_correction.py with params: {}
+2025-07-05 05:33:06,408 [INFO] Applying script: bilateral_filter.py with params: {}
+2025-07-05 05:33:06,420 [INFO] Applying script: gamma_correction.py with params: {}
+2025-07-05 05:33:06,423 [INFO] Applying script: bilateral_filter.py with params: {}
+2025-07-05 05:33:06,433 [INFO] Applying script: gaussian_smooth.py with params: {}
+2025-07-05 05:33:06,441 [INFO] Applying script: gamma_correction.py with params: {}
+2025-07-05 05:33:06,444 [INFO] Applying script: bilateral_filter.py with params: {}
+2025-07-05 05:33:06,451 [INFO] Applying script: gamma_correction.py with params: {}
+2025-07-05 05:33:06,455 [INFO] Applying script: bilateral_filter.py with params: {}
+2025-07-05 05:33:06,462 [INFO] Applying script: gamma_correction.py with params: {}
+2025-07-05 05:33:06,465 [INFO] Applying script: bilateral_filter.py with params: {}
+2025-07-05 05:33:06,471 [INFO] Applying script: gamma_correction.py with params: {}
+2025-07-05 05:33:06,474 [INFO] Applying script: bilateral_filter.py with params: {}
+2025-07-05 05:33:06,482 [INFO] Applying script: gaussian_smooth.py with params: {}
+2025-07-05 05:33:06,489 [INFO] Applying script: gamma_correction.py with params: {}
+2025-07-05 05:33:06,492 [INFO] Applying script: bilateral_filter.py with params: {}
+2025-07-05 05:33:06,500 [INFO] Applying script: transformations/rotate_90.py with params: {}
+2025-07-05 05:33:06,503 [INFO] Applying script: load_img/load_use_circles.py with params: {}
+2025-07-05 05:33:06,506 [INFO] Applying script: morphological opening.py with params: {}
+2025-07-05 05:33:06,509 [INFO] Applying script: transformations/flip_both.py with params: {}
+2025-07-05 05:33:06,512 [INFO] Applying script: validate_components.py with params: {}
+2025-07-05 05:33:06,518 [INFO] Applying script: gamma_correction.py with params: {}
+2025-07-05 05:33:06,521 [INFO] Applying script: bilateral_filter.py with params: {}
+2025-07-05 05:33:06,528 [INFO] Applying script: transformations/rotate_45.py with params: {}
+2025-07-05 05:33:06,531 [INFO] Applying script: max_filter_2.py with params: {}
+2025-07-05 05:33:06,534 [INFO] Applying script: bilateral_filter.py with params: {}
+2025-07-05 05:33:06,539 [INFO] Applying script: super_resolution.py with params: {}
+2025-07-05 05:33:06,552 [INFO] Applying script: gamma_correction.py with params: {}
+2025-07-05 05:33:06,556 [INFO] Applying script: bilateral_filter.py with params: {}
+2025-07-05 05:33:06,570 [INFO] Applying script: gamma_correction.py with params: {}
+2025-07-05 05:33:06,574 [INFO] Applying script: bilateral_filter.py with params: {}
+2025-07-05 05:33:06,583 [INFO] Parameter log saved to .studio_cache_v2/parameters_20250705_053306.json

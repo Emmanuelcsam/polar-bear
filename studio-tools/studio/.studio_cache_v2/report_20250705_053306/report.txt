@@ -1,0 +1,42 @@
+
+Automated Image Processing Report
+=================================
+Generated: 2025-07-05 05:33:06
+
+SUMMARY
+-------
+Success: False
+Final Similarity Score: 0.6488
+Total Iterations: 15
+Processing Time: 0.23 seconds
+Scripts Applied: 5
+
+PROCESSING PIPELINE
+------------------
+  1. bilateral_filter.py
+  2. bilateral_filter.py
+  3. gaussian_smooth.py
+  4. gaussian_smooth.py
+  5. super_resolution.py
+
+IMPROVEMENT STATISTICS
+----------------------
+Total Improvements: 5
+Average Improvement: 0.0004
+Best Improvement: 0.0007
+
+LEARNING STATISTICS
+-------------------
+Total Scripts Available: 570
+Successful Sequences Learned: 13
+Most Successful Scripts:
+  - morphological opening.py: 0.040 success rate (1 uses)
+  - posterize_effect.py: 0.025 success rate (1 uses)
+  - clahe_preprocessing.py: 0.008 success rate (1 uses)
+  - histogram_equalization.py: 0.003 success rate (1 uses)
+  - bilateral_filter.py: 0.000 success rate (3 uses)
+  - nlm_denoise.py: 0.000 success rate (1 uses)
+  - gaussian_smooth.py: 0.000 success rate (2 uses)
+  - super_resolution.py: 0.000 success rate (1 uses)
+  - histogram_equalization (1).py: 0.000 success rate (1 uses)
+  - box_filter.py: 0.000 success rate (1 uses)

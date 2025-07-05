@@ -497,6 +497,53 @@ class ImprovedScriptManager:
         for func_name, info in self.function_info.items():
             self.category_map[info['category']].append(func_name)
 
+    def _wrap_script_function(self, func, script_name: str):
+        """Wrap script function to handle various return types"""
+        def wrapped_function(image, **kwargs):
+            try:
+                result = func(image, **kwargs) if kwargs else func(image)
+                
+                # Handle various return types
+                if isinstance(result, np.ndarray):
+                    return result
+                elif hasattr(result, '__dict__'):
+                    # Object with attributes - check common ones
+                    for attr in ['enhanced_image', 'processed_image', 'result_image', 
+                               'output_image', 'final_image', 'image']:
+                        if hasattr(result, attr):
+                            img = getattr(result, attr)
+                            if isinstance(img, np.ndarray):
+                                logger.debug(f"Extracted image from {attr} attribute")
+                                return img
+                    # Try to extract mask attributes
+                    for attr in ['final_cleaned_mask', 'mask', 'binary_mask']:
+                        if hasattr(result, attr):
+                            mask = getattr(result, attr)
+                            if isinstance(mask, np.ndarray):
+                                logger.debug(f"Extracted mask from {attr} attribute")
+                                # Convert mask to image format
+                                if len(mask.shape) == 2:
+                                    # Apply mask to original image or convert to visible format
+                                    if mask.dtype == bool:
+                                        mask = mask.astype(np.uint8) * 255
+                                    return mask
+                elif isinstance(result, tuple) or isinstance(result, list):
+                    # Return first numpy array found
+                    for item in result:
+                        if isinstance(item, np.ndarray):
+                            logger.debug(f"Extracted image from tuple/list")
+                            return item
+                            
+                # If we get here, couldn't extract image
+                logger.warning(f"Script {script_name} returned unexpected type: {type(result)}")
+                return image  # Return original
+                
+            except Exception as e:
+                logger.error(f"Error in wrapped script {script_name}: {e}")
+                return image  # Return original on error
+                
+        return wrapped_function
+
     def _load_scripts_from_dir(self, scripts_dir: Path):
         """Load all scripts from a directory"""
         try:
@@ -517,7 +564,10 @@ class ImprovedScriptManager:
                             rel_path = script_path.relative_to(scripts_dir)
                             func_key = str(rel_path).replace('\\', '/')  # Normalize path separators
 
-                            self.functions[func_key] = module.process_image
+                            # Wrap the function to handle various return types
+                            self.functions[func_key] = self._wrap_script_function(
+                                module.process_image, func_key
+                            )
                             self.function_info[func_key] = {
                                 'path': script_path,
                                 'category': self._determine_category(script_path),
@@ -525,10 +575,10 @@ class ImprovedScriptManager:
                             }
                 except Exception as e:
                     # Log error but continue loading other scripts
-                    print(f"Warning: Failed to load {script_path}: {e}")
+                    logger.warning(f"Failed to load {script_path}: {e}")
                     continue
         except Exception as e:
-            print(f"Error accessing directory {scripts_dir}: {e}")
+            logger.error(f"Error accessing directory {scripts_dir}: {e}")
 
     def _determine_category(self, script_path: Path) -> str:
         """Determine category from path or filename"""

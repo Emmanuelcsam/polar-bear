@@ -1,0 +1,35 @@
+
+Automated Image Processing Report
+=================================
+Generated: 2025-07-05 05:32:47
+
+SUMMARY
+-------
+Success: False
+Final Similarity Score: 0.7420
+Total Iterations: 10
+Processing Time: 7.40 seconds
+Scripts Applied: 4
+
+PROCESSING PIPELINE
+------------------
+  1. bilateral_filter.py
+  2. histogram_equalization.py
+  3. histogram_equalization (1).py
+  4. clahe_preprocessing.py
+
+IMPROVEMENT STATISTICS
+----------------------
+Total Improvements: 4
+Average Improvement: 0.0280
+Best Improvement: 0.0778
+
+LEARNING STATISTICS
+-------------------
+Total Scripts Available: 570
+Successful Sequences Learned: 4
+Most Successful Scripts:
+  - clahe_preprocessing.py: 0.008 success rate (1 uses)
+  - histogram_equalization.py: 0.003 success rate (1 uses)
+  - bilateral_filter.py: 0.000 success rate (1 uses)
+  - histogram_equalization (1).py: 0.000 success rate (1 uses)

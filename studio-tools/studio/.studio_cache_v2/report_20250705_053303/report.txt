@@ -1,0 +1,39 @@
+
+Automated Image Processing Report
+=================================
+Generated: 2025-07-05 05:33:06
+
+SUMMARY
+-------
+Success: False
+Final Similarity Score: 0.2057
+Total Iterations: 20
+Processing Time: 16.19 seconds
+Scripts Applied: 4
+
+PROCESSING PIPELINE
+------------------
+  1. posterize_effect.py
+  2. nlm_denoise.py
+  3. box_filter.py
+  4. morphological opening.py
+
+IMPROVEMENT STATISTICS
+----------------------
+Total Improvements: 4
+Average Improvement: 0.1621
+Best Improvement: 0.4015
+
+LEARNING STATISTICS
+-------------------
+Total Scripts Available: 570
+Successful Sequences Learned: 8
+Most Successful Scripts:
+  - morphological opening.py: 0.040 success rate (1 uses)
+  - posterize_effect.py: 0.025 success rate (1 uses)
+  - clahe_preprocessing.py: 0.008 success rate (1 uses)
+  - histogram_equalization.py: 0.003 success rate (1 uses)
+  - nlm_denoise.py: 0.000 success rate (1 uses)
+  - bilateral_filter.py: 0.000 success rate (1 uses)
+  - histogram_equalization (1).py: 0.000 success rate (1 uses)
+  - box_filter.py: 0.000 success rate (1 uses)
