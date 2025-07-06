@@ -1,0 +1,50 @@
+2025-07-05 10:23:51,108 [INFO] Starting Advanced Ferrule Analysis
+2025-07-05 10:23:51,109 [INFO] Found 14 ferrule images to analyze
+2025-07-05 10:23:51,109 [INFO] Performing comprehensive analysis on: img (74)_ferrule.png
+2025-07-05 10:23:51,213 [ERROR] Error in gradient analysis: index 0 is out of bounds for axis 0 with size 0
+2025-07-05 10:23:51,242 [INFO] morphological analysis complete
+2025-07-05 10:23:51,401 [INFO] frequency analysis complete
+2025-07-05 10:23:51,492 [ERROR] Error in statistical analysis: zero-size array to reduction operation maximum which has no identity
+2025-07-05 10:23:51,570 [ERROR] Error in edge analysis: index -1 is out of bounds for axis 0 with size 0
+2025-07-05 10:23:51,674 [INFO] Saved visualization: analysis_visualizations/img (74)_ferrule_visualization.png
+2025-07-05 10:23:51,675 [INFO] Performing comprehensive analysis on: 19700101000214-scratch_ferrule.png
+2025-07-05 10:23:51,755 [ERROR] Error in gradient analysis: index 0 is out of bounds for axis 0 with size 0
+2025-07-05 10:23:51,786 [INFO] morphological analysis complete
+2025-07-05 10:23:51,949 [INFO] frequency analysis complete
+2025-07-05 10:23:52,056 [ERROR] Error in statistical analysis: zero-size array to reduction operation maximum which has no identity
+2025-07-05 10:23:52,136 [ERROR] Error in edge analysis: index -1 is out of bounds for axis 0 with size 0
+2025-07-05 10:23:52,249 [INFO] Saved visualization: analysis_visualizations/19700101000214-scratch_ferrule_visualization.png
+2025-07-05 10:23:52,249 [INFO] Performing comprehensive analysis on: img (49)_ferrule.png
+2025-07-05 10:23:52,324 [ERROR] Error in gradient analysis: index 0 is out of bounds for axis 0 with size 0
+2025-07-05 10:23:52,354 [INFO] morphological analysis complete
+2025-07-05 10:23:52,530 [INFO] frequency analysis complete
+2025-07-05 10:23:52,615 [ERROR] Error in statistical analysis: zero-size array to reduction operation maximum which has no identity
+2025-07-05 10:23:52,700 [ERROR] Error in edge analysis: index -1 is out of bounds for axis 0 with size 0
+2025-07-05 10:23:52,803 [INFO] Saved visualization: analysis_visualizations/img (49)_ferrule_visualization.png
+2025-07-05 10:23:52,803 [INFO] Performing comprehensive analysis on: 19700101000102-ubet_ferrule.png
+2025-07-05 10:23:52,874 [ERROR] Error in gradient analysis: index 0 is out of bounds for axis 0 with size 0
+2025-07-05 10:23:52,907 [INFO] morphological analysis complete
+2025-07-05 10:23:53,085 [INFO] frequency analysis complete
+2025-07-05 10:23:53,181 [ERROR] Error in statistical analysis: zero-size array to reduction operation maximum which has no identity
+2025-07-05 10:23:53,264 [ERROR] Error in edge analysis: index -1 is out of bounds for axis 0 with size 0
+2025-07-05 10:23:53,360 [INFO] Saved visualization: analysis_visualizations/19700101000102-ubet_ferrule_visualization.png
+2025-07-05 10:23:53,361 [INFO] Performing comprehensive analysis on: 19700101000223-scratch_ferrule.png
+2025-07-05 10:23:53,431 [ERROR] Error in gradient analysis: index 0 is out of bounds for axis 0 with size 0
+2025-07-05 10:23:53,461 [INFO] morphological analysis complete
+2025-07-05 10:23:53,626 [INFO] frequency analysis complete
+2025-07-05 10:23:53,711 [ERROR] Error in statistical analysis: zero-size array to reduction operation maximum which has no identity
+2025-07-05 10:23:53,787 [ERROR] Error in edge analysis: index -1 is out of bounds for axis 0 with size 0
+2025-07-05 10:23:53,893 [INFO] Saved visualization: analysis_visualizations/19700101000223-scratch_ferrule_visualization.png
+2025-07-05 10:23:53,893 [INFO] Performing comprehensive analysis on: ferrule.png
+2025-07-05 10:23:53,969 [ERROR] Error in gradient analysis: index 0 is out of bounds for axis 0 with size 0
+2025-07-05 10:23:53,998 [INFO] morphological analysis complete
+2025-07-05 10:23:54,163 [INFO] frequency analysis complete
+2025-07-05 10:23:54,253 [ERROR] Error in statistical analysis: zero-size array to reduction operation maximum which has no identity
+2025-07-05 10:23:54,331 [ERROR] Error in edge analysis: index -1 is out of bounds for axis 0 with size 0
+2025-07-05 10:23:54,431 [INFO] Saved visualization: analysis_visualizations/ferrule_visualization.png
+2025-07-05 10:23:54,432 [INFO] Performing comprehensive analysis on: ferrule(0)(0).png
+2025-07-05 10:23:54,527 [INFO] gradient analysis complete
+2025-07-05 10:23:54,560 [INFO] morphological analysis complete
+2025-07-05 10:23:54,720 [INFO] frequency analysis complete
+2025-07-05 10:23:54,827 [INFO] statistical analysis complete
+2025-07-05 10:23:54,917 [INFO] edge analysis complete

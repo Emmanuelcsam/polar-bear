@@ -1,0 +1,27 @@
+# Test dependencies for geometry detection system
+
+# Core testing framework
+unittest2>=1.1.0
+
+# Mocking and patching
+mock>=4.0.3
+
+# Code coverage
+coverage>=6.0
+
+# Additional test utilities
+pytest>=7.0.0
+pytest-cov>=4.0.0
+pytest-mock>=3.10.0
+
+# All main dependencies needed for testing
+opencv-python>=4.5.0
+numpy>=1.21.0
+matplotlib>=3.4.0
+psutil>=5.8.0
+pandas>=1.3.0
+pypylon>=2.0.0  # Optional - for Basler cameras
+
+# For Python 3.13 compatibility
+setuptools>=65.0.0
+wheel>=0.38.0
