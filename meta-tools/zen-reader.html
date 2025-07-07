@@ -1,0 +1,1980 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zen Text Reader Pro - Ultimate Focus & Comprehension</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #6366f1;
+            --secondary: #a78bfa;
+            --accent: #f472b6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --bg-dark: #0f0f23;
+            --bg-light: #1a1a2e;
+            --text: #e0e0ff;
+            --text-dim: #a0a0c0;
+            --glass: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Light theme */
+        body.light-theme {
+            --bg-dark: #f3f4f6;
+            --bg-light: #ffffff;
+            --text: #1f2937;
+            --text-dim: #6b7280;
+            --glass: rgba(0, 0, 0, 0.02);
+            --glass-border: rgba(0, 0, 0, 0.1);
+        }
+
+        /* Animated background */
+        .background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-light) 50%, var(--bg-dark) 100%);
+            transition: all 0.5s ease;
+        }
+
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.4;
+            animation: float 20s infinite ease-in-out;
+        }
+
+        .orb1 {
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, var(--primary) 0%, transparent 70%);
+            top: -200px;
+            left: -200px;
+            animation-delay: 0s;
+        }
+
+        .orb2 {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, var(--secondary) 0%, transparent 70%);
+            bottom: -100px;
+            right: -100px;
+            animation-delay: 10s;
+        }
+
+        .orb3 {
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, var(--accent) 0%, transparent 70%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation-delay: 5s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(100px, -100px) scale(1.1); }
+            50% { transform: translate(-100px, 100px) scale(0.9); }
+            75% { transform: translate(50px, 50px) scale(1.05); }
+        }
+
+        /* Main container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeInDown 1s ease-out;
+        }
+
+        .header h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 50%, var(--accent) 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .header p {
+            color: var(--text-dim);
+            font-size: 1.2rem;
+        }
+
+        /* Features dropdown menu */
+        .features-dropdown {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 2rem;
+        }
+
+        .features-btn {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border: none;
+            border-radius: 10px;
+            padding: 0.75rem 1.5rem;
+            color: white;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .features-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(99, 102, 241, 0.4);
+        }
+
+        .features-menu {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            margin-top: 0.5rem;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 15px;
+            backdrop-filter: blur(20px);
+            min-width: 250px;
+            opacity: 0;
+            transform: translateY(-10px);
+            pointer-events: none;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .features-menu.active {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: all;
+        }
+
+        .feature-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-radius: 10px;
+            margin: 0.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .feature-item:hover {
+            background: rgba(99, 102, 241, 0.2);
+        }
+
+        .feature-item.active {
+            background: rgba(99, 102, 241, 0.3);
+        }
+
+        .feature-icon {
+            font-size: 1.2rem;
+        }
+
+        .feature-text {
+            flex: 1;
+        }
+
+        .feature-shortcut {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            font-family: monospace;
+        }
+
+        /* Stats bar */
+        .stats-bar {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 15px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+            align-items: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .stat-label {
+            color: var(--text-dim);
+            font-size: 0.85rem;
+        }
+
+        .stat-value {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        /* File upload area */
+        .upload-area {
+            background: var(--glass);
+            border: 2px dashed var(--glass-border);
+            border-radius: 20px;
+            padding: 3rem;
+            text-align: center;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-area:hover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .upload-area.dragover {
+            border-color: var(--accent);
+            background: rgba(244, 114, 182, 0.1);
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.1); opacity: 1; }
+        }
+
+        /* Main content area */
+        .content-area {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 2rem;
+            margin-top: 2rem;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        .content-area.active {
+            opacity: 1;
+        }
+
+        /* Text display */
+        .text-display {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 2.5rem;
+            backdrop-filter: blur(10px);
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .text-display.fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            max-height: 100vh;
+            z-index: 9999;
+            border-radius: 0;
+            padding: 4rem;
+            background: var(--bg-dark);
+        }
+
+        .text-content {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: var(--text);
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            position: relative;
+        }
+
+        /* Markdown styling */
+        .text-content h1, .text-content h2, .text-content h3, .text-content h4, .text-content h5, .text-content h6 {
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            font-weight: 700;
+            line-height: 1.3;
+        }
+
+        .text-content h1 { font-size: 2rem; }
+        .text-content h2 { font-size: 1.75rem; }
+        .text-content h3 { font-size: 1.5rem; }
+        .text-content h4 { font-size: 1.25rem; }
+        .text-content h5 { font-size: 1.1rem; }
+        .text-content h6 { font-size: 1rem; }
+
+        .text-content p {
+            margin-bottom: 1rem;
+        }
+
+        .text-content code {
+            background: var(--glass);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+
+        .text-content pre {
+            background: var(--glass);
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin-bottom: 1rem;
+        }
+
+        .text-content pre code {
+            background: none;
+            padding: 0;
+        }
+
+        .text-content blockquote {
+            border-left: 4px solid var(--primary);
+            padding-left: 1rem;
+            margin: 1rem 0;
+            color: var(--text-dim);
+        }
+
+        .text-content ul, .text-content ol {
+            margin-left: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .text-content li {
+            margin-bottom: 0.5rem;
+        }
+
+        .text-content a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .text-content a:hover {
+            text-decoration: underline;
+        }
+
+        .text-content::selection {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Bionic reading mode */
+        .bionic-mode .word {
+            display: inline-block;
+        }
+
+        .bionic-mode .word .bold {
+            font-weight: 700;
+        }
+
+        /* Focus gradient mode */
+        .focus-gradient::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(to bottom, 
+                rgba(0,0,0,0.7) 0%,
+                transparent 20%,
+                transparent 80%,
+                rgba(0,0,0,0.7) 100%);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Reading progress bar */
+        .reading-progress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: var(--glass-border);
+            z-index: 9998;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .reading-progress.active {
+            opacity: 1;
+        }
+
+        .reading-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        /* Reading controls */
+        .reading-controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .control-btn {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 0.5rem 1rem;
+            color: var(--text);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .control-btn:hover {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .control-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Speed reader modal */
+        .speed-reader-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+
+        .speed-reader-modal.active {
+            display: flex;
+        }
+
+        .speed-reader-content {
+            text-align: center;
+            color: white;
+        }
+
+        .speed-word {
+            font-size: 4rem;
+            font-weight: 300;
+            margin-bottom: 2rem;
+            letter-spacing: 0.05em;
+            min-height: 5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .speed-controls {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .speed-control-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .speed-control-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .wpm-display {
+            color: var(--primary);
+            font-weight: 600;
+            margin: 0 1rem;
+        }
+
+        /* Pomodoro timer */
+        .pomodoro-widget {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 15px;
+            padding: 1rem;
+            backdrop-filter: blur(10px);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            z-index: 100;
+        }
+
+        .pomodoro-widget.active {
+            display: flex;
+        }
+
+        .pomodoro-time {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .pomodoro-controls {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        /* AI Chat Panel */
+        .ai-panel {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            height: 80vh;
+        }
+
+        .ai-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .ai-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 1rem;
+            padding-right: 0.5rem;
+        }
+
+        .message {
+            margin-bottom: 1rem;
+            animation: fadeInUp 0.3s ease-out;
+        }
+
+        .message.user {
+            text-align: right;
+        }
+
+        .message-bubble {
+            display: inline-block;
+            padding: 0.75rem 1rem;
+            border-radius: 15px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+
+        .message.user .message-bubble {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+        }
+
+        .message.ai .message-bubble {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+        }
+
+        .chat-input-area {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .chat-input {
+            flex: 1;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 0.75rem;
+            color: var(--text);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .send-btn {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border: none;
+            border-radius: 10px;
+            padding: 0.75rem 1.5rem;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .send-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(99, 102, 241, 0.4);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Quick actions */
+        .quick-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .quick-action {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 0.4rem 0.8rem;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .quick-action:hover {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: var(--primary);
+        }
+
+        /* API Key input */
+        .api-key-section {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 15px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .api-key-input {
+            flex: 1;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 0.5rem;
+            color: var(--text);
+            font-family: monospace;
+            transition: all 0.3s ease;
+        }
+
+        .api-key-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .api-key-input:valid {
+            border-color: var(--success);
+        }
+
+        .api-key-input:invalid {
+            border-color: var(--warning);
+        }
+
+        /* Exit fullscreen button */
+        .exit-fullscreen {
+            position: absolute;
+            top: 2rem;
+            right: 2rem;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 0.5rem 1rem;
+            color: var(--text);
+            cursor: pointer;
+            display: none;
+            z-index: 10000;
+        }
+
+        .text-display.fullscreen .exit-fullscreen {
+            display: block;
+        }
+
+        /* TTS controls */
+        .tts-controls {
+            position: fixed;
+            bottom: 2rem;
+            left: 2rem;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 15px;
+            padding: 1rem;
+            backdrop-filter: blur(10px);
+            display: none;
+            gap: 1rem;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .tts-controls.active {
+            display: flex;
+        }
+
+        .tts-rate-control {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tts-rate-slider {
+            width: 100px;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--glass);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+        }
+
+        /* Animations */
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .content-area {
+                grid-template-columns: 1fr;
+            }
+            
+            .ai-panel {
+                height: 60vh;
+            }
+        }
+
+        /* Loading animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid var(--glass-border);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="background">
+        <div class="orb orb1"></div>
+        <div class="orb orb2"></div>
+        <div class="orb orb3"></div>
+    </div>
+
+    <div class="reading-progress">
+        <div class="reading-progress-bar"></div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>Zen Text Reader Pro</h1>
+            <p>Ultimate focus, comprehension, and speed reading toolkit</p>
+        </div>
+
+        <div class="features-dropdown">
+            <button class="features-btn" onclick="toggleFeaturesMenu()">
+                <span>🎯</span> Features Menu
+                <span>▼</span>
+            </button>
+            <div class="features-menu" id="featuresMenu">
+                <div class="feature-item" onclick="toggleFullscreen()">
+                    <span class="feature-icon">⛶</span>
+                    <span class="feature-text">Fullscreen Mode</span>
+                    <span class="feature-shortcut">Ctrl+F</span>
+                </div>
+                <div class="feature-item" onclick="startSpeedReader()">
+                    <span class="feature-icon">⚡</span>
+                    <span class="feature-text">Speed Reader</span>
+                    <span class="feature-shortcut">Ctrl+S</span>
+                </div>
+                <div class="feature-item" onclick="toggleBionicMode()">
+                    <span class="feature-icon">👁️</span>
+                    <span class="feature-text">Bionic Reading</span>
+                    <span class="feature-shortcut">Ctrl+B</span>
+                </div>
+                <div class="feature-item" onclick="toggleFocusGradient()">
+                    <span class="feature-icon">🎯</span>
+                    <span class="feature-text">Focus Gradient</span>
+                </div>
+                <div class="feature-item" onclick="togglePomodoro()">
+                    <span class="feature-icon">⏱️</span>
+                    <span class="feature-text">Pomodoro Timer</span>
+                    <span class="feature-shortcut">Ctrl+P</span>
+                </div>
+                <div class="feature-item" onclick="toggleTTS()">
+                    <span class="feature-icon">🔊</span>
+                    <span class="feature-text">Text to Speech</span>
+                    <span class="feature-shortcut">Ctrl+L</span>
+                </div>
+                <div class="feature-item" onclick="toggleTheme()">
+                    <span class="feature-icon">🌓</span>
+                    <span class="feature-text">Toggle Theme</span>
+                </div>
+                <div class="feature-item" onclick="changeTextSize('increase')">
+                    <span class="feature-icon">🔍</span>
+                    <span class="feature-text">Increase Text Size</span>
+                </div>
+                <div class="feature-item" onclick="changeTextSize('decrease')">
+                    <span class="feature-icon">🔍</span>
+                    <span class="feature-text">Decrease Text Size</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-bar">
+            <div class="stat-item">
+                <span class="stat-label">Words:</span>
+                <span class="stat-value" id="wordCount">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Reading Time:</span>
+                <span class="stat-value" id="readingTime">0 min</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Progress:</span>
+                <span class="stat-value" id="progressPercent">0%</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Session:</span>
+                <span class="stat-value" id="sessionTime">00:00</span>
+            </div>
+        </div>
+
+        <div class="api-key-section">
+            <span>🔑</span>
+            <input type="password" class="api-key-input" id="apiKey" placeholder="Enter your Gemini API Key">
+            <button class="control-btn" onclick="saveApiKey()">Save</button>
+            <button class="control-btn" onclick="testApiKey()">Test</button>
+        </div>
+
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📄</div>
+            <h3>Drop your text or markdown file here or click to upload</h3>
+            <p style="color: var(--text-dim); margin-top: 0.5rem;">Supports .txt and .md files</p>
+            <input type="file" id="fileInput" accept=".txt,.md" style="display: none;">
+        </div>
+
+        <div class="content-area" id="contentArea">
+            <div class="text-display" id="textDisplay">
+                <button class="exit-fullscreen" onclick="exitFullscreen()">✕ Exit Fullscreen</button>
+                <div class="text-content" id="textContent"></div>
+            </div>
+
+            <div class="ai-panel">
+                <div class="ai-header">
+                    <div class="ai-icon">✨</div>
+                    <div>
+                        <h3>AI Assistant</h3>
+                        <p style="font-size: 0.85rem; color: var(--text-dim);">Ask questions & test comprehension</p>
+                    </div>
+                </div>
+
+                <div class="quick-actions">
+                    <div class="quick-action" onclick="askAI('Summarize this text')">Summarize</div>
+                    <div class="quick-action" onclick="askAI('What are the key points?')">Key Points</div>
+                    <div class="quick-action" onclick="askAI('Quiz me on this text')">Quiz Me</div>
+                    <div class="quick-action" onclick="askAI('Explain difficult concepts')">Explain</div>
+                </div>
+
+                <div class="chat-messages" id="chatMessages"></div>
+
+                <div class="chat-input-area">
+                    <input type="text" class="chat-input" id="chatInput" placeholder="Ask about the text..." onkeypress="handleChatKeypress(event)">
+                    <button class="send-btn" id="sendBtn" onclick="sendMessage()">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Speed Reader Modal -->
+    <div class="speed-reader-modal" id="speedReaderModal">
+        <div class="speed-reader-content">
+            <div class="speed-word" id="speedWord">Ready</div>
+            <div class="speed-controls">
+                <button class="speed-control-btn" onclick="changeSpeed(-50)">Slower</button>
+                <button class="speed-control-btn" id="speedPlayPause" onclick="toggleSpeedReading()">Start</button>
+                <button class="speed-control-btn" onclick="changeSpeed(50)">Faster</button>
+                <span class="wpm-display" id="wpmDisplay">250 WPM</span>
+                <button class="speed-control-btn" onclick="closeSpeedReader()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pomodoro Widget -->
+    <div class="pomodoro-widget" id="pomodoroWidget">
+        <div class="pomodoro-time" id="pomodoroTime">25:00</div>
+        <div class="pomodoro-controls">
+            <button class="control-btn" onclick="startPomodoro()">▶️</button>
+            <button class="control-btn" onclick="pausePomodoro()">⏸️</button>
+            <button class="control-btn" onclick="resetPomodoro()">🔄</button>
+        </div>
+    </div>
+
+    <!-- TTS Controls -->
+    <div class="tts-controls" id="ttsControls">
+        <button class="control-btn" onclick="playPauseTTS()">⏯️</button>
+        <button class="control-btn" onclick="stopTTS()">⏹️</button>
+        <div class="tts-rate-control">
+            <span>Speed:</span>
+            <input type="range" class="tts-rate-slider" id="ttsRate" min="0.5" max="2" step="0.1" value="1" onchange="updateTTSRate()">
+            <span id="ttsRateValue">1x</span>
+        </div>
+    </div>
+
+    <script>
+        // State variables
+        let currentText = '';
+        let apiKey = '';
+        let focusMode = false;
+        let currentFontSize = 1.1;
+        let bionicMode = false;
+        let focusGradient = false;
+        let isFullscreen = false;
+        let speedReading = false;
+        let currentWordIndex = 0;
+        let wordsPerMinute = 250;
+        let speedInterval = null;
+        let words = [];
+        let sessionStartTime = Date.now();
+        let sessionInterval = null;
+        let pomodoroInterval = null;
+        let pomodoroTime = 25 * 60;
+        let ttsUtterance = null;
+        let isTTSPlaying = false;
+        let readingProgress = 0;
+        let isMarkdown = false;
+
+        // Initialize
+        window.onload = () => {
+            try {
+                const savedKey = localStorage.getItem('geminiApiKey');
+                if (savedKey) {
+                    document.getElementById('apiKey').value = savedKey;
+                    apiKey = savedKey;
+                    console.log('API key loaded from storage');
+                }
+            } catch (e) {
+                console.error('Error loading API key:', e);
+            }
+
+            // Start session timer
+            startSessionTimer();
+
+            // Set up scroll tracking
+            setupScrollTracking();
+
+            // Close features menu when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.features-dropdown')) {
+                    document.getElementById('featuresMenu').classList.remove('active');
+                }
+            });
+            
+            // Add initial welcome message
+            setTimeout(() => {
+                if (!currentText) {
+                    addMessage('ai', 'Welcome to Zen Text Reader Pro! Upload a text file to get started, and make sure to add your Gemini API key for AI assistance.');
+                }
+            }, 1000);
+        };
+
+        // Features menu
+        function toggleFeaturesMenu() {
+            const menu = document.getElementById('featuresMenu');
+            menu.classList.toggle('active');
+        }
+
+        // Save API key
+        function saveApiKey() {
+            try {
+                const keyInput = document.getElementById('apiKey');
+                const newApiKey = keyInput.value.trim();
+                
+                if (!newApiKey) {
+                    alert('Please enter an API key');
+                    keyInput.style.borderColor = '#f59e0b';
+                    setTimeout(() => {
+                        keyInput.style.borderColor = '';
+                    }, 2000);
+                    return;
+                }
+                
+                // Basic validation for Gemini API key format
+                if (!newApiKey.startsWith('AIza') || newApiKey.length < 30) {
+                    alert('Invalid API key format. Gemini API keys should start with "AIza" and be at least 30 characters long.');
+                    keyInput.style.borderColor = '#f59e0b';
+                    setTimeout(() => {
+                        keyInput.style.borderColor = '';
+                    }, 2000);
+                    return;
+                }
+                
+                apiKey = newApiKey;
+                localStorage.setItem('geminiApiKey', apiKey);
+                
+                keyInput.style.borderColor = '#10b981';
+                setTimeout(() => {
+                    keyInput.style.borderColor = '';
+                }, 2000);
+                
+                // Show success message
+                addMessage('ai', 'API key saved successfully! You can now use the AI assistant.');
+            } catch (e) {
+                console.error('Error saving API key:', e);
+                alert('Failed to save API key: ' + e.message);
+            }
+        }
+
+        // Test API key
+        async function testApiKey() {
+            const keyInput = document.getElementById('apiKey');
+            const testKey = keyInput.value.trim();
+            
+            if (!testKey) {
+                alert('Please enter an API key first');
+                return;
+            }
+            
+            // Temporarily set the API key for testing
+            const originalKey = apiKey;
+            apiKey = testKey;
+            
+            const testBtn = event.target;
+            testBtn.disabled = true;
+            testBtn.textContent = 'Testing...';
+            
+            try {
+                // Test with a simple prompt
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: 'Hello! This is a test message. Please respond with "API key is working correctly."'
+                            }]
+                        }]
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+                        keyInput.style.borderColor = '#10b981';
+                        addMessage('ai', '✅ API key test successful! Your key is working correctly.');
+                        
+                        // Save the working key
+                        localStorage.setItem('geminiApiKey', testKey);
+                    } else {
+                        throw new Error('Invalid response format');
+                    }
+                } else {
+                    const errorData = await response.text();
+                    throw new Error(`API test failed: ${response.status} - ${errorData}`);
+                }
+            } catch (error) {
+                console.error('API key test failed:', error);
+                keyInput.style.borderColor = '#f59e0b';
+                
+                let errorMessage = '❌ API key test failed: ';
+                if (error.message.includes('401') || error.message.includes('403')) {
+                    errorMessage += 'Invalid API key. Please check your key.';
+                } else if (error.message.includes('429')) {
+                    errorMessage += 'Rate limit exceeded. Try again later.';
+                } else {
+                    errorMessage += 'Connection error. Check your internet and API key.';
+                }
+                
+                addMessage('ai', errorMessage);
+                apiKey = originalKey; // Restore original key
+            } finally {
+                testBtn.disabled = false;
+                testBtn.textContent = 'Test';
+                
+                setTimeout(() => {
+                    keyInput.style.borderColor = '';
+                }, 3000);
+            }
+        }
+
+        // File upload handling
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            const file = e.dataTransfer.files[0];
+            if (file && (file.type === 'text/plain' || file.name.endsWith('.md'))) {
+                readFile(file);
+            } else {
+                alert('Please upload a .txt or .md file');
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                readFile(file);
+            }
+        });
+
+        function readFile(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    currentText = e.target.result;
+                    isMarkdown = file.name.endsWith('.md');
+                    displayText(currentText);
+                    document.getElementById('contentArea').classList.add('active');
+                    updateStats();
+                    
+                    // Add initial AI message
+                    if (apiKey) {
+                        addMessage('ai', 'Text loaded! I can help you understand it better. Try asking for a summary, quiz yourself, or ask about specific concepts.');
+                    } else {
+                        addMessage('ai', 'Text loaded! Add your Gemini API key to enable AI assistance for summaries, quizzes, and explanations.');
+                    }
+                } catch (error) {
+                    console.error('Error reading file:', error);
+                    alert('Failed to read file');
+                }
+            };
+            reader.onerror = () => {
+                alert('Failed to read file');
+            };
+            reader.readAsText(file);
+        }
+
+        function displayText(text) {
+            const textContent = document.getElementById('textContent');
+            
+            try {
+                if (isMarkdown) {
+                    textContent.innerHTML = parseMarkdown(text);
+                } else if (bionicMode) {
+                    textContent.innerHTML = applyBionicReading(text);
+                } else {
+                    textContent.textContent = text;
+                }
+                
+                words = text.replace(/[#*`\[\]()]/g, '').split(/\s+/).filter(word => word.length > 0);
+                
+                // Show reading progress
+                document.querySelector('.reading-progress').classList.add('active');
+            } catch (e) {
+                console.error('Error displaying text:', e);
+                textContent.textContent = text; // Fallback to plain text
+            }
+        }
+
+        // Simple markdown parser
+        function parseMarkdown(text) {
+            try {
+                let html = text;
+                
+                // Headers
+                html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+                html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+                html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+                
+                // Bold
+                html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+                html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+                html = html.replace(/__(.+?)__/g, '<strong>$1</strong>');
+                
+                // Italic
+                html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+                html = html.replace(/_(.+?)_/g, '<em>$1</em>');
+                
+                // Links
+                html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+                
+                // Inline code
+                html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+                
+                // Code blocks
+                html = html.replace(/```(.*?)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+                
+                // Blockquotes
+                html = html.replace(/^> (.*$)/gim, '<blockquote>$1</blockquote>');
+                
+                // Lists
+                html = html.replace(/^\* (.+)/gim, '<li>$1</li>');
+                html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+                html = html.replace(/^\d+\. (.+)/gim, '<li>$1</li>');
+                
+                // Paragraphs
+                html = html.replace(/\n\n/g, '</p><p>');
+                html = '<p>' + html + '</p>';
+                
+                // Clean up
+                html = html.replace(/<p><\/p>/g, '');
+                html = html.replace(/<p>(<h[1-6]>)/g, '$1');
+                html = html.replace(/(<\/h[1-6]>)<\/p>/g, '$1');
+                
+                if (bionicMode) {
+                    // Apply bionic reading to text content only
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = html;
+                    applyBionicToElement(tempDiv);
+                    html = tempDiv.innerHTML;
+                }
+                
+                return html;
+            } catch (e) {
+                console.error('Error parsing markdown:', e);
+                return text; // Return original text on error
+            }
+        }
+
+        function applyBionicToElement(element) {
+            const textNodes = [];
+            const walker = document.createTreeWalker(
+                element,
+                NodeFilter.SHOW_TEXT,
+                null,
+                false
+            );
+            
+            let node;
+            while (node = walker.nextNode()) {
+                if (node.textContent.trim() && !node.parentElement.matches('code, pre')) {
+                    textNodes.push(node);
+                }
+            }
+            
+            textNodes.forEach(node => {
+                const bionicHtml = applyBionicReading(node.textContent);
+                const span = document.createElement('span');
+                span.innerHTML = bionicHtml;
+                node.parentNode.replaceChild(span, node);
+            });
+        }
+
+        // Stats updating
+        function updateStats() {
+            try {
+                const wordCount = words.length;
+                const avgWPM = 200; // Average reading speed
+                const readingTime = Math.ceil(wordCount / avgWPM);
+                
+                document.getElementById('wordCount').textContent = wordCount;
+                document.getElementById('readingTime').textContent = `${readingTime} min`;
+                updateProgressPercent();
+            } catch (e) {
+                console.error('Error updating stats:', e);
+            }
+        }
+
+        function updateProgressPercent() {
+            document.getElementById('progressPercent').textContent = `${Math.round(readingProgress)}%`;
+            document.querySelector('.reading-progress-bar').style.width = `${readingProgress}%`;
+        }
+
+        // Session timer
+        function startSessionTimer() {
+            sessionInterval = setInterval(() => {
+                try {
+                    const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
+                    const minutes = Math.floor(elapsed / 60);
+                    const seconds = elapsed % 60;
+                    document.getElementById('sessionTime').textContent = 
+                        `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                } catch (e) {
+                    console.error('Error updating session timer:', e);
+                }
+            }, 1000);
+        }
+
+        // Scroll tracking
+        function setupScrollTracking() {
+            const textDisplay = document.getElementById('textDisplay');
+            textDisplay.addEventListener('scroll', () => {
+                try {
+                    const scrollPercent = (textDisplay.scrollTop / 
+                        Math.max(1, textDisplay.scrollHeight - textDisplay.clientHeight)) * 100;
+                    readingProgress = Math.min(100, Math.max(0, scrollPercent));
+                    updateProgressPercent();
+                } catch (e) {
+                    console.error('Error tracking scroll:', e);
+                }
+            });
+        }
+
+        // Text controls
+        function changeTextSize(action) {
+            try {
+                const textContent = document.getElementById('textContent');
+                if (action === 'increase') {
+                    currentFontSize = Math.min(2, currentFontSize + 0.1);
+                } else {
+                    currentFontSize = Math.max(0.8, currentFontSize - 0.1);
+                }
+                textContent.style.fontSize = currentFontSize + 'rem';
+            } catch (e) {
+                console.error('Error changing text size:', e);
+            }
+        }
+
+        // Theme toggle
+        function toggleTheme() {
+            document.body.classList.toggle('light-theme');
+            updateFeatureItemState('theme', document.body.classList.contains('light-theme'));
+        }
+
+        // Fullscreen mode
+        function toggleFullscreen() {
+            const textDisplay = document.getElementById('textDisplay');
+            isFullscreen = !isFullscreen;
+            
+            try {
+                if (isFullscreen) {
+                    textDisplay.classList.add('fullscreen');
+                    if (textDisplay.requestFullscreen) {
+                        textDisplay.requestFullscreen().catch(err => {
+                            console.error('Error entering fullscreen:', err);
+                            isFullscreen = false;
+                            textDisplay.classList.remove('fullscreen');
+                        });
+                    }
+                } else {
+                    exitFullscreen();
+                }
+                updateFeatureItemState('fullscreen', isFullscreen);
+            } catch (e) {
+                console.error('Error toggling fullscreen:', e);
+            }
+        }
+
+        function exitFullscreen() {
+            const textDisplay = document.getElementById('textDisplay');
+            textDisplay.classList.remove('fullscreen');
+            isFullscreen = false;
+            
+            if (document.exitFullscreen && document.fullscreenElement) {
+                document.exitFullscreen().catch(err => {
+                    console.error('Error exiting fullscreen:', err);
+                });
+            }
+            updateFeatureItemState('fullscreen', false);
+        }
+
+        // Bionic reading mode
+        function toggleBionicMode() {
+            bionicMode = !bionicMode;
+            displayText(currentText);
+            updateFeatureItemState('bionic', bionicMode);
+        }
+
+        function applyBionicReading(text) {
+            try {
+                return text.split(/\s+/).map(word => {
+                    if (!word) return '';
+                    if (word.length <= 3) {
+                        return `<span class="word"><span class="bold">${word}</span></span>`;
+                    }
+                    const boldLength = Math.ceil(word.length * 0.4);
+                    const boldPart = word.slice(0, boldLength);
+                    const normalPart = word.slice(boldLength);
+                    return `<span class="word"><span class="bold">${boldPart}</span>${normalPart}</span>`;
+                }).join(' ');
+            } catch (e) {
+                console.error('Error applying bionic reading:', e);
+                return text;
+            }
+        }
+
+        // Focus gradient
+        function toggleFocusGradient() {
+            focusGradient = !focusGradient;
+            const textContent = document.getElementById('textContent');
+            
+            if (focusGradient) {
+                textContent.classList.add('focus-gradient');
+            } else {
+                textContent.classList.remove('focus-gradient');
+            }
+            updateFeatureItemState('focus', focusGradient);
+        }
+
+        // Speed reader
+        function startSpeedReader() {
+            if (!currentText || words.length === 0) {
+                alert('Please load a text file first');
+                return;
+            }
+            
+            document.getElementById('speedReaderModal').classList.add('active');
+            currentWordIndex = 0;
+            updateSpeedDisplay();
+        }
+
+        function closeSpeedReader() {
+            stopSpeedReading();
+            document.getElementById('speedReaderModal').classList.remove('active');
+        }
+
+        function toggleSpeedReading() {
+            if (speedReading) {
+                stopSpeedReading();
+            } else {
+                startSpeedReading();
+            }
+        }
+
+        function startSpeedReading() {
+            if (currentWordIndex >= words.length) {
+                currentWordIndex = 0;
+            }
+            
+            speedReading = true;
+            document.getElementById('speedPlayPause').textContent = 'Pause';
+            
+            const interval = 60000 / wordsPerMinute;
+            speedInterval = setInterval(() => {
+                if (currentWordIndex < words.length) {
+                    document.getElementById('speedWord').textContent = words[currentWordIndex];
+                    currentWordIndex++;
+                } else {
+                    stopSpeedReading();
+                    document.getElementById('speedWord').textContent = 'Complete!';
+                }
+            }, interval);
+        }
+
+        function stopSpeedReading() {
+            speedReading = false;
+            document.getElementById('speedPlayPause').textContent = 'Start';
+            if (speedInterval) {
+                clearInterval(speedInterval);
+                speedInterval = null;
+            }
+        }
+
+        function changeSpeed(delta) {
+            wordsPerMinute = Math.max(100, Math.min(800, wordsPerMinute + delta));
+            updateSpeedDisplay();
+            
+            if (speedReading) {
+                stopSpeedReading();
+                startSpeedReading();
+            }
+        }
+
+        function updateSpeedDisplay() {
+            document.getElementById('wpmDisplay').textContent = `${wordsPerMinute} WPM`;
+        }
+
+        // Pomodoro timer
+        function togglePomodoro() {
+            const widget = document.getElementById('pomodoroWidget');
+            const isActive = widget.classList.toggle('active');
+            updateFeatureItemState('pomodoro', isActive);
+        }
+
+        function startPomodoro() {
+            if (pomodoroInterval) return;
+            
+            pomodoroInterval = setInterval(() => {
+                if (pomodoroTime > 0) {
+                    pomodoroTime--;
+                    updatePomodoroDisplay();
+                } else {
+                    // Timer finished
+                    alert('Pomodoro session complete! Take a break.');
+                    resetPomodoro();
+                }
+            }, 1000);
+        }
+
+        function pausePomodoro() {
+            if (pomodoroInterval) {
+                clearInterval(pomodoroInterval);
+                pomodoroInterval = null;
+            }
+        }
+
+        function resetPomodoro() {
+            pausePomodoro();
+            pomodoroTime = 25 * 60;
+            updatePomodoroDisplay();
+        }
+
+        function updatePomodoroDisplay() {
+            const minutes = Math.floor(pomodoroTime / 60);
+            const seconds = pomodoroTime % 60;
+            document.getElementById('pomodoroTime').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        // Text-to-Speech
+        function toggleTTS() {
+            const controls = document.getElementById('ttsControls');
+            const isActive = controls.classList.toggle('active');
+            updateFeatureItemState('tts', isActive);
+            
+            if (!isTTSPlaying && currentText && isActive) {
+                startTTS();
+            }
+        }
+
+        function startTTS() {
+            if (!currentText) return;
+            
+            try {
+                stopTTS(); // Stop any ongoing speech
+                
+                ttsUtterance = new SpeechSynthesisUtterance(currentText);
+                ttsUtterance.rate = parseFloat(document.getElementById('ttsRate').value);
+                
+                ttsUtterance.onend = () => {
+                    isTTSPlaying = false;
+                };
+                
+                ttsUtterance.onerror = (event) => {
+                    console.error('TTS error:', event);
+                    isTTSPlaying = false;
+                };
+                
+                speechSynthesis.speak(ttsUtterance);
+                isTTSPlaying = true;
+            } catch (e) {
+                console.error('Error starting TTS:', e);
+                alert('Text-to-speech is not supported in your browser');
+            }
+        }
+
+        function playPauseTTS() {
+            try {
+                if (speechSynthesis.paused) {
+                    speechSynthesis.resume();
+                } else if (speechSynthesis.speaking) {
+                    speechSynthesis.pause();
+                } else {
+                    startTTS();
+                }
+            } catch (e) {
+                console.error('Error toggling TTS:', e);
+            }
+        }
+
+        function stopTTS() {
+            try {
+                speechSynthesis.cancel();
+                isTTSPlaying = false;
+            } catch (e) {
+                console.error('Error stopping TTS:', e);
+            }
+        }
+
+        function updateTTSRate() {
+            const rate = document.getElementById('ttsRate').value;
+            document.getElementById('ttsRateValue').textContent = `${rate}x`;
+            
+            if (ttsUtterance) {
+                ttsUtterance.rate = parseFloat(rate);
+            }
+        }
+
+        // Update feature menu item states
+        function updateFeatureItemState(feature, isActive) {
+            const featureMap = {
+                'fullscreen': 0,
+                'speed': 1,
+                'bionic': 2,
+                'focus': 3,
+                'pomodoro': 4,
+                'tts': 5,
+                'theme': 6
+            };
+            
+            const items = document.querySelectorAll('.feature-item');
+            const index = featureMap[feature];
+            
+            if (index !== undefined && items[index]) {
+                if (isActive) {
+                    items[index].classList.add('active');
+                } else {
+                    items[index].classList.remove('active');
+                }
+            }
+        }
+
+        // Chat functionality
+        function addMessage(type, content) {
+            try {
+                const chatMessages = document.getElementById('chatMessages');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${type}`;
+                
+                const bubbleDiv = document.createElement('div');
+                bubbleDiv.className = 'message-bubble';
+                bubbleDiv.textContent = content;
+                
+                messageDiv.appendChild(bubbleDiv);
+                chatMessages.appendChild(messageDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            } catch (e) {
+                console.error('Error adding message:', e);
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            if (!apiKey) {
+                addMessage('ai', 'Please add your Gemini API key first and click Save.');
+                return;
+            }
+            
+            if (!currentText) {
+                addMessage('ai', 'Please upload a text file first.');
+                return;
+            }
+            
+            addMessage('user', message);
+            input.value = '';
+            
+            const sendBtn = document.getElementById('sendBtn');
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '<span class="loading"></span>';
+            
+            try {
+                const response = await callGeminiAPI(message);
+                addMessage('ai', response);
+            } catch (error) {
+                console.error('API error:', error);
+                let errorMessage = 'Sorry, I encountered an error. ';
+                
+                if (error.message.includes('401') || error.message.includes('403')) {
+                    errorMessage += 'Please check your API key - it may be invalid or expired.';
+                } else if (error.message.includes('429')) {
+                    errorMessage += 'API rate limit exceeded. Please wait a moment and try again.';
+                } else if (error.message.includes('quota')) {
+                    errorMessage += 'API quota exceeded. Please check your billing status.';
+                } else {
+                    errorMessage += 'Please check your API key and internet connection.';
+                }
+                
+                addMessage('ai', errorMessage);
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = 'Send';
+            }
+        }
+
+        async function callGeminiAPI(userMessage) {
+            if (!apiKey) {
+                throw new Error('API key is required');
+            }
+            
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
+            
+            const selectedText = window.getSelection().toString();
+            const contextText = selectedText || currentText;
+            
+            let prompt = '';
+            
+            if (userMessage.toLowerCase().includes('quiz')) {
+                prompt = `Based on the following text, create 5 multiple-choice questions to test comprehension. Format each question with the question, 4 options (A, B, C, D), and indicate the correct answer.
+
+Text: ${contextText.substring(0, 3000)}${contextText.length > 3000 ? '...' : ''}`;
+            } else {
+                prompt = `You are a helpful reading assistant. The user is reading the following text:
+
+---
+${contextText.substring(0, 3000)}${contextText.length > 3000 ? '...' : ''}
+---
+
+User question: ${userMessage}
+
+Please provide a helpful, concise response based on the text provided.`;
+            }
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: prompt
+                            }]
+                        }]
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.text();
+                    let errorMessage = `API request failed: ${response.status}`;
+                    
+                    try {
+                        const errorJson = JSON.parse(errorData);
+                        if (errorJson.error && errorJson.error.message) {
+                            errorMessage += ` - ${errorJson.error.message}`;
+                        }
+                    } catch (e) {
+                        errorMessage += ` - ${errorData}`;
+                    }
+                    
+                    throw new Error(errorMessage);
+                }
+
+                const data = await response.json();
+                
+                // Validate response structure
+                if (!data || !data.candidates || !Array.isArray(data.candidates) || data.candidates.length === 0) {
+                    throw new Error('Invalid API response: No candidates found');
+                }
+                
+                const candidate = data.candidates[0];
+                if (!candidate.content || !candidate.content.parts || !Array.isArray(candidate.content.parts) || candidate.content.parts.length === 0) {
+                    throw new Error('Invalid API response: No content found');
+                }
+                
+                const responseText = candidate.content.parts[0].text;
+                if (!responseText || typeof responseText !== 'string') {
+                    throw new Error('Invalid API response: No text content found');
+                }
+                
+                return responseText;
+                
+            } catch (error) {
+                if (error instanceof TypeError && error.message.includes('fetch')) {
+                    throw new Error('Network error: Please check your internet connection');
+                }
+                throw error;
+            }
+        }
+
+        function askAI(question) {
+            document.getElementById('chatInput').value = question;
+            sendMessage();
+        }
+
+        function handleChatKeypress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Don't trigger shortcuts when typing in input fields
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                return;
+            }
+            
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key.toLowerCase()) {
+                    case 'f':
+                        e.preventDefault();
+                        toggleFullscreen();
+                        break;
+                    case 's':
+                        e.preventDefault();
+                        startSpeedReader();
+                        break;
+                    case 'b':
+                        e.preventDefault();
+                        toggleBionicMode();
+                        break;
+                    case 'p':
+                        e.preventDefault();
+                        togglePomodoro();
+                        break;
+                    case 'l':
+                        e.preventDefault();
+                        toggleTTS();
+                        break;
+                }
+            } else if (e.key === 'Escape') {
+                if (isFullscreen) {
+                    exitFullscreen();
+                }
+                if (document.getElementById('speedReaderModal').classList.contains('active')) {
+                    closeSpeedReader();
+                }
+            }
+        });
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', () => {
+            if (sessionInterval) clearInterval(sessionInterval);
+            if (pomodoroInterval) clearInterval(pomodoroInterval);
+            if (speedInterval) clearInterval(speedInterval);
+            stopTTS();
+        });
+
+        // Test function for debugging
+        function testAllFeatures() {
+            console.log('Testing all features...');
+            
+            // Test theme toggle
+            console.log('Theme toggle:', document.body.classList.contains('light-theme') ? 'Light' : 'Dark');
+            
+            // Test text size
+            console.log('Font size:', currentFontSize);
+            
+            // Test bionic mode
+            console.log('Bionic mode:', bionicMode);
+            
+            // Test focus gradient
+            console.log('Focus gradient:', focusGradient);
+            
+            // Test fullscreen
+            console.log('Fullscreen:', isFullscreen);
+            
+            // Test stats
+            console.log('Word count:', words.length);
+            console.log('Reading progress:', readingProgress + '%');
+            
+            // Test pomodoro
+            console.log('Pomodoro time:', pomodoroTime);
+            
+            // Test speed reader
+            console.log('WPM:', wordsPerMinute);
+            console.log('Current word index:', currentWordIndex);
+            
+            // Test TTS
+            console.log('TTS playing:', isTTSPlaying);
+            console.log('TTS rate:', document.getElementById('ttsRate').value);
+            
+            console.log('All features tested!');
+        }
+
+        // Add test function to window for debugging
+        window.testReader = testAllFeatures;
+    </script>
+</body>
+</html>
