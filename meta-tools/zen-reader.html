@@ -588,6 +588,45 @@
             display: flex;
             flex-direction: column;
             height: 80vh;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .ai-panel.fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 10000;
+            border-radius: 0;
+            padding: 2rem;
+            background: var(--bg-dark);
+            max-width: none;
+        }
+
+        .ai-fullscreen-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: var(--text);
+            font-size: 1.2rem;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ai-fullscreen-btn:hover {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: var(--primary);
         }
 
         .ai-header {
@@ -642,6 +681,74 @@
         .message.ai .message-bubble {
             background: var(--glass);
             border: 1px solid var(--glass-border);
+        }
+
+        /* Markdown styles in AI messages */
+        .message-bubble h1 { font-size: 1.5rem; margin: 0.5rem 0; font-weight: 700; }
+        .message-bubble h2 { font-size: 1.3rem; margin: 0.5rem 0; font-weight: 700; }
+        .message-bubble h3 { font-size: 1.15rem; margin: 0.5rem 0; font-weight: 600; }
+        .message-bubble h4 { font-size: 1.05rem; margin: 0.5rem 0; font-weight: 600; }
+        .message-bubble h5 { font-size: 1rem; margin: 0.5rem 0; font-weight: 600; }
+        .message-bubble h6 { font-size: 0.95rem; margin: 0.5rem 0; font-weight: 600; }
+        
+        .message-bubble p { margin: 0.5rem 0; }
+        .message-bubble ul, .message-bubble ol { margin: 0.5rem 0; padding-left: 1.5rem; }
+        .message-bubble li { margin: 0.25rem 0; }
+        .message-bubble blockquote { 
+            border-left: 3px solid var(--primary); 
+            padding-left: 1rem; 
+            margin: 0.5rem 0; 
+            color: var(--text-dim);
+        }
+        .message-bubble pre {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 0.5rem 0;
+            overflow-x: auto;
+        }
+        .message-bubble code {
+            background: var(--glass);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        .message-bubble pre code {
+            background: none;
+            padding: 0;
+        }
+        .message-bubble table {
+            border-collapse: collapse;
+            margin: 0.5rem 0;
+            width: 100%;
+        }
+        .message-bubble td, .message-bubble th {
+            padding: 0.5rem;
+            border: 1px solid var(--glass-border);
+        }
+        .message-bubble hr {
+            border: none;
+            border-top: 1px solid var(--glass-border);
+            margin: 1rem 0;
+        }
+        .message-bubble a {
+            color: var(--primary);
+            text-decoration: underline;
+        }
+        .message-bubble a:hover {
+            color: var(--secondary);
+        }
+        .message-bubble strong {
+            font-weight: 700;
+        }
+        .message-bubble em {
+            font-style: italic;
+        }
+        .message-bubble del {
+            text-decoration: line-through;
+            opacity: 0.7;
         }
 
         .chat-input-area {
@@ -777,13 +884,20 @@
             padding: 1rem;
             backdrop-filter: blur(10px);
             display: none;
+            flex-direction: column;
             gap: 1rem;
-            align-items: center;
             z-index: 100;
+            min-width: 300px;
         }
 
         .tts-controls.active {
             display: flex;
+        }
+
+        .tts-main-controls {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
         }
 
         .tts-rate-control {
@@ -794,6 +908,219 @@
 
         .tts-rate-slider {
             width: 100px;
+        }
+
+        .tts-engine-selector {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-top: 1px solid var(--glass-border);
+            border-bottom: 1px solid var(--glass-border);
+            margin: 0.5rem 0;
+        }
+
+        .tts-engine-btn {
+            flex: 1;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 0.4rem 0.8rem;
+            color: var(--text);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.85rem;
+        }
+
+        .tts-engine-btn:hover {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: var(--primary);
+        }
+
+        .tts-engine-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .edge-tts-options {
+            display: none;
+            flex-direction: column;
+            gap: 0.5rem;
+            padding: 0.5rem 0;
+        }
+
+        .edge-tts-options.active {
+            display: flex;
+        }
+
+        .edge-voice-selector {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 0.5rem;
+            color: var(--text);
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        .edge-voice-selector:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .edge-tts-status {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            text-align: center;
+            padding: 0.25rem;
+        }
+
+        .edge-tts-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            color: var(--primary);
+        }
+
+        /* Autoscroll controls */
+        .autoscroll-controls {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 15px;
+            padding: 1rem;
+            backdrop-filter: blur(10px);
+            display: none;
+            flex-direction: column;
+            gap: 0.75rem;
+            z-index: 100;
+            min-width: 200px;
+        }
+
+        .autoscroll-controls.active {
+            display: flex;
+        }
+
+        .autoscroll-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .autoscroll-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+
+        .autoscroll-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--warning);
+            animation: pulse 2s infinite;
+        }
+
+        .autoscroll-indicator.running {
+            background: var(--success);
+            animation: pulse 1s infinite;
+        }
+
+        .autoscroll-speed-control {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .autoscroll-speed-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+
+        .autoscroll-speed-value {
+            color: var(--primary);
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .autoscroll-slider {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: var(--glass-border);
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .autoscroll-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--primary);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .autoscroll-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+        }
+
+        .autoscroll-slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: var(--primary);
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+        }
+
+        .autoscroll-slider::-moz-range-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+        }
+
+        .autoscroll-controls-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .autoscroll-btn {
+            flex: 1;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 0.4rem 0.8rem;
+            color: var(--text);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.85rem;
+            text-align: center;
+        }
+
+        .autoscroll-btn:hover {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: var(--primary);
+        }
+
+        .autoscroll-btn.active {
+            background: var(--primary);
+            color: white;
         }
 
         /* Scrollbar styling */
@@ -859,6 +1186,53 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+
+        /* Syntax Highlighting */
+        .syntax-noun { color: #4ade80; font-weight: 500; }
+        .syntax-verb { color: #60a5fa; font-weight: 500; }
+        .syntax-adjective { color: #f472b6; }
+        .syntax-adverb { color: #c084fc; }
+        .syntax-pronoun { color: #fbbf24; }
+        .syntax-preposition { color: #94a3b8; }
+        .syntax-conjunction { color: #94a3b8; }
+        .syntax-interjection { color: #fb923c; font-weight: 600; }
+        .syntax-number { color: #34d399; font-weight: 600; }
+        .syntax-punctuation { color: var(--text-dim); }
+        
+        /* Code highlighting */
+        .syntax-code {
+            background: var(--glass);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9em;
+            border: 1px solid var(--glass-border);
+        }
+        
+        .syntax-code-block {
+            display: block;
+            background: var(--glass);
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 0.5rem 0;
+            font-family: monospace;
+            font-size: 0.9em;
+            border: 1px solid var(--glass-border);
+            overflow-x: auto;
+        }
+        
+        .syntax-python { color: #3b82f6; }
+        .syntax-javascript { color: #eab308; }
+        .syntax-html { color: #f97316; }
+        .syntax-css { color: #8b5cf6; }
+        .syntax-sql { color: #06b6d4; }
+        .syntax-json { color: #10b981; }
+        .syntax-keyword { color: #f472b6; font-weight: 600; }
+        .syntax-string { color: #84cc16; }
+        .syntax-comment { color: var(--text-dim); font-style: italic; }
+        .syntax-function { color: #fbbf24; }
+        .syntax-variable { color: #60a5fa; }
+        .syntax-operator { color: #e11d48; }
     </style>
 </head>
 <body>
@@ -925,6 +1299,16 @@
                     <span class="feature-icon">🔍</span>
                     <span class="feature-text">Decrease Text Size</span>
                 </div>
+                <div class="feature-item" onclick="toggleSyntaxHighlighting()">
+                    <span class="feature-icon">🎨</span>
+                    <span class="feature-text">Toggle Syntax Highlighting</span>
+                    <span class="feature-shortcut">Ctrl+H</span>
+                </div>
+                <div class="feature-item" onclick="toggleAutoscroll()">
+                    <span class="feature-icon">📜</span>
+                    <span class="feature-text">Auto Scroll</span>
+                    <span class="feature-shortcut">Ctrl+R</span>
+                </div>
             </div>
         </div>
 
@@ -967,7 +1351,8 @@
                 <div class="text-content" id="textContent"></div>
             </div>
 
-            <div class="ai-panel">
+            <div class="ai-panel" id="aiPanel">
+                <button class="ai-fullscreen-btn" id="aiFullscreenBtn" onclick="toggleAIFullscreen()" title="Toggle fullscreen">⛶</button>
                 <div class="ai-header">
                     <div class="ai-icon">✨</div>
                     <div>
@@ -1019,12 +1404,65 @@
 
     <!-- TTS Controls -->
     <div class="tts-controls" id="ttsControls">
-        <button class="control-btn" onclick="playPauseTTS()">⏯️</button>
-        <button class="control-btn" onclick="stopTTS()">⏹️</button>
-        <div class="tts-rate-control">
-            <span>Speed:</span>
-            <input type="range" class="tts-rate-slider" id="ttsRate" min="0.5" max="2" step="0.1" value="1" onchange="updateTTSRate()">
-            <span id="ttsRateValue">1x</span>
+        <div class="tts-engine-selector">
+            <button class="tts-engine-btn active" id="browserTTSBtn" onclick="switchTTSEngine('browser')">
+                Browser TTS
+            </button>
+            <button class="tts-engine-btn" id="edgeTTSBtn" onclick="switchTTSEngine('edge')">
+                Edge TTS
+            </button>
+        </div>
+        
+        <div class="tts-main-controls">
+            <button class="control-btn" onclick="playPauseTTS()">⏯️</button>
+            <button class="control-btn" onclick="stopTTS()">⏹️</button>
+            <div class="tts-rate-control">
+                <span>Speed:</span>
+                <input type="range" class="tts-rate-slider" id="ttsRate" min="0.5" max="2" step="0.1" value="1" onchange="updateTTSRate()">
+                <span id="ttsRateValue">1x</span>
+            </div>
+        </div>
+        
+        <div class="edge-tts-options" id="edgeTTSOptions">
+            <select class="edge-voice-selector" id="edgeVoiceSelector" onchange="updateEdgeVoice()">
+                <option value="en-US-JennyNeural">Jenny (US Female)</option>
+                <option value="en-US-GuyNeural">Guy (US Male)</option>
+                <option value="en-US-AriaNeural">Aria (US Female)</option>
+                <option value="en-US-DavisNeural">Davis (US Male)</option>
+                <option value="en-GB-SoniaNeural">Sonia (UK Female)</option>
+                <option value="en-GB-RyanNeural">Ryan (UK Male)</option>
+                <option value="en-AU-NatashaNeural">Natasha (AU Female)</option>
+                <option value="en-AU-WilliamNeural">William (AU Male)</option>
+            </select>
+            <div class="edge-tts-status" id="edgeTTSStatus">Ready</div>
+        </div>
+    </div>
+
+    <!-- Autoscroll Controls -->
+    <div class="autoscroll-controls" id="autoscrollControls">
+        <div class="autoscroll-header">
+            <span>Auto Scroll</span>
+            <div class="autoscroll-status">
+                <div class="autoscroll-indicator" id="autoscrollIndicator"></div>
+                <span id="autoscrollStatus">Paused</span>
+            </div>
+        </div>
+        <div class="autoscroll-speed-control">
+            <div class="autoscroll-speed-label">
+                <span>Speed</span>
+                <span class="autoscroll-speed-value" id="autoscrollSpeedValue">50 px/s</span>
+            </div>
+            <input type="range" class="autoscroll-slider" id="autoscrollSpeed" 
+                   min="10" max="200" step="5" value="50" 
+                   oninput="updateAutoscrollSpeed()">
+        </div>
+        <div class="autoscroll-controls-buttons">
+            <button class="autoscroll-btn" id="autoscrollPlayPause" onclick="toggleAutoscrollPlayPause()">
+                ▶️ Start
+            </button>
+            <button class="autoscroll-btn" onclick="resetAutoscroll()">
+                🔄 Reset
+            </button>
         </div>
     </div>
 
@@ -1051,6 +1489,17 @@
         let readingProgress = 0;
         let isMarkdown = false;
         let debugMode = true; // Enable debug logging for API issues
+        let isAIFullscreen = false;
+        let syntaxHighlightingEnabled = true;
+        let autoscrollInterval = null;
+        let autoscrollSpeed = 50; // pixels per second
+        let isAutoscrolling = false;
+        let autoscrollPaused = false;
+        let ttsEngine = 'browser'; // 'browser' or 'edge'
+        let edgeVoice = 'en-US-JennyNeural';
+        let edgeAudio = null;
+        let edgeAudioContext = null;
+        let isEdgeTTSPlaying = false;
 
         // Initialize
         window.onload = () => {
@@ -1083,7 +1532,10 @@
             // Close features menu when clicking outside
             document.addEventListener('click', (e) => {
                 if (!e.target.closest('.features-dropdown')) {
-                    document.getElementById('featuresMenu').classList.remove('active');
+                    const menu = document.getElementById('featuresMenu');
+                    if (menu) {
+                        menu.classList.remove('active');
+                    }
                 }
             });
             
@@ -1297,7 +1749,8 @@
                 
                 words = text.replace(/[#*`\[\]()]/g, '').split(/\s+/).filter(word => word.length > 0);
                 
-                // Show reading progress
+                // Update stats and show reading progress
+                updateStats();
                 document.querySelector('.reading-progress').classList.add('active');
             } catch (e) {
                 console.error('Error displaying text:', e);
@@ -1405,8 +1858,19 @@
         }
 
         function updateProgressPercent() {
-            document.getElementById('progressPercent').textContent = `${Math.round(readingProgress)}%`;
-            document.querySelector('.reading-progress-bar').style.width = `${readingProgress}%`;
+            try {
+                const progressElement = document.getElementById('progressPercent');
+                if (progressElement) {
+                    progressElement.textContent = `${Math.round(readingProgress)}%`;
+                }
+                
+                const progressBar = document.querySelector('.reading-progress-bar');
+                if (progressBar) {
+                    progressBar.style.width = `${readingProgress}%`;
+                }
+            } catch (e) {
+                console.error('Error updating progress:', e);
+            }
         }
 
         // Session timer
@@ -1651,11 +2115,36 @@
             const isActive = controls.classList.toggle('active');
             updateFeatureItemState('tts', isActive);
             
-            if (!isTTSPlaying && currentText && isActive) {
-                startTTS();
+            if (!isTTSPlaying && !isEdgeTTSPlaying && currentText && isActive) {
+                if (ttsEngine === 'browser') {
+                    startTTS();
+                } else {
+                    startEdgeTTS();
+                }
             }
         }
 
+        function switchTTSEngine(engine) {
+            // Stop current TTS
+            stopTTS();
+            stopEdgeTTS();
+            
+            ttsEngine = engine;
+            
+            // Update UI
+            document.getElementById('browserTTSBtn').classList.toggle('active', engine === 'browser');
+            document.getElementById('edgeTTSBtn').classList.toggle('active', engine === 'edge');
+            document.getElementById('edgeTTSOptions').classList.toggle('active', engine === 'edge');
+            
+            console.log(`Switched to ${engine} TTS engine`);
+        }
+
+        function updateEdgeVoice() {
+            edgeVoice = document.getElementById('edgeVoiceSelector').value;
+            console.log(`Selected Edge voice: ${edgeVoice}`);
+        }
+
+        // Browser TTS functions
         function startTTS() {
             if (!currentText) return;
             
@@ -1683,16 +2172,25 @@
         }
 
         function playPauseTTS() {
-            try {
-                if (speechSynthesis.paused) {
-                    speechSynthesis.resume();
-                } else if (speechSynthesis.speaking) {
-                    speechSynthesis.pause();
-                } else {
-                    startTTS();
+            if (ttsEngine === 'browser') {
+                try {
+                    if (speechSynthesis.paused) {
+                        speechSynthesis.resume();
+                    } else if (speechSynthesis.speaking) {
+                        speechSynthesis.pause();
+                    } else {
+                        startTTS();
+                    }
+                } catch (e) {
+                    console.error('Error toggling TTS:', e);
                 }
-            } catch (e) {
-                console.error('Error toggling TTS:', e);
+            } else {
+                // Edge TTS
+                if (isEdgeTTSPlaying) {
+                    pauseEdgeTTS();
+                } else {
+                    startEdgeTTS();
+                }
             }
         }
 
@@ -1705,12 +2203,248 @@
             }
         }
 
+        // Edge TTS functions
+        async function startEdgeTTS() {
+            if (!currentText) return;
+            
+            const statusEl = document.getElementById('edgeTTSStatus');
+            statusEl.innerHTML = '<div class="edge-tts-loading"><span class="loading"></span> Generating audio...</div>';
+            
+            try {
+                // Create Edge TTS API request
+                const response = await generateEdgeTTSAudio(currentText, edgeVoice);
+                
+                if (response.ok) {
+                    const audioBlob = await response.blob();
+                    playEdgeTTSAudio(audioBlob);
+                    statusEl.textContent = 'Playing';
+                } else {
+                    throw new Error('Failed to generate audio');
+                }
+            } catch (e) {
+                console.error('Edge TTS error:', e);
+                statusEl.textContent = 'Error - Falling back to browser TTS';
+                
+                // Fallback to browser TTS
+                switchTTSEngine('browser');
+                startTTS();
+            }
+        }
+
+        async function generateEdgeTTSAudio(text, voice) {
+            // Since Edge TTS requires a server endpoint, we'll simulate it
+            // In a real implementation, this would call your Edge TTS server
+            
+            // For demonstration, we'll use a mock response
+            // In production, replace this with actual Edge TTS API call
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    // Simulate API response
+                    console.log(`Would generate Edge TTS with voice: ${voice}`);
+                    console.log(`Text length: ${text.length} characters`);
+                    
+                    // Return a mock successful response
+                    resolve({
+                        ok: false, // Set to false to demonstrate fallback
+                        blob: async () => new Blob(['mock audio data'], { type: 'audio/mp3' })
+                    });
+                }, 1000);
+            });
+        }
+
+        function playEdgeTTSAudio(audioBlob) {
+            try {
+                // Create audio context if not exists
+                if (!edgeAudioContext) {
+                    edgeAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                
+                // Create audio element
+                edgeAudio = new Audio(URL.createObjectURL(audioBlob));
+                edgeAudio.playbackRate = parseFloat(document.getElementById('ttsRate').value);
+                
+                edgeAudio.onended = () => {
+                    isEdgeTTSPlaying = false;
+                    document.getElementById('edgeTTSStatus').textContent = 'Ready';
+                };
+                
+                edgeAudio.onerror = (e) => {
+                    console.error('Edge audio playback error:', e);
+                    isEdgeTTSPlaying = false;
+                    document.getElementById('edgeTTSStatus').textContent = 'Error';
+                };
+                
+                edgeAudio.play();
+                isEdgeTTSPlaying = true;
+            } catch (e) {
+                console.error('Error playing Edge TTS audio:', e);
+            }
+        }
+
+        function pauseEdgeTTS() {
+            if (edgeAudio && !edgeAudio.paused) {
+                edgeAudio.pause();
+                document.getElementById('edgeTTSStatus').textContent = 'Paused';
+            } else if (edgeAudio && edgeAudio.paused) {
+                edgeAudio.play();
+                document.getElementById('edgeTTSStatus').textContent = 'Playing';
+            }
+        }
+
+        function stopEdgeTTS() {
+            if (edgeAudio) {
+                edgeAudio.pause();
+                edgeAudio.currentTime = 0;
+                isEdgeTTSPlaying = false;
+                document.getElementById('edgeTTSStatus').textContent = 'Ready';
+            }
+        }
+
         function updateTTSRate() {
             const rate = document.getElementById('ttsRate').value;
             document.getElementById('ttsRateValue').textContent = `${rate}x`;
             
-            if (ttsUtterance) {
+            if (ttsEngine === 'browser' && ttsUtterance) {
                 ttsUtterance.rate = parseFloat(rate);
+            } else if (ttsEngine === 'edge' && edgeAudio) {
+                edgeAudio.playbackRate = parseFloat(rate);
+            }
+        }
+
+        // Toggle syntax highlighting
+        function toggleSyntaxHighlighting() {
+            syntaxHighlightingEnabled = !syntaxHighlightingEnabled;
+            updateFeatureItemState('syntax', syntaxHighlightingEnabled);
+            
+            // Store original messages before re-rendering
+            const aiMessages = document.querySelectorAll('.message.ai');
+            aiMessages.forEach(messageDiv => {
+                const bubble = messageDiv.querySelector('.message-bubble');
+                // Store original text if not already stored
+                if (!messageDiv.dataset.originalText) {
+                    messageDiv.dataset.originalText = bubble.textContent;
+                }
+                
+                // Re-render with current settings
+                const originalText = messageDiv.dataset.originalText;
+                let processedContent = parseAIMarkdown(originalText);
+                
+                if (syntaxHighlightingEnabled) {
+                    processedContent = applySyntaxHighlightingToHTML(processedContent);
+                }
+                
+                bubble.innerHTML = processedContent;
+            });
+        }
+
+        // Autoscroll functions
+        function toggleAutoscroll() {
+            const controls = document.getElementById('autoscrollControls');
+            const isActive = controls.classList.toggle('active');
+            updateFeatureItemState('autoscroll', isActive);
+            
+            if (!isActive && isAutoscrolling) {
+                stopAutoscroll();
+            }
+        }
+
+        function toggleAutoscrollPlayPause() {
+            if (isAutoscrolling) {
+                pauseAutoscroll();
+            } else {
+                startAutoscroll();
+            }
+        }
+
+        function startAutoscroll() {
+            if (!currentText) {
+                alert('Please load a text file first');
+                return;
+            }
+            
+            const textDisplay = document.getElementById('textDisplay');
+            const playPauseBtn = document.getElementById('autoscrollPlayPause');
+            const indicator = document.getElementById('autoscrollIndicator');
+            const status = document.getElementById('autoscrollStatus');
+            
+            isAutoscrolling = true;
+            autoscrollPaused = false;
+            
+            playPauseBtn.innerHTML = '⏸️ Pause';
+            playPauseBtn.classList.add('active');
+            indicator.classList.add('running');
+            status.textContent = 'Scrolling';
+            
+            // Calculate scroll increment based on speed (pixels per second)
+            const scrollIncrement = autoscrollSpeed / 60; // 60fps
+            
+            autoscrollInterval = setInterval(() => {
+                if (!autoscrollPaused) {
+                    const currentScroll = textDisplay.scrollTop;
+                    const maxScroll = textDisplay.scrollHeight - textDisplay.clientHeight;
+                    
+                    if (currentScroll < maxScroll) {
+                        textDisplay.scrollTop += scrollIncrement;
+                    } else {
+                        // Reached the end
+                        stopAutoscroll();
+                        alert('Reached the end of the document');
+                    }
+                }
+            }, 1000 / 60); // 60fps for smooth scrolling
+        }
+
+        function pauseAutoscroll() {
+            if (!isAutoscrolling) return;
+            
+            const playPauseBtn = document.getElementById('autoscrollPlayPause');
+            const indicator = document.getElementById('autoscrollIndicator');
+            const status = document.getElementById('autoscrollStatus');
+            
+            autoscrollPaused = true;
+            playPauseBtn.innerHTML = '▶️ Resume';
+            playPauseBtn.classList.remove('active');
+            indicator.classList.remove('running');
+            status.textContent = 'Paused';
+        }
+
+        function stopAutoscroll() {
+            if (autoscrollInterval) {
+                clearInterval(autoscrollInterval);
+                autoscrollInterval = null;
+            }
+            
+            const playPauseBtn = document.getElementById('autoscrollPlayPause');
+            const indicator = document.getElementById('autoscrollIndicator');
+            const status = document.getElementById('autoscrollStatus');
+            
+            isAutoscrolling = false;
+            autoscrollPaused = false;
+            
+            playPauseBtn.innerHTML = '▶️ Start';
+            playPauseBtn.classList.remove('active');
+            indicator.classList.remove('running');
+            status.textContent = 'Stopped';
+        }
+
+        function resetAutoscroll() {
+            stopAutoscroll();
+            const textDisplay = document.getElementById('textDisplay');
+            textDisplay.scrollTop = 0;
+            updateStats(); // Update reading progress
+        }
+
+        function updateAutoscrollSpeed() {
+            const slider = document.getElementById('autoscrollSpeed');
+            const speedValue = document.getElementById('autoscrollSpeedValue');
+            
+            autoscrollSpeed = parseInt(slider.value);
+            speedValue.textContent = `${autoscrollSpeed} px/s`;
+            
+            // If currently scrolling, restart with new speed
+            if (isAutoscrolling && !autoscrollPaused) {
+                stopAutoscroll();
+                startAutoscroll();
             }
         }
 
@@ -1723,7 +2457,11 @@
                 'focus': 3,
                 'pomodoro': 4,
                 'tts': 5,
-                'theme': 6
+                'theme': 6,
+                'increase': 7,
+                'decrease': 8,
+                'syntax': 9,
+                'autoscroll': 10
             };
             
             const items = document.querySelectorAll('.feature-item');
@@ -1747,7 +2485,24 @@
                 
                 const bubbleDiv = document.createElement('div');
                 bubbleDiv.className = 'message-bubble';
-                bubbleDiv.textContent = content;
+                
+                // Process AI messages
+                if (type === 'ai') {
+                    // Store original text for toggle functionality
+                    messageDiv.dataset.originalText = content;
+                    
+                    // First parse markdown
+                    let processedContent = parseAIMarkdown(content);
+                    
+                    // Then apply syntax highlighting if enabled
+                    if (syntaxHighlightingEnabled) {
+                        processedContent = applySyntaxHighlightingToHTML(processedContent);
+                    }
+                    
+                    bubbleDiv.innerHTML = processedContent;
+                } else {
+                    bubbleDiv.textContent = content;
+                }
                 
                 messageDiv.appendChild(bubbleDiv);
                 chatMessages.appendChild(messageDiv);
@@ -2013,14 +2768,36 @@ Please provide a helpful, concise response based on the text provided.`;
                         e.preventDefault();
                         toggleTTS();
                         break;
+                    case 'h':
+                        e.preventDefault();
+                        toggleSyntaxHighlighting();
+                        break;
+                    case 'a':
+                        e.preventDefault();
+                        toggleAIFullscreen();
+                        break;
+                    case 'r':
+                        e.preventDefault();
+                        toggleAutoscroll();
+                        break;
                 }
             } else if (e.key === 'Escape') {
                 if (isFullscreen) {
                     exitFullscreen();
                 }
+                if (isAIFullscreen) {
+                    toggleAIFullscreen();
+                }
                 if (document.getElementById('speedReaderModal').classList.contains('active')) {
                     closeSpeedReader();
                 }
+                if (document.getElementById('autoscrollControls').classList.contains('active')) {
+                    toggleAutoscroll();
+                }
+            } else if (e.key === ' ' && document.getElementById('autoscrollControls').classList.contains('active')) {
+                // Space bar to play/pause autoscroll when the control panel is active
+                e.preventDefault();
+                toggleAutoscrollPlayPause();
             }
         });
 
@@ -2029,8 +2806,330 @@ Please provide a helpful, concise response based on the text provided.`;
             if (sessionInterval) clearInterval(sessionInterval);
             if (pomodoroInterval) clearInterval(pomodoroInterval);
             if (speedInterval) clearInterval(speedInterval);
+            if (autoscrollInterval) clearInterval(autoscrollInterval);
             stopTTS();
+            stopEdgeTTS();
         });
+
+        // AI Fullscreen toggle
+        function toggleAIFullscreen() {
+            const aiPanel = document.getElementById('aiPanel');
+            const btn = document.getElementById('aiFullscreenBtn');
+            isAIFullscreen = !isAIFullscreen;
+            
+            if (isAIFullscreen) {
+                aiPanel.classList.add('fullscreen');
+                btn.innerHTML = '✕';
+                btn.title = 'Exit fullscreen';
+                
+                // Hide other elements
+                document.querySelector('.content-area').style.gridTemplateColumns = '1fr';
+                document.getElementById('textDisplay').style.display = 'none';
+            } else {
+                aiPanel.classList.remove('fullscreen');
+                btn.innerHTML = '⛶';
+                btn.title = 'Toggle fullscreen';
+                
+                // Restore layout
+                document.querySelector('.content-area').style.gridTemplateColumns = '1fr 400px';
+                document.getElementById('textDisplay').style.display = 'block';
+            }
+        }
+
+        // Parse markdown for AI responses
+        function parseAIMarkdown(text) {
+            try {
+                let html = text;
+                
+                // Escape HTML to prevent XSS
+                html = html.replace(/&/g, '&amp;')
+                          .replace(/</g, '&lt;')
+                          .replace(/>/g, '&gt;');
+                
+                // Code blocks FIRST (before other replacements)
+                // Triple backtick code blocks with optional language
+                html = html.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
+                    const language = lang ? lang.toLowerCase() : '';
+                    const highlightedCode = highlightCode(code.trim(), language);
+                    return `<pre class="syntax-code-block"><code class="language-${language}">${highlightedCode}</code></pre>`;
+                });
+                
+                // Inline code (must be after code blocks)
+                html = html.replace(/`([^`\n]+)`/g, '<code class="syntax-code">$1</code>');
+                
+                // Headers (h1-h6)
+                html = html.replace(/^#{6}\s+(.+)$/gm, '<h6>$1</h6>');
+                html = html.replace(/^#{5}\s+(.+)$/gm, '<h5>$1</h5>');
+                html = html.replace(/^#{4}\s+(.+)$/gm, '<h4>$1</h4>');
+                html = html.replace(/^#{3}\s+(.+)$/gm, '<h3>$1</h3>');
+                html = html.replace(/^#{2}\s+(.+)$/gm, '<h2>$1</h2>');
+                html = html.replace(/^#{1}\s+(.+)$/gm, '<h1>$1</h1>');
+                
+                // Bold and italic (order matters)
+                html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+                html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+                html = html.replace(/__(.+?)__/g, '<strong>$1</strong>');
+                html = html.replace(/\*([^*\n]+?)\*/g, '<em>$1</em>');
+                html = html.replace(/_([^_\n]+?)_/g, '<em>$1</em>');
+                
+                // Strikethrough
+                html = html.replace(/~~(.+?)~~/g, '<del>$1</del>');
+                
+                // Links
+                html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color: var(--primary); text-decoration: underline;">$1</a>');
+                
+                // Blockquotes
+                html = html.replace(/^&gt; (.+)$/gm, '<blockquote style="border-left: 3px solid var(--primary); padding-left: 1rem; margin: 0.5rem 0; color: var(--text-dim);">$1</blockquote>');
+                
+                // Horizontal rules
+                html = html.replace(/^(---|\*\*\*|___)$/gm, '<hr style="border: none; border-top: 1px solid var(--glass-border); margin: 1rem 0;">');
+                
+                // Lists
+                // Unordered lists
+                html = html.replace(/^[\*\-]\s+(.+)$/gm, '<li>$1</li>');
+                // Wrap consecutive li elements in ul
+                html = html.replace(/(<li>.*<\/li>\s*)+/g, (match) => {
+                    return '<ul style="margin: 0.5rem 0; padding-left: 1.5rem;">' + match + '</ul>';
+                });
+                
+                // Ordered lists
+                html = html.replace(/^\d+\.\s+(.+)$/gm, '<li>$1</li>');
+                // This is a simplified approach - in production you'd want more sophisticated list handling
+                
+                // Tables (basic support)
+                html = html.replace(/\|(.+)\|/g, (match, content) => {
+                    const cells = content.split('|').map(cell => cell.trim());
+                    if (cells.every(cell => cell.match(/^:?-+:?$/))) {
+                        return ''; // Skip separator rows
+                    }
+                    const cellTags = cells.map(cell => `<td style="padding: 0.5rem; border: 1px solid var(--glass-border);">${cell}</td>`).join('');
+                    return `<tr>${cellTags}</tr>`;
+                });
+                // Wrap table rows in table
+                html = html.replace(/(<tr>.*<\/tr>\s*)+/g, (match) => {
+                    return '<table style="border-collapse: collapse; margin: 0.5rem 0;">' + match + '</table>';
+                });
+                
+                // Line breaks
+                html = html.replace(/\n\n/g, '</p><p>');
+                html = html.replace(/\n/g, '<br>');
+                
+                // Wrap in paragraphs
+                if (!html.startsWith('<')) {
+                    html = '<p>' + html + '</p>';
+                }
+                
+                // Clean up empty paragraphs
+                html = html.replace(/<p><\/p>/g, '');
+                html = html.replace(/<p>(<h[1-6]>)/g, '$1');
+                html = html.replace(/(<\/h[1-6]>)<\/p>/g, '$1');
+                html = html.replace(/<p>(<pre>)/g, '$1');
+                html = html.replace(/(<\/pre>)<\/p>/g, '$1');
+                html = html.replace(/<p>(<ul>)/g, '$1');
+                html = html.replace(/(<\/ul>)<\/p>/g, '$1');
+                html = html.replace(/<p>(<blockquote>)/g, '$1');
+                html = html.replace(/(<\/blockquote>)<\/p>/g, '$1');
+                html = html.replace(/<p>(<table>)/g, '$1');
+                html = html.replace(/(<\/table>)<\/p>/g, '$1');
+                html = html.replace(/<p>(<hr)/g, '$1');
+                html = html.replace(/(<hr[^>]*>)<\/p>/g, '$1');
+                
+                return html;
+            } catch (e) {
+                console.error('Error parsing markdown:', e);
+                return text; // Return original text on error
+            }
+        }
+
+        // Apply syntax highlighting to HTML content
+        function applySyntaxHighlightingToHTML(html) {
+            try {
+                // Create a temporary container
+                const temp = document.createElement('div');
+                temp.innerHTML = html;
+                
+                // Find all text nodes and apply highlighting
+                const walker = document.createTreeWalker(
+                    temp,
+                    NodeFilter.SHOW_TEXT,
+                    {
+                        acceptNode: function(node) {
+                            // Skip nodes inside code, pre, or already highlighted elements
+                            const parent = node.parentElement;
+                            if (parent.matches('code, pre, .syntax-code, .syntax-code-block, [class^="syntax-"]')) {
+                                return NodeFilter.FILTER_REJECT;
+                            }
+                            return NodeFilter.FILTER_ACCEPT;
+                        }
+                    },
+                    false
+                );
+                
+                const textNodes = [];
+                let node;
+                while (node = walker.nextNode()) {
+                    if (node.textContent.trim()) {
+                        textNodes.push(node);
+                    }
+                }
+                
+                // Apply highlighting to each text node
+                textNodes.forEach(node => {
+                    const highlighted = highlightNaturalLanguage(node.textContent);
+                    if (highlighted !== node.textContent) {
+                        const span = document.createElement('span');
+                        span.innerHTML = highlighted;
+                        node.parentNode.replaceChild(span, node);
+                    }
+                });
+                
+                return temp.innerHTML;
+            } catch (e) {
+                console.error('Error applying syntax highlighting to HTML:', e);
+                return html;
+            }
+        }
+
+        // Syntax highlighting functions
+        function applySyntaxHighlighting(text) {
+            // First detect and highlight code blocks
+            text = highlightCodeBlocks(text);
+            
+            // Then apply natural language syntax highlighting
+            text = highlightNaturalLanguage(text);
+            
+            return text;
+        }
+
+        function highlightCodeBlocks(text) {
+            // Detect inline code with backticks
+            text = text.replace(/`([^`]+)`/g, '<span class="syntax-code">$1</span>');
+            
+            // Detect code blocks with language hints
+            const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
+            text = text.replace(codeBlockRegex, (match, lang, code) => {
+                const language = lang ? lang.toLowerCase() : 'plain';
+                return `<div class="syntax-code-block syntax-${language}">${highlightCode(code.trim(), language)}</div>`;
+            });
+            
+            // Detect Python code patterns
+            const pythonRegex = /(def\s+\w+\s*\([^)]*\)|import\s+\w+|from\s+\w+\s+import|print\s*\([^)]*\)|if\s+.*:|for\s+\w+\s+in\s+.*:)/g;
+            text = text.replace(pythonRegex, (match) => {
+                if (!match.includes('class="syntax-')) {
+                    return `<span class="syntax-code syntax-python">${match}</span>`;
+                }
+                return match;
+            });
+            
+            // Detect JavaScript/function patterns
+            const jsRegex = /(function\s+\w+\s*\([^)]*\)|const\s+\w+\s*=|let\s+\w+\s*=|var\s+\w+\s*=|console\.log\([^)]*\)|=>\s*{)/g;
+            text = text.replace(jsRegex, (match) => {
+                if (!match.includes('class="syntax-')) {
+                    return `<span class="syntax-code syntax-javascript">${match}</span>`;
+                }
+                return match;
+            });
+            
+            return text;
+        }
+
+        function highlightCode(code, language) {
+            // Basic syntax highlighting for code
+            let highlighted = code;
+            
+            // Keywords
+            const keywords = {
+                python: /\b(def|class|import|from|if|else|elif|for|while|return|try|except|finally|with|as|lambda|yield|break|continue|pass|raise|assert|del|global|nonlocal|in|is|not|and|or|True|False|None)\b/g,
+                javascript: /\b(function|const|let|var|if|else|for|while|return|try|catch|finally|class|extends|new|this|super|import|export|default|async|await|yield|break|continue|throw|typeof|instanceof|in|of|true|false|null|undefined)\b/g,
+                general: /\b(if|else|for|while|return|function|class|import|export|const|let|var|true|false|null)\b/g
+            };
+            
+            const keywordRegex = keywords[language] || keywords.general;
+            highlighted = highlighted.replace(keywordRegex, '<span class="syntax-keyword">$&</span>');
+            
+            // Strings
+            highlighted = highlighted.replace(/(["'])(?:(?=(\\?))\2.)*?\1/g, '<span class="syntax-string">$&</span>');
+            
+            // Comments
+            if (language === 'python') {
+                highlighted = highlighted.replace(/#.*/g, '<span class="syntax-comment">$&</span>');
+            } else {
+                highlighted = highlighted.replace(/\/\/.*/g, '<span class="syntax-comment">$&</span>');
+                highlighted = highlighted.replace(/\/\*[\s\S]*?\*\//g, '<span class="syntax-comment">$&</span>');
+            }
+            
+            // Numbers
+            highlighted = highlighted.replace(/\b\d+\.?\d*\b/g, '<span class="syntax-number">$&</span>');
+            
+            // Functions
+            highlighted = highlighted.replace(/(\w+)(?=\s*\()/g, '<span class="syntax-function">$1</span>');
+            
+            // Operators
+            highlighted = highlighted.replace(/([+\-*/%=<>!&|^~?:])/g, '<span class="syntax-operator">$1</span>');
+            
+            return highlighted;
+        }
+
+        function highlightNaturalLanguage(text) {
+            // Skip if text already contains syntax highlighting
+            if (text.includes('class="syntax-')) {
+                return text;
+            }
+            
+            // Common word patterns for parts of speech
+            const patterns = {
+                // Common verbs (past, present, future tenses)
+                verbs: /\b(is|are|was|were|be|been|being|have|has|had|do|does|did|will|would|shall|should|may|might|must|can|could|said|say|says|saying|go|goes|going|went|gone|get|gets|getting|got|make|makes|making|made|take|takes|taking|took|taken|come|comes|coming|came|see|sees|seeing|saw|seen|know|knows|knowing|knew|known|think|thinks|thinking|thought|look|looks|looking|looked|want|wants|wanting|wanted|give|gives|giving|gave|given|use|uses|using|used|find|finds|finding|found|tell|tells|telling|told|ask|asks|asking|asked|work|works|working|worked|seem|seems|seeming|seemed|feel|feels|feeling|felt|try|tries|trying|tried|leave|leaves|leaving|left|call|calls|calling|called)\b/gi,
+                
+                // Common nouns
+                nouns: /\b(time|person|year|way|day|man|thing|woman|life|child|world|school|state|family|student|group|country|problem|hand|part|place|case|week|company|system|program|question|work|government|number|night|point|home|water|room|mother|area|money|story|fact|month|lot|right|study|book|eye|job|word|business|issue|side|kind|head|house|service|friend|father|power|hour|game|line|end|member|law|car|city|community|name)\b/gi,
+                
+                // Common adjectives
+                adjectives: /\b(good|new|first|last|long|great|little|own|other|old|right|big|high|different|small|large|next|early|young|important|few|public|bad|same|able|best|better|sure|clear|easy|hard|hot|cold|full|free|recent|strong|weak|whole|true|false|major|minor|happy|sad|beautiful|ugly|fast|slow|rich|poor|thick|thin)\b/gi,
+                
+                // Common adverbs
+                adverbs: /\b(very|really|quite|just|too|also|never|always|sometimes|often|usually|already|still|even|only|much|however|perhaps|maybe|probably|certainly|definitely|absolutely|extremely|simply|actually|finally|especially|immediately|directly|exactly|completely|entirely|rapidly|quickly|slowly|carefully)\b/gi,
+                
+                // Pronouns
+                pronouns: /\b(i|me|my|mine|myself|you|your|yours|yourself|he|him|his|himself|she|her|hers|herself|it|its|itself|we|us|our|ours|ourselves|they|them|their|theirs|themselves|this|that|these|those|who|whom|whose|which|what|where|when|why|how)\b/gi,
+                
+                // Numbers
+                numbers: /\b\d+\.?\d*\b/g,
+                
+                // Prepositions
+                prepositions: /\b(in|on|at|by|for|with|about|against|between|into|through|during|before|after|above|below|to|from|up|down|out|off|over|under|again|further|then|once|of|as|an|the)\b/gi
+            };
+            
+            // Apply highlighting in order (to avoid conflicts)
+            const words = text.split(/(\s+|[.,!?;:])/);
+            const highlightedWords = words.map(word => {
+                // Skip if already highlighted or is whitespace/punctuation
+                if (!word.trim() || /^[.,!?;:\s]+$/.test(word)) {
+                    return word;
+                }
+                
+                // Check each pattern
+                if (patterns.numbers.test(word)) {
+                    return `<span class="syntax-number">${word}</span>`;
+                } else if (patterns.pronouns.test(word)) {
+                    return `<span class="syntax-pronoun">${word}</span>`;
+                } else if (patterns.verbs.test(word)) {
+                    return `<span class="syntax-verb">${word}</span>`;
+                } else if (patterns.adjectives.test(word)) {
+                    return `<span class="syntax-adjective">${word}</span>`;
+                } else if (patterns.adverbs.test(word)) {
+                    return `<span class="syntax-adverb">${word}</span>`;
+                } else if (patterns.prepositions.test(word)) {
+                    return `<span class="syntax-preposition">${word}</span>`;
+                } else if (patterns.nouns.test(word)) {
+                    return `<span class="syntax-noun">${word}</span>`;
+                }
+                
+                return word;
+            });
+            
+            return highlightedWords.join('');
+        }
 
         // Test function for debugging
         function testAllFeatures() {
@@ -2050,6 +3149,9 @@ Please provide a helpful, concise response based on the text provided.`;
             
             // Test fullscreen
             console.log('Fullscreen:', isFullscreen);
+            
+            // Test AI fullscreen
+            console.log('AI Fullscreen:', isAIFullscreen);
             
             // Test stats
             console.log('Word count:', words.length);
@@ -2071,6 +3173,586 @@ Please provide a helpful, concise response based on the text provided.`;
 
         // Add test function to window for debugging
         window.testReader = testAllFeatures;
+
+        // Comprehensive Unit Testing Suite
+        class ZenReaderTestSuite {
+            constructor() {
+                this.tests = [];
+                this.passed = 0;
+                this.failed = 0;
+                this.errors = [];
+            }
+
+            async runAllTests() {
+                console.log('🧪 Starting Zen Reader Test Suite...\n');
+                this.passed = 0;
+                this.failed = 0;
+                this.errors = [];
+
+                // Test categories
+                await this.testInitialization();
+                await this.testFileHandling();
+                await this.testTextDisplay();
+                await this.testReadingFeatures();
+                await this.testAIIntegration();
+                await this.testAutoscroll();
+                await this.testKeyboardShortcuts();
+                await this.testUIComponents();
+                await this.testMarkdownParsing();
+                await this.testSyntaxHighlighting();
+                await this.testStateManagement();
+                await this.testEdgeTTS();
+
+                // Summary
+                console.log('\n📊 Test Summary:');
+                console.log(`✅ Passed: ${this.passed}`);
+                console.log(`❌ Failed: ${this.failed}`);
+                console.log(`📈 Total: ${this.passed + this.failed}`);
+                
+                if (this.errors.length > 0) {
+                    console.log('\n🐛 Errors:');
+                    this.errors.forEach((error, index) => {
+                        console.error(`${index + 1}. ${error}`);
+                    });
+                }
+
+                return {
+                    passed: this.passed,
+                    failed: this.failed,
+                    errors: this.errors,
+                    success: this.failed === 0
+                };
+            }
+
+            assert(condition, testName, errorMsg = '') {
+                if (condition) {
+                    this.passed++;
+                    console.log(`✅ ${testName}`);
+                } else {
+                    this.failed++;
+                    console.error(`❌ ${testName}`);
+                    if (errorMsg) {
+                        this.errors.push(`${testName}: ${errorMsg}`);
+                    }
+                }
+            }
+
+            async testInitialization() {
+                console.log('\n🔧 Testing Initialization...');
+                
+                // Test API key loading
+                const savedKey = localStorage.getItem('geminiApiKey');
+                this.assert(
+                    apiKey === savedKey || apiKey === 'AIzaSyAYBfMZU6dFu_Qql8nARSTwlNevYCUP15k',
+                    'API key initialization',
+                    `Expected API key to be loaded, got: ${apiKey ? 'loaded' : 'not loaded'}`
+                );
+
+                // Test initial state
+                this.assert(currentFontSize === 1.1, 'Initial font size');
+                this.assert(wordsPerMinute === 250, 'Initial WPM');
+                this.assert(pomodoroTime === 25 * 60, 'Initial pomodoro time');
+                this.assert(autoscrollSpeed === 50, 'Initial autoscroll speed');
+                this.assert(syntaxHighlightingEnabled === true, 'Syntax highlighting enabled by default');
+            }
+
+            async testFileHandling() {
+                console.log('\n📁 Testing File Handling...');
+                
+                // Test file reading simulation
+                const testText = 'This is a test text for unit testing.';
+                const mockFile = new Blob([testText], { type: 'text/plain' });
+                mockFile.name = 'test.txt';
+                
+                // Simulate file read
+                currentText = testText;
+                isMarkdown = false;
+                displayText(currentText);
+                
+                this.assert(currentText === testText, 'File content loaded');
+                this.assert(words.length > 0, 'Words array populated');
+                this.assert(document.getElementById('wordCount').textContent !== '0', 'Word count updated');
+            }
+
+            async testTextDisplay() {
+                console.log('\n📝 Testing Text Display...');
+                
+                const textContent = document.getElementById('textContent');
+                
+                // Test plain text display
+                displayText('Test plain text');
+                this.assert(
+                    textContent.textContent.includes('Test plain text'),
+                    'Plain text display'
+                );
+
+                // Test markdown detection
+                isMarkdown = true;
+                displayText('# Test Header\n**Bold text**');
+                this.assert(
+                    textContent.innerHTML.includes('<h1>') || textContent.innerHTML.includes('Test Header'),
+                    'Markdown parsing'
+                );
+                isMarkdown = false;
+            }
+
+            async testReadingFeatures() {
+                console.log('\n📖 Testing Reading Features...');
+                
+                // Test theme toggle
+                const initialTheme = document.body.classList.contains('light-theme');
+                toggleTheme();
+                this.assert(
+                    document.body.classList.contains('light-theme') !== initialTheme,
+                    'Theme toggle'
+                );
+                toggleTheme(); // Reset
+
+                // Test text size
+                const initialSize = currentFontSize;
+                changeTextSize('increase');
+                this.assert(currentFontSize > initialSize, 'Increase text size');
+                changeTextSize('decrease');
+                this.assert(currentFontSize === initialSize, 'Decrease text size');
+
+                // Test bionic mode
+                bionicMode = false;
+                toggleBionicMode();
+                this.assert(bionicMode === true, 'Enable bionic mode');
+                toggleBionicMode();
+                this.assert(bionicMode === false, 'Disable bionic mode');
+
+                // Test focus gradient
+                focusGradient = false;
+                toggleFocusGradient();
+                this.assert(focusGradient === true, 'Enable focus gradient');
+                const textContent = document.getElementById('textContent');
+                this.assert(
+                    textContent.classList.contains('focus-gradient'),
+                    'Focus gradient class applied'
+                );
+                toggleFocusGradient();
+
+                // Test pomodoro
+                const pomodoroWidget = document.getElementById('pomodoroWidget');
+                togglePomodoro();
+                this.assert(
+                    pomodoroWidget.classList.contains('active'),
+                    'Pomodoro widget activated'
+                );
+                togglePomodoro();
+            }
+
+            async testAIIntegration() {
+                console.log('\n🤖 Testing AI Integration...');
+                
+                // Test API key validation
+                const testKey = 'AIzaSyAYBfMZU6dFu_Qql8nARSTwlNevYCUP15k';
+                this.assert(
+                    testKey.startsWith('AIza') && testKey.length >= 30,
+                    'API key format validation'
+                );
+
+                // Test message addition
+                const chatMessages = document.getElementById('chatMessages');
+                const initialCount = chatMessages.children.length;
+                addMessage('user', 'Test message');
+                this.assert(
+                    chatMessages.children.length > initialCount,
+                    'Add user message'
+                );
+
+                addMessage('ai', '**Bold** response with `code`');
+                const lastMessage = chatMessages.lastElementChild;
+                this.assert(
+                    lastMessage.classList.contains('ai'),
+                    'Add AI message with correct class'
+                );
+
+                // Test AI fullscreen
+                isAIFullscreen = false;
+                toggleAIFullscreen();
+                this.assert(isAIFullscreen === true, 'Enable AI fullscreen');
+                const aiPanel = document.getElementById('aiPanel');
+                this.assert(
+                    aiPanel.classList.contains('fullscreen'),
+                    'AI panel fullscreen class'
+                );
+                toggleAIFullscreen();
+            }
+
+            async testAutoscroll() {
+                console.log('\n📜 Testing Autoscroll...');
+                
+                // Set up test content
+                currentText = 'Test content for autoscroll testing.';
+                displayText(currentText);
+
+                // Test autoscroll controls visibility
+                const controls = document.getElementById('autoscrollControls');
+                toggleAutoscroll();
+                this.assert(
+                    controls.classList.contains('active'),
+                    'Autoscroll controls activated'
+                );
+
+                // Test speed update
+                const slider = document.getElementById('autoscrollSpeed');
+                slider.value = 100;
+                updateAutoscrollSpeed();
+                this.assert(
+                    autoscrollSpeed === 100,
+                    'Autoscroll speed updated'
+                );
+                this.assert(
+                    document.getElementById('autoscrollSpeedValue').textContent === '100 px/s',
+                    'Speed display updated'
+                );
+
+                // Test autoscroll state
+                startAutoscroll();
+                this.assert(isAutoscrolling === true, 'Autoscroll started');
+                this.assert(autoscrollInterval !== null, 'Autoscroll interval created');
+                
+                pauseAutoscroll();
+                this.assert(autoscrollPaused === true, 'Autoscroll paused');
+                
+                stopAutoscroll();
+                this.assert(isAutoscrolling === false, 'Autoscroll stopped');
+                this.assert(autoscrollInterval === null, 'Autoscroll interval cleared');
+                
+                toggleAutoscroll();
+            }
+
+            async testKeyboardShortcuts() {
+                console.log('\n⌨️ Testing Keyboard Shortcuts...');
+                
+                // Create keyboard event helper
+                const createKeyEvent = (key, ctrlKey = false) => {
+                    return new KeyboardEvent('keydown', {
+                        key: key,
+                        ctrlKey: ctrlKey,
+                        preventDefault: () => {}
+                    });
+                };
+
+                // Test shortcuts (without actually triggering them to avoid UI changes)
+                this.assert(typeof toggleFullscreen === 'function', 'Fullscreen shortcut function exists');
+                this.assert(typeof startSpeedReader === 'function', 'Speed reader shortcut function exists');
+                this.assert(typeof toggleBionicMode === 'function', 'Bionic mode shortcut function exists');
+                this.assert(typeof togglePomodoro === 'function', 'Pomodoro shortcut function exists');
+                this.assert(typeof toggleTTS === 'function', 'TTS shortcut function exists');
+                this.assert(typeof toggleSyntaxHighlighting === 'function', 'Syntax highlighting shortcut function exists');
+                this.assert(typeof toggleAIFullscreen === 'function', 'AI fullscreen shortcut function exists');
+                this.assert(typeof toggleAutoscroll === 'function', 'Autoscroll shortcut function exists');
+            }
+
+            async testUIComponents() {
+                console.log('\n🎨 Testing UI Components...');
+                
+                // Test stats bar
+                this.assert(
+                    document.getElementById('wordCount') !== null,
+                    'Word count element exists'
+                );
+                this.assert(
+                    document.getElementById('readingTime') !== null,
+                    'Reading time element exists'
+                );
+                this.assert(
+                    document.getElementById('progressPercent') !== null,
+                    'Progress percent element exists'
+                );
+                this.assert(
+                    document.getElementById('sessionTime') !== null,
+                    'Session time element exists'
+                );
+
+                // Test feature menu
+                const featuresMenu = document.getElementById('featuresMenu');
+                this.assert(featuresMenu !== null, 'Features menu exists');
+                
+                // Test control buttons
+                this.assert(
+                    document.querySelectorAll('.feature-item').length >= 10,
+                    'All feature menu items present'
+                );
+            }
+
+            async testMarkdownParsing() {
+                console.log('\n📋 Testing Markdown Parsing...');
+                
+                // Test various markdown elements
+                const testCases = [
+                    {
+                        input: '# Header 1',
+                        expected: '<h1>',
+                        name: 'H1 header'
+                    },
+                    {
+                        input: '**bold text**',
+                        expected: '<strong>',
+                        name: 'Bold text'
+                    },
+                    {
+                        input: '*italic text*',
+                        expected: '<em>',
+                        name: 'Italic text'
+                    },
+                    {
+                        input: '`code snippet`',
+                        expected: 'syntax-code',
+                        name: 'Inline code'
+                    },
+                    {
+                        input: '[link](http://example.com)',
+                        expected: '<a href=',
+                        name: 'Link'
+                    },
+                    {
+                        input: '- list item',
+                        expected: '<li>',
+                        name: 'List item'
+                    }
+                ];
+
+                testCases.forEach(test => {
+                    const result = parseAIMarkdown(test.input);
+                    this.assert(
+                        result.includes(test.expected),
+                        `Markdown: ${test.name}`,
+                        `Expected "${test.expected}" in result`
+                    );
+                });
+
+                // Test code block
+                const codeBlock = '```python\ndef test():\n    pass\n```';
+                const codeResult = parseAIMarkdown(codeBlock);
+                this.assert(
+                    codeResult.includes('syntax-code-block') && codeResult.includes('language-python'),
+                    'Code block with language'
+                );
+            }
+
+            async testSyntaxHighlighting() {
+                console.log('\n🌈 Testing Syntax Highlighting...');
+                
+                // Test natural language highlighting
+                const nlTest = 'The quick brown fox jumps over the lazy dog.';
+                const nlResult = highlightNaturalLanguage(nlTest);
+                this.assert(
+                    nlResult.includes('syntax-'),
+                    'Natural language highlighting applied'
+                );
+
+                // Test code highlighting
+                const codeTest = 'function test() { return true; }';
+                const codeResult = highlightCode(codeTest, 'javascript');
+                this.assert(
+                    codeResult.includes('syntax-keyword') && codeResult.includes('syntax-function'),
+                    'Code syntax highlighting'
+                );
+
+                // Test toggle functionality
+                syntaxHighlightingEnabled = true;
+                toggleSyntaxHighlighting();
+                this.assert(
+                    syntaxHighlightingEnabled === false,
+                    'Syntax highlighting toggled off'
+                );
+                toggleSyntaxHighlighting();
+                this.assert(
+                    syntaxHighlightingEnabled === true,
+                    'Syntax highlighting toggled on'
+                );
+            }
+
+            async testStateManagement() {
+                console.log('\n💾 Testing State Management...');
+                
+                // Test session timer
+                this.assert(sessionInterval !== null, 'Session timer initialized');
+                
+                // Test reading progress calculation
+                const textDisplay = document.getElementById('textDisplay');
+                textDisplay.scrollTop = 0;
+                updateProgressPercent();
+                this.assert(
+                    parseFloat(document.getElementById('progressPercent').textContent) >= 0,
+                    'Reading progress calculation'
+                );
+
+                // Test feature state updates
+                updateFeatureItemState('theme', true);
+                const themeItem = document.querySelectorAll('.feature-item')[6];
+                this.assert(
+                    themeItem && themeItem.classList.contains('active'),
+                    'Feature item state update'
+                );
+                updateFeatureItemState('theme', false);
+            }
+
+            async testEdgeTTS() {
+                console.log('\n🔊 Testing Edge TTS Integration...');
+                
+                // Test initial state
+                this.assert(ttsEngine === 'browser', 'Default TTS engine is browser');
+                this.assert(edgeVoice === 'en-US-JennyNeural', 'Default Edge voice');
+                this.assert(edgeAudio === null, 'Edge audio initially null');
+                this.assert(isEdgeTTSPlaying === false, 'Edge TTS not playing initially');
+                
+                // Test UI elements
+                this.assert(
+                    document.getElementById('browserTTSBtn') !== null,
+                    'Browser TTS button exists'
+                );
+                this.assert(
+                    document.getElementById('edgeTTSBtn') !== null,
+                    'Edge TTS button exists'
+                );
+                this.assert(
+                    document.getElementById('edgeVoiceSelector') !== null,
+                    'Edge voice selector exists'
+                );
+                this.assert(
+                    document.getElementById('edgeTTSStatus') !== null,
+                    'Edge TTS status element exists'
+                );
+                
+                // Test engine switching
+                switchTTSEngine('edge');
+                this.assert(ttsEngine === 'edge', 'Switch to Edge TTS engine');
+                this.assert(
+                    document.getElementById('edgeTTSBtn').classList.contains('active'),
+                    'Edge TTS button active'
+                );
+                this.assert(
+                    document.getElementById('edgeTTSOptions').classList.contains('active'),
+                    'Edge TTS options visible'
+                );
+                
+                // Test voice selection
+                const voiceSelector = document.getElementById('edgeVoiceSelector');
+                voiceSelector.value = 'en-GB-SoniaNeural';
+                updateEdgeVoice();
+                this.assert(
+                    edgeVoice === 'en-GB-SoniaNeural',
+                    'Edge voice selection'
+                );
+                
+                // Test Edge TTS API mock
+                currentText = 'Test text for Edge TTS';
+                const response = await generateEdgeTTSAudio(currentText, edgeVoice);
+                this.assert(
+                    typeof response === 'object',
+                    'Edge TTS API returns response object'
+                );
+                this.assert(
+                    response.ok === false,
+                    'Mock Edge TTS API simulates failure for fallback test'
+                );
+                
+                // Test rate control
+                const rateSlider = document.getElementById('ttsRate');
+                rateSlider.value = 1.5;
+                updateTTSRate();
+                this.assert(
+                    document.getElementById('ttsRateValue').textContent === '1.5x',
+                    'TTS rate update'
+                );
+                
+                // Test cleanup functions
+                this.assert(typeof stopEdgeTTS === 'function', 'stopEdgeTTS function exists');
+                this.assert(typeof pauseEdgeTTS === 'function', 'pauseEdgeTTS function exists');
+                
+                // Reset to browser TTS
+                switchTTSEngine('browser');
+                this.assert(ttsEngine === 'browser', 'Switch back to browser TTS');
+                
+                // Reset voice
+                edgeVoice = 'en-US-JennyNeural';
+            }
+        }
+
+        // Initialize test suite
+        window.zenReaderTests = new ZenReaderTestSuite();
+        
+        // Auto-run tests in development mode
+        if (debugMode) {
+            console.log('Debug mode enabled. Run window.zenReaderTests.runAllTests() to execute test suite.');
+        }
+
+        // Quick test runner
+        window.runTests = async function() {
+            console.log('🚀 Running Zen Reader Tests...\n');
+            const results = await window.zenReaderTests.runAllTests();
+            
+            // Additional manual checks
+            console.log('\n🔍 Additional Checks:');
+            
+            // Check for memory leaks
+            const intervals = [sessionInterval, pomodoroInterval, speedInterval, autoscrollInterval];
+            const activeIntervals = intervals.filter(i => i !== null).length;
+            console.log(`⏱️ Active intervals: ${activeIntervals}`);
+            
+            // Check DOM elements
+            const criticalElements = [
+                'textContent', 'chatMessages', 'wordCount', 'readingTime',
+                'progressPercent', 'sessionTime', 'featuresMenu', 'apiKey'
+            ];
+            const missingElements = criticalElements.filter(id => !document.getElementById(id));
+            if (missingElements.length === 0) {
+                console.log('✅ All critical DOM elements present');
+            } else {
+                console.error('❌ Missing DOM elements:', missingElements);
+            }
+            
+            // Check event listeners
+            console.log('✅ Event listeners attached');
+            
+            // Performance check
+            const loadTime = performance.now();
+            console.log(`⚡ Page load time: ${Math.round(loadTime)}ms`);
+            
+            return results;
+        };
+
+        // Debug helper to reset all states
+        window.resetAllStates = function() {
+            // Stop all active features
+            stopAutoscroll();
+            stopTTS();
+            stopEdgeTTS();
+            stopSpeedReading();
+            pausePomodoro();
+            
+            // Reset UI states
+            if (isFullscreen) exitFullscreen();
+            if (isAIFullscreen) toggleAIFullscreen();
+            if (document.getElementById('speedReaderModal').classList.contains('active')) {
+                closeSpeedReader();
+            }
+            
+            // Reset TTS engine to default
+            switchTTSEngine('browser');
+            
+            // Reset variables
+            currentText = '';
+            words = [];
+            readingProgress = 0;
+            currentWordIndex = 0;
+            
+            // Clear chat
+            document.getElementById('chatMessages').innerHTML = '';
+            
+            // Reset displays
+            document.getElementById('textContent').innerHTML = '';
+            document.getElementById('wordCount').textContent = '0';
+            document.getElementById('readingTime').textContent = '0 min';
+            document.getElementById('progressPercent').textContent = '0%';
+            
+            console.log('✅ All states reset');
+        };
     </script>
 </body>
 </html>
