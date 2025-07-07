@@ -7,13 +7,15 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# Function to check if running on Wayland
+# Function to check if running on Wayland and fix Qt issues
 check_wayland() {
     if [ ! -z "$WAYLAND_DISPLAY" ]; then
         echo -e "${YELLOW}Detected Wayland display system.${NC}"
         echo "Setting GDK_BACKEND=x11 for compatibility..."
         export GDK_BACKEND=x11
     fi
+    
+    # Qt fixes are now handled in run_with_system_qt.sh
 }
 
 # Function to display menu
@@ -41,12 +43,12 @@ while true; do
         1)
             echo -e "${GREEN}Starting Circle Detector...${NC}"
             check_wayland
-            python3 run_circle_detector.py
+            ./run_with_system_qt.sh run_circle_detector.py
             ;;
         2)
             echo -e "${GREEN}Starting Geometry Demo...${NC}"
             check_wayland
-            python3 run_geometry_demo.py
+            python3 run_geometry_demo_fixed.py
             ;;
         3)
             echo -e "${GREEN}Starting Calibration Tool...${NC}"

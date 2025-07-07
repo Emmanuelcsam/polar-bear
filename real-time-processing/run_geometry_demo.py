@@ -13,6 +13,9 @@ import platform
 project_root = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, project_root)
 
+# Fix Qt environment before importing OpenCV
+import fix_qt_env
+
 def check_dependencies():
     """Check if required dependencies are installed."""
     required_packages = ['cv2', 'numpy', 'matplotlib']

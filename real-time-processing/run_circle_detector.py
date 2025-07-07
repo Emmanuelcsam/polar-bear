@@ -13,6 +13,9 @@ import platform
 project_root = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, project_root)
 
+# Fix Qt environment before importing OpenCV
+import fix_qt_env
+
 def check_dependencies():
     """Check if required dependencies are installed."""
     required_packages = ['cv2', 'numpy', 'pypylon']
@@ -46,14 +49,13 @@ def main():
     
     # Import and run the circle detector
     try:
-        from src.applications.realtime_circle_detector import CircleDetector
+        from src.applications.realtime_circle_detector import main as circle_detector_main
         
         print("Starting Real-time Circle Detector...")
         print("Press 'q' to quit, 'p' to pause/resume, 's' to save frame")
         print("-" * 50)
         
-        detector = CircleDetector()
-        detector.run()
+        circle_detector_main()
         
     except ImportError as e:
         print(f"Error importing module: {e}")

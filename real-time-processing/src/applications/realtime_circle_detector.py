@@ -88,15 +88,36 @@ def detect(gray):
 
 def main():
     # ----- VideoCapture initialisation ----------------------------------------------
-    cap = cv2.VideoCapture(0) # Use 0 for webcam or provide a video file path
+    print("Initializing camera...")
+    cap = cv2.VideoCapture(0, cv2.CAP_V4L2) # Use V4L2 backend for better Linux compatibility
+    
+    if not cap.isOpened():
+        print("Failed to open camera! Trying default backend...")
+        cap = cv2.VideoCapture(0)
+    
+    if not cap.isOpened():
+        print("ERROR: Cannot open camera!")
+        return
+    
+    # Get camera properties
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    print(f"Camera opened: {width}x{height} @ {fps} FPS")
 
     kfs = []       # active Kalman filters
     traces = deque(maxlen=MAX_QUEUE)
+    frame_count = 0
 
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
+            print("Failed to read frame!")
             break
+
+        frame_count += 1
+        if frame_count % 30 == 0:
+            print(f"Processing frame {frame_count}...")
 
         img = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
@@ -120,14 +141,28 @@ def main():
         traces.append([(int(k.kf.statePost[0]), int(k.kf.statePost[1]), int(k.kf.statePost[2])) for k in kfs])
 
         # draw -----------------------------------------------------------------
-        vis = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+        # Use the original color frame instead of grayscale
+        vis = frame.copy()
+        
+        # Draw detected circles
         for tr in traces:
             for (x, y, r) in tr:
                 cv2.circle(vis, (x, y), r, (0, 255, 0), 2)
+                cv2.circle(vis, (x, y), 3, (0, 0, 255), -1)  # Center point
+        
+        # Add info text
+        cv2.putText(vis, f"Circles: {len(traces[-1]) if traces else 0}", 
+                    (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+        cv2.putText(vis, "Press 'q' to quit", 
+                    (10, height - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+        
         if DISPLAY_SCALE != 1.0:
             vis = cv2.resize(vis, None, fx=DISPLAY_SCALE, fy=DISPLAY_SCALE)
-        cv2.imshow("Circle detector – ESC to quit", vis)
-        if cv2.waitKey(1) == 27:
+        
+        cv2.imshow("Circle detector - Press 'q' to quit", vis)
+        key = cv2.waitKey(1) & 0xFF
+        if key == ord('q') or key == 27:  # 'q' or ESC
+            print("Exiting...")
             break
 
     cap.release()
