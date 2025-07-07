@@ -1,0 +1,915 @@
+2025-07-07 13:39:02,853 - INFO - Searching for images...
+2025-07-07 13:39:02,854 - INFO - Found 70 JPG/PNG files and 57 BMP files
+2025-07-07 13:39:02,854 - INFO - Generating 3990 combinations using parallel processing...
+2025-07-07 13:39:03,193 - INFO - [1/3990] Completed: 91_clean_20250705_0007_WITH_16_s.jpg
+2025-07-07 13:39:03,206 - INFO - [2/3990] Completed: 91_clean_20250705_0007_WITH_52_s.jpg
+2025-07-07 13:39:03,427 - INFO - [3/3990] Completed: 91_clean_20250705_0007_WITH_40_s.jpg
+2025-07-07 13:39:03,431 - INFO - [4/3990] Completed: 91_clean_20250705_0007_WITH_59_s.jpg
+2025-07-07 13:39:03,681 - INFO - [5/3990] Completed: 91_clean_20250705_0007_WITH_28_s.jpg
+2025-07-07 13:39:03,692 - INFO - [6/3990] Completed: 91_clean_20250705_0007_WITH_04_s.jpg
+2025-07-07 13:39:03,961 - INFO - [7/3990] Completed: 91_clean_20250705_0007_WITH_18_s.jpg
+2025-07-07 13:39:03,970 - INFO - [8/3990] Completed: 91_clean_20250705_0007_WITH_06_s.jpg
+2025-07-07 13:39:04,254 - INFO - [9/3990] Completed: 91_clean_20250705_0007_WITH_36_s.jpg
+2025-07-07 13:39:04,282 - INFO - [10/3990] Completed: 91_clean_20250705_0007_WITH_35_s.jpg
+2025-07-07 13:39:04,512 - INFO - [11/3990] Completed: 91_clean_20250705_0007_WITH_31_s.jpg
+2025-07-07 13:39:04,545 - INFO - [12/3990] Completed: 91_clean_20250705_0007_WITH_55_s.jpg
+2025-07-07 13:39:04,759 - INFO - [13/3990] Completed: 91_clean_20250705_0007_WITH_30_s.jpg
+2025-07-07 13:39:04,797 - INFO - [14/3990] Completed: 91_clean_20250705_0007_WITH_32_s.jpg
+2025-07-07 13:39:04,996 - INFO - [15/3990] Completed: 91_clean_20250705_0007_WITH_45_s.jpg
+2025-07-07 13:39:05,021 - INFO - [16/3990] Completed: 91_clean_20250705_0007_WITH_27_s.jpg
+2025-07-07 13:39:05,231 - INFO - [17/3990] Completed: 91_clean_20250705_0007_WITH_22_s.jpg
+2025-07-07 13:39:05,237 - INFO - [18/3990] Completed: 91_clean_20250705_0007_WITH_29_s.jpg
+2025-07-07 13:39:05,486 - INFO - [19/3990] Completed: 91_clean_20250705_0007_WITH_44_s.jpg
+2025-07-07 13:39:05,489 - INFO - [20/3990] Completed: 91_clean_20250705_0007_WITH_50_s.jpg
+2025-07-07 13:39:05,734 - INFO - [21/3990] Completed: 91_clean_20250705_0007_WITH_37_s.jpg
+2025-07-07 13:39:05,735 - INFO - [22/3990] Completed: 91_clean_20250705_0007_WITH_11_s.jpg
+2025-07-07 13:39:05,975 - INFO - [23/3990] Completed: 91_clean_20250705_0007_WITH_07_s.jpg
+2025-07-07 13:39:05,977 - INFO - [24/3990] Completed: 91_clean_20250705_0007_WITH_33_s.jpg
+2025-07-07 13:39:06,214 - INFO - [25/3990] Completed: 91_clean_20250705_0007_WITH_49_s.jpg
+2025-07-07 13:39:06,216 - INFO - [26/3990] Completed: 91_clean_20250705_0007_WITH_17_s.jpg
+2025-07-07 13:39:06,458 - INFO - [27/3990] Completed: 91_clean_20250705_0007_WITH_51_s.jpg
+2025-07-07 13:39:06,459 - INFO - [28/3990] Completed: 91_clean_20250705_0007_WITH_43_s.jpg
+2025-07-07 13:39:06,707 - INFO - [29/3990] Completed: 91_clean_20250705_0007_WITH_25_s.jpg
+2025-07-07 13:39:06,712 - INFO - [30/3990] Completed: 91_clean_20250705_0007_WITH_34_s.jpg
+2025-07-07 13:39:06,953 - INFO - [31/3990] Completed: 91_clean_20250705_0007_WITH_12_s.jpg
+2025-07-07 13:39:06,963 - INFO - [32/3990] Completed: 91_clean_20250705_0007_WITH_41_s.jpg
+2025-07-07 13:39:07,185 - INFO - [33/3990] Completed: 91_clean_20250705_0007_WITH_38_s.jpg
+2025-07-07 13:39:07,198 - INFO - [34/3990] Completed: 91_clean_20250705_0007_WITH_13_s.jpg
+2025-07-07 13:39:07,432 - INFO - [35/3990] Completed: 91_clean_20250705_0007_WITH_14_s.jpg
+2025-07-07 13:39:07,457 - INFO - [36/3990] Completed: 91_clean_20250705_0007_WITH_08_s.jpg
+2025-07-07 13:39:07,675 - INFO - [37/3990] Completed: 91_clean_20250705_0007_WITH_24_s.jpg
+2025-07-07 13:39:07,690 - INFO - [38/3990] Completed: 91_clean_20250705_0007_WITH_05_s.jpg
+2025-07-07 13:39:07,914 - INFO - [39/3990] Completed: 91_clean_20250705_0007_WITH_39_s.jpg
+2025-07-07 13:39:07,916 - INFO - [40/3990] Completed: 91_clean_20250705_0007_WITH_09_s.jpg
+2025-07-07 13:39:08,153 - INFO - [41/3990] Completed: 91_clean_20250705_0007_WITH_54_s.jpg
+2025-07-07 13:39:08,157 - INFO - [42/3990] Completed: 91_clean_20250705_0007_WITH_57_s.jpg
+2025-07-07 13:39:08,387 - INFO - [43/3990] Completed: 91_clean_20250705_0007_WITH_19_s.jpg
+2025-07-07 13:39:08,402 - INFO - [44/3990] Completed: 91_clean_20250705_0007_WITH_23_s.jpg
+2025-07-07 13:39:08,633 - INFO - [45/3990] Completed: 91_clean_20250705_0007_WITH_48_s.jpg
+2025-07-07 13:39:08,639 - INFO - [46/3990] Completed: 91_clean_20250705_0007_WITH_46_s.jpg
+2025-07-07 13:39:08,876 - INFO - [47/3990] Completed: 91_clean_20250705_0007_WITH_47_s.jpg
+2025-07-07 13:39:08,881 - INFO - [48/3990] Completed: 91_clean_20250705_0007_WITH_26_s.jpg
+2025-07-07 13:39:09,104 - INFO - [49/3990] Completed: 91_clean_20250705_0007_WITH_58_s.jpg
+2025-07-07 13:39:09,106 - INFO - [50/3990] Completed: 91_clean_20250705_0007_WITH_53_s.jpg
+2025-07-07 13:39:09,340 - INFO - [51/3990] Completed: 91_clean_20250705_0007_WITH_42_s.jpg
+2025-07-07 13:39:09,347 - INFO - [52/3990] Completed: 91_clean_20250705_0007_WITH_56_s.jpg
+2025-07-07 13:39:09,584 - INFO - [53/3990] Completed: 91_clean_20250705_0007_WITH_10_s.jpg
+2025-07-07 13:39:09,585 - INFO - [54/3990] Completed: 91_clean_20250705_0007_WITH_21_s.jpg
+2025-07-07 13:39:09,827 - INFO - [55/3990] Completed: 91_clean_20250705_0007_WITH_15_s.jpg
+2025-07-07 13:39:09,841 - INFO - [56/3990] Completed: 91_clean_20250705_0007_WITH_60_s.jpg
+2025-07-07 13:39:10,055 - INFO - [57/3990] Completed: 91_clean_20250705_0007_WITH_20_s.jpg
+2025-07-07 13:39:10,069 - INFO - [58/3990] Completed: img (303)_WITH_52_s.jpg
+2025-07-07 13:39:10,275 - INFO - [59/3990] Completed: img (303)_WITH_16_s.jpg
+2025-07-07 13:39:10,303 - INFO - [60/3990] Completed: img (303)_WITH_40_s.jpg
+2025-07-07 13:39:10,498 - INFO - [61/3990] Completed: img (303)_WITH_59_s.jpg
+2025-07-07 13:39:10,531 - INFO - [62/3990] Completed: img (303)_WITH_28_s.jpg
+2025-07-07 13:39:10,744 - INFO - [63/3990] Completed: img (303)_WITH_04_s.jpg
+2025-07-07 13:39:10,781 - INFO - [64/3990] Completed: img (303)_WITH_06_s.jpg
+2025-07-07 13:39:10,963 - INFO - [65/3990] Completed: img (303)_WITH_18_s.jpg
+2025-07-07 13:39:11,004 - INFO - [66/3990] Completed: img (303)_WITH_36_s.jpg
+2025-07-07 13:39:11,188 - INFO - [67/3990] Completed: img (303)_WITH_35_s.jpg
+2025-07-07 13:39:11,239 - INFO - [68/3990] Completed: img (303)_WITH_31_s.jpg
+2025-07-07 13:39:11,420 - INFO - [69/3990] Completed: img (303)_WITH_55_s.jpg
+2025-07-07 13:39:11,460 - INFO - [70/3990] Completed: img (303)_WITH_30_s.jpg
+2025-07-07 13:39:11,641 - INFO - [71/3990] Completed: img (303)_WITH_32_s.jpg
+2025-07-07 13:39:11,692 - INFO - [72/3990] Completed: img (303)_WITH_45_s.jpg
+2025-07-07 13:39:11,866 - INFO - [73/3990] Completed: img (303)_WITH_27_s.jpg
+2025-07-07 13:39:11,917 - INFO - [74/3990] Completed: img (303)_WITH_22_s.jpg
+2025-07-07 13:39:12,082 - INFO - [75/3990] Completed: img (303)_WITH_29_s.jpg
+2025-07-07 13:39:12,144 - INFO - [76/3990] Completed: img (303)_WITH_50_s.jpg
+2025-07-07 13:39:12,305 - INFO - [77/3990] Completed: img (303)_WITH_44_s.jpg
+2025-07-07 13:39:12,363 - INFO - [78/3990] Completed: img (303)_WITH_11_s.jpg
+2025-07-07 13:39:12,532 - INFO - [79/3990] Completed: img (303)_WITH_37_s.jpg
+2025-07-07 13:39:12,594 - INFO - [80/3990] Completed: img (303)_WITH_07_s.jpg
+2025-07-07 13:39:12,765 - INFO - [81/3990] Completed: img (303)_WITH_33_s.jpg
+2025-07-07 13:39:12,819 - INFO - [82/3990] Completed: img (303)_WITH_49_s.jpg
+2025-07-07 13:39:12,990 - INFO - [83/3990] Completed: img (303)_WITH_17_s.jpg
+2025-07-07 13:39:13,041 - INFO - [84/3990] Completed: img (303)_WITH_43_s.jpg
+2025-07-07 13:39:13,226 - INFO - [85/3990] Completed: img (303)_WITH_51_s.jpg
+2025-07-07 13:39:13,257 - INFO - [86/3990] Completed: img (303)_WITH_25_s.jpg
+2025-07-07 13:39:13,457 - INFO - [87/3990] Completed: img (303)_WITH_34_s.jpg
+2025-07-07 13:39:13,478 - INFO - [88/3990] Completed: img (303)_WITH_41_s.jpg
+2025-07-07 13:39:13,679 - INFO - [89/3990] Completed: img (303)_WITH_12_s.jpg
+2025-07-07 13:39:13,705 - INFO - [90/3990] Completed: img (303)_WITH_38_s.jpg
+2025-07-07 13:39:13,908 - INFO - [91/3990] Completed: img (303)_WITH_13_s.jpg
+2025-07-07 13:39:13,946 - INFO - [92/3990] Completed: img (303)_WITH_08_s.jpg
+2025-07-07 13:39:14,130 - INFO - [93/3990] Completed: img (303)_WITH_14_s.jpg
+2025-07-07 13:39:14,168 - INFO - [94/3990] Completed: img (303)_WITH_24_s.jpg
+2025-07-07 13:39:14,351 - INFO - [95/3990] Completed: img (303)_WITH_05_s.jpg
+2025-07-07 13:39:14,394 - INFO - [96/3990] Completed: img (303)_WITH_39_s.jpg
+2025-07-07 13:39:14,572 - INFO - [97/3990] Completed: img (303)_WITH_09_s.jpg
+2025-07-07 13:39:14,629 - INFO - [98/3990] Completed: img (303)_WITH_57_s.jpg
+2025-07-07 13:39:14,810 - INFO - [99/3990] Completed: img (303)_WITH_54_s.jpg
+2025-07-07 13:39:14,853 - INFO - [100/3990] Completed: img (303)_WITH_23_s.jpg
+2025-07-07 13:39:15,053 - INFO - [101/3990] Completed: img (303)_WITH_19_s.jpg
+2025-07-07 13:39:15,077 - INFO - [102/3990] Completed: img (303)_WITH_48_s.jpg
+2025-07-07 13:39:15,279 - INFO - [103/3990] Completed: img (303)_WITH_46_s.jpg
+2025-07-07 13:39:15,302 - INFO - [104/3990] Completed: img (303)_WITH_47_s.jpg
+2025-07-07 13:39:15,525 - INFO - [105/3990] Completed: img (303)_WITH_26_s.jpg
+2025-07-07 13:39:15,545 - INFO - [106/3990] Completed: img (303)_WITH_58_s.jpg
+2025-07-07 13:39:15,762 - INFO - [107/3990] Completed: img (303)_WITH_53_s.jpg
+2025-07-07 13:39:15,774 - INFO - [108/3990] Completed: img (303)_WITH_56_s.jpg
+2025-07-07 13:39:15,992 - INFO - [109/3990] Completed: img (303)_WITH_42_s.jpg
+2025-07-07 13:39:16,002 - INFO - [110/3990] Completed: img (303)_WITH_10_s.jpg
+2025-07-07 13:39:16,224 - INFO - [111/3990] Completed: img (303)_WITH_21_s.jpg
+2025-07-07 13:39:16,237 - INFO - [112/3990] Completed: img (303)_WITH_15_s.jpg
+2025-07-07 13:39:16,454 - INFO - [113/3990] Completed: img (303)_WITH_60_s.jpg
+2025-07-07 13:39:16,460 - INFO - [114/3990] Completed: img (303)_WITH_20_s.jpg
+2025-07-07 13:39:16,709 - INFO - [115/3990] Completed: sma_clean_20250705_0040_WITH_16_s.jpg
+2025-07-07 13:39:16,710 - INFO - [116/3990] Completed: sma_clean_20250705_0040_WITH_52_s.jpg
+2025-07-07 13:39:16,951 - INFO - [117/3990] Completed: sma_clean_20250705_0040_WITH_40_s.jpg
+2025-07-07 13:39:16,973 - INFO - [118/3990] Completed: sma_clean_20250705_0040_WITH_59_s.jpg
+2025-07-07 13:39:17,175 - INFO - [119/3990] Completed: sma_clean_20250705_0040_WITH_28_s.jpg
+2025-07-07 13:39:17,203 - INFO - [120/3990] Completed: sma_clean_20250705_0040_WITH_04_s.jpg
+2025-07-07 13:39:17,414 - INFO - [121/3990] Completed: sma_clean_20250705_0040_WITH_06_s.jpg
+2025-07-07 13:39:17,426 - INFO - [122/3990] Completed: sma_clean_20250705_0040_WITH_18_s.jpg
+2025-07-07 13:39:17,665 - INFO - [123/3990] Completed: sma_clean_20250705_0040_WITH_36_s.jpg
+2025-07-07 13:39:17,670 - INFO - [124/3990] Completed: sma_clean_20250705_0040_WITH_35_s.jpg
+2025-07-07 13:39:17,906 - INFO - [125/3990] Completed: sma_clean_20250705_0040_WITH_55_s.jpg
+2025-07-07 13:39:17,908 - INFO - [126/3990] Completed: sma_clean_20250705_0040_WITH_31_s.jpg
+2025-07-07 13:39:18,135 - INFO - [127/3990] Completed: sma_clean_20250705_0040_WITH_30_s.jpg
+2025-07-07 13:39:18,144 - INFO - [128/3990] Completed: sma_clean_20250705_0040_WITH_32_s.jpg
+2025-07-07 13:39:18,372 - INFO - [129/3990] Completed: sma_clean_20250705_0040_WITH_27_s.jpg
+2025-07-07 13:39:18,374 - INFO - [130/3990] Completed: sma_clean_20250705_0040_WITH_45_s.jpg
+2025-07-07 13:39:18,603 - INFO - [131/3990] Completed: sma_clean_20250705_0040_WITH_22_s.jpg
+2025-07-07 13:39:18,610 - INFO - [132/3990] Completed: sma_clean_20250705_0040_WITH_29_s.jpg
+2025-07-07 13:39:18,851 - INFO - [133/3990] Completed: sma_clean_20250705_0040_WITH_44_s.jpg
+2025-07-07 13:39:18,852 - INFO - [134/3990] Completed: sma_clean_20250705_0040_WITH_50_s.jpg
+2025-07-07 13:39:19,077 - INFO - [135/3990] Completed: sma_clean_20250705_0040_WITH_11_s.jpg
+2025-07-07 13:39:19,094 - INFO - [136/3990] Completed: sma_clean_20250705_0040_WITH_37_s.jpg
+2025-07-07 13:39:19,301 - INFO - [137/3990] Completed: sma_clean_20250705_0040_WITH_07_s.jpg
+2025-07-07 13:39:19,346 - INFO - [138/3990] Completed: sma_clean_20250705_0040_WITH_33_s.jpg
+2025-07-07 13:39:19,532 - INFO - [139/3990] Completed: sma_clean_20250705_0040_WITH_49_s.jpg
+2025-07-07 13:39:19,587 - INFO - [140/3990] Completed: sma_clean_20250705_0040_WITH_17_s.jpg
+2025-07-07 13:39:19,782 - INFO - [141/3990] Completed: sma_clean_20250705_0040_WITH_43_s.jpg
+2025-07-07 13:39:19,824 - INFO - [142/3990] Completed: sma_clean_20250705_0040_WITH_51_s.jpg
+2025-07-07 13:39:19,999 - INFO - [143/3990] Completed: sma_clean_20250705_0040_WITH_25_s.jpg
+2025-07-07 13:39:20,042 - INFO - [144/3990] Completed: sma_clean_20250705_0040_WITH_34_s.jpg
+2025-07-07 13:39:20,217 - INFO - [145/3990] Completed: sma_clean_20250705_0040_WITH_41_s.jpg
+2025-07-07 13:39:20,269 - INFO - [146/3990] Completed: sma_clean_20250705_0040_WITH_12_s.jpg
+2025-07-07 13:39:20,437 - INFO - [147/3990] Completed: sma_clean_20250705_0040_WITH_38_s.jpg
+2025-07-07 13:39:20,495 - INFO - [148/3990] Completed: sma_clean_20250705_0040_WITH_13_s.jpg
+2025-07-07 13:39:20,678 - INFO - [149/3990] Completed: sma_clean_20250705_0040_WITH_08_s.jpg
+2025-07-07 13:39:20,731 - INFO - [150/3990] Completed: sma_clean_20250705_0040_WITH_14_s.jpg
+2025-07-07 13:39:20,905 - INFO - [151/3990] Completed: sma_clean_20250705_0040_WITH_24_s.jpg
+2025-07-07 13:39:20,961 - INFO - [152/3990] Completed: sma_clean_20250705_0040_WITH_05_s.jpg
+2025-07-07 13:39:21,133 - INFO - [153/3990] Completed: sma_clean_20250705_0040_WITH_39_s.jpg
+2025-07-07 13:39:21,190 - INFO - [154/3990] Completed: sma_clean_20250705_0040_WITH_09_s.jpg
+2025-07-07 13:39:21,368 - INFO - [155/3990] Completed: sma_clean_20250705_0040_WITH_57_s.jpg
+2025-07-07 13:39:21,426 - INFO - [156/3990] Completed: sma_clean_20250705_0040_WITH_54_s.jpg
+2025-07-07 13:39:21,597 - INFO - [157/3990] Completed: sma_clean_20250705_0040_WITH_23_s.jpg
+2025-07-07 13:39:21,672 - INFO - [158/3990] Completed: sma_clean_20250705_0040_WITH_19_s.jpg
+2025-07-07 13:39:21,827 - INFO - [159/3990] Completed: sma_clean_20250705_0040_WITH_48_s.jpg
+2025-07-07 13:39:21,911 - INFO - [160/3990] Completed: sma_clean_20250705_0040_WITH_46_s.jpg
+2025-07-07 13:39:22,046 - INFO - [161/3990] Completed: sma_clean_20250705_0040_WITH_47_s.jpg
+2025-07-07 13:39:22,138 - INFO - [162/3990] Completed: sma_clean_20250705_0040_WITH_26_s.jpg
+2025-07-07 13:39:22,275 - INFO - [163/3990] Completed: sma_clean_20250705_0040_WITH_58_s.jpg
+2025-07-07 13:39:22,375 - INFO - [164/3990] Completed: sma_clean_20250705_0040_WITH_53_s.jpg
+2025-07-07 13:39:22,552 - INFO - [165/3990] Completed: sma_clean_20250705_0040_WITH_56_s.jpg
+2025-07-07 13:39:22,639 - INFO - [166/3990] Completed: sma_clean_20250705_0040_WITH_42_s.jpg
+2025-07-07 13:39:22,839 - INFO - [167/3990] Completed: sma_clean_20250705_0040_WITH_10_s.jpg
+2025-07-07 13:39:22,914 - INFO - [168/3990] Completed: sma_clean_20250705_0040_WITH_21_s.jpg
+2025-07-07 13:39:23,133 - INFO - [169/3990] Completed: sma_clean_20250705_0040_WITH_15_s.jpg
+2025-07-07 13:39:23,205 - INFO - [170/3990] Completed: sma_clean_20250705_0040_WITH_60_s.jpg
+2025-07-07 13:39:23,417 - INFO - [171/3990] Completed: sma_clean_20250705_0040_WITH_20_s.jpg
+2025-07-07 13:39:23,473 - INFO - [172/3990] Completed: sma_clean_20250705_0023_WITH_52_s.jpg
+2025-07-07 13:39:23,670 - INFO - [173/3990] Completed: sma_clean_20250705_0023_WITH_16_s.jpg
+2025-07-07 13:39:23,734 - INFO - [174/3990] Completed: sma_clean_20250705_0023_WITH_40_s.jpg
+2025-07-07 13:39:23,915 - INFO - [175/3990] Completed: sma_clean_20250705_0023_WITH_59_s.jpg
+2025-07-07 13:39:23,978 - INFO - [176/3990] Completed: sma_clean_20250705_0023_WITH_28_s.jpg
+2025-07-07 13:39:24,200 - INFO - [177/3990] Completed: sma_clean_20250705_0023_WITH_04_s.jpg
+2025-07-07 13:39:24,223 - INFO - [178/3990] Completed: sma_clean_20250705_0023_WITH_06_s.jpg
+2025-07-07 13:39:24,442 - INFO - [179/3990] Completed: sma_clean_20250705_0023_WITH_18_s.jpg
+2025-07-07 13:39:24,465 - INFO - [180/3990] Completed: sma_clean_20250705_0023_WITH_36_s.jpg
+2025-07-07 13:39:24,676 - INFO - [181/3990] Completed: sma_clean_20250705_0023_WITH_35_s.jpg
+2025-07-07 13:39:24,718 - INFO - [182/3990] Completed: sma_clean_20250705_0023_WITH_31_s.jpg
+2025-07-07 13:39:24,951 - INFO - [183/3990] Completed: sma_clean_20250705_0023_WITH_55_s.jpg
+2025-07-07 13:39:25,002 - INFO - [184/3990] Completed: sma_clean_20250705_0023_WITH_30_s.jpg
+2025-07-07 13:39:25,218 - INFO - [185/3990] Completed: sma_clean_20250705_0023_WITH_32_s.jpg
+2025-07-07 13:39:25,284 - INFO - [186/3990] Completed: sma_clean_20250705_0023_WITH_45_s.jpg
+2025-07-07 13:39:25,464 - INFO - [187/3990] Completed: sma_clean_20250705_0023_WITH_27_s.jpg
+2025-07-07 13:39:25,540 - INFO - [188/3990] Completed: sma_clean_20250705_0023_WITH_22_s.jpg
+2025-07-07 13:39:25,699 - INFO - [189/3990] Completed: sma_clean_20250705_0023_WITH_29_s.jpg
+2025-07-07 13:39:25,775 - INFO - [190/3990] Completed: sma_clean_20250705_0023_WITH_50_s.jpg
+2025-07-07 13:39:25,929 - INFO - [191/3990] Completed: sma_clean_20250705_0023_WITH_44_s.jpg
+2025-07-07 13:39:26,016 - INFO - [192/3990] Completed: sma_clean_20250705_0023_WITH_11_s.jpg
+2025-07-07 13:39:26,152 - INFO - [193/3990] Completed: sma_clean_20250705_0023_WITH_37_s.jpg
+2025-07-07 13:39:26,253 - INFO - [194/3990] Completed: sma_clean_20250705_0023_WITH_07_s.jpg
+2025-07-07 13:39:26,372 - INFO - [195/3990] Completed: sma_clean_20250705_0023_WITH_33_s.jpg
+2025-07-07 13:39:26,495 - INFO - [196/3990] Completed: sma_clean_20250705_0023_WITH_49_s.jpg
+2025-07-07 13:39:26,607 - INFO - [197/3990] Completed: sma_clean_20250705_0023_WITH_17_s.jpg
+2025-07-07 13:39:26,739 - INFO - [198/3990] Completed: sma_clean_20250705_0023_WITH_43_s.jpg
+2025-07-07 13:39:26,848 - INFO - [199/3990] Completed: sma_clean_20250705_0023_WITH_51_s.jpg
+2025-07-07 13:39:26,978 - INFO - [200/3990] Completed: sma_clean_20250705_0023_WITH_25_s.jpg
+2025-07-07 13:39:27,069 - INFO - [201/3990] Completed: sma_clean_20250705_0023_WITH_34_s.jpg
+2025-07-07 13:39:27,211 - INFO - [202/3990] Completed: sma_clean_20250705_0023_WITH_41_s.jpg
+2025-07-07 13:39:27,288 - INFO - [203/3990] Completed: sma_clean_20250705_0023_WITH_12_s.jpg
+2025-07-07 13:39:27,453 - INFO - [204/3990] Completed: sma_clean_20250705_0023_WITH_38_s.jpg
+2025-07-07 13:39:27,518 - INFO - [205/3990] Completed: sma_clean_20250705_0023_WITH_13_s.jpg
+2025-07-07 13:39:27,689 - INFO - [206/3990] Completed: sma_clean_20250705_0023_WITH_08_s.jpg
+2025-07-07 13:39:27,757 - INFO - [207/3990] Completed: sma_clean_20250705_0023_WITH_14_s.jpg
+2025-07-07 13:39:27,916 - INFO - [208/3990] Completed: sma_clean_20250705_0023_WITH_24_s.jpg
+2025-07-07 13:39:27,986 - INFO - [209/3990] Completed: sma_clean_20250705_0023_WITH_05_s.jpg
+2025-07-07 13:39:28,147 - INFO - [210/3990] Completed: sma_clean_20250705_0023_WITH_39_s.jpg
+2025-07-07 13:39:28,213 - INFO - [211/3990] Completed: sma_clean_20250705_0023_WITH_09_s.jpg
+2025-07-07 13:39:28,383 - INFO - [212/3990] Completed: sma_clean_20250705_0023_WITH_57_s.jpg
+2025-07-07 13:39:28,454 - INFO - [213/3990] Completed: sma_clean_20250705_0023_WITH_54_s.jpg
+2025-07-07 13:39:28,621 - INFO - [214/3990] Completed: sma_clean_20250705_0023_WITH_23_s.jpg
+2025-07-07 13:39:28,699 - INFO - [215/3990] Completed: sma_clean_20250705_0023_WITH_19_s.jpg
+2025-07-07 13:39:28,856 - INFO - [216/3990] Completed: sma_clean_20250705_0023_WITH_48_s.jpg
+2025-07-07 13:39:28,929 - INFO - [217/3990] Completed: sma_clean_20250705_0023_WITH_46_s.jpg
+2025-07-07 13:39:29,100 - INFO - [218/3990] Completed: sma_clean_20250705_0023_WITH_47_s.jpg
+2025-07-07 13:39:29,164 - INFO - [219/3990] Completed: sma_clean_20250705_0023_WITH_26_s.jpg
+2025-07-07 13:39:29,336 - INFO - [220/3990] Completed: sma_clean_20250705_0023_WITH_58_s.jpg
+2025-07-07 13:39:29,392 - INFO - [221/3990] Completed: sma_clean_20250705_0023_WITH_53_s.jpg
+2025-07-07 13:39:29,560 - INFO - [222/3990] Completed: sma_clean_20250705_0023_WITH_56_s.jpg
+2025-07-07 13:39:29,629 - INFO - [223/3990] Completed: sma_clean_20250705_0023_WITH_42_s.jpg
+2025-07-07 13:39:29,839 - INFO - [224/3990] Completed: sma_clean_20250705_0023_WITH_10_s.jpg
+2025-07-07 13:39:29,890 - INFO - [225/3990] Completed: sma_clean_20250705_0023_WITH_21_s.jpg
+2025-07-07 13:39:30,067 - INFO - [226/3990] Completed: sma_clean_20250705_0023_WITH_15_s.jpg
+2025-07-07 13:39:30,117 - INFO - [227/3990] Completed: sma_clean_20250705_0023_WITH_60_s.jpg
+2025-07-07 13:39:30,296 - INFO - [228/3990] Completed: sma_clean_20250705_0023_WITH_20_s.jpg
+2025-07-07 13:39:30,354 - INFO - [229/3990] Completed: sma_clean_20250705_0006_WITH_52_s.jpg
+2025-07-07 13:39:30,518 - INFO - [230/3990] Completed: sma_clean_20250705_0006_WITH_16_s.jpg
+2025-07-07 13:39:30,583 - INFO - [231/3990] Completed: sma_clean_20250705_0006_WITH_40_s.jpg
+2025-07-07 13:39:30,745 - INFO - [232/3990] Completed: sma_clean_20250705_0006_WITH_59_s.jpg
+2025-07-07 13:39:30,820 - INFO - [233/3990] Completed: sma_clean_20250705_0006_WITH_28_s.jpg
+2025-07-07 13:39:30,977 - INFO - [234/3990] Completed: sma_clean_20250705_0006_WITH_04_s.jpg
+2025-07-07 13:39:31,052 - INFO - [235/3990] Completed: sma_clean_20250705_0006_WITH_06_s.jpg
+2025-07-07 13:39:31,199 - INFO - [236/3990] Completed: sma_clean_20250705_0006_WITH_18_s.jpg
+2025-07-07 13:39:31,275 - INFO - [237/3990] Completed: sma_clean_20250705_0006_WITH_36_s.jpg
+2025-07-07 13:39:31,424 - INFO - [238/3990] Completed: sma_clean_20250705_0006_WITH_35_s.jpg
+2025-07-07 13:39:31,500 - INFO - [239/3990] Completed: sma_clean_20250705_0006_WITH_31_s.jpg
+2025-07-07 13:39:31,652 - INFO - [240/3990] Completed: sma_clean_20250705_0006_WITH_55_s.jpg
+2025-07-07 13:39:31,738 - INFO - [241/3990] Completed: sma_clean_20250705_0006_WITH_30_s.jpg
+2025-07-07 13:39:31,880 - INFO - [242/3990] Completed: sma_clean_20250705_0006_WITH_32_s.jpg
+2025-07-07 13:39:31,965 - INFO - [243/3990] Completed: sma_clean_20250705_0006_WITH_45_s.jpg
+2025-07-07 13:39:32,102 - INFO - [244/3990] Completed: sma_clean_20250705_0006_WITH_27_s.jpg
+2025-07-07 13:39:32,196 - INFO - [245/3990] Completed: sma_clean_20250705_0006_WITH_22_s.jpg
+2025-07-07 13:39:32,328 - INFO - [246/3990] Completed: sma_clean_20250705_0006_WITH_29_s.jpg
+2025-07-07 13:39:32,429 - INFO - [247/3990] Completed: sma_clean_20250705_0006_WITH_50_s.jpg
+2025-07-07 13:39:32,563 - INFO - [248/3990] Completed: sma_clean_20250705_0006_WITH_44_s.jpg
+2025-07-07 13:39:32,668 - INFO - [249/3990] Completed: sma_clean_20250705_0006_WITH_11_s.jpg
+2025-07-07 13:39:32,800 - INFO - [250/3990] Completed: sma_clean_20250705_0006_WITH_37_s.jpg
+2025-07-07 13:39:32,897 - INFO - [251/3990] Completed: sma_clean_20250705_0006_WITH_07_s.jpg
+2025-07-07 13:39:33,033 - INFO - [252/3990] Completed: sma_clean_20250705_0006_WITH_33_s.jpg
+2025-07-07 13:39:33,130 - INFO - [253/3990] Completed: sma_clean_20250705_0006_WITH_49_s.jpg
+2025-07-07 13:39:33,259 - INFO - [254/3990] Completed: sma_clean_20250705_0006_WITH_17_s.jpg
+2025-07-07 13:39:33,354 - INFO - [255/3990] Completed: sma_clean_20250705_0006_WITH_43_s.jpg
+2025-07-07 13:39:33,491 - INFO - [256/3990] Completed: sma_clean_20250705_0006_WITH_51_s.jpg
+2025-07-07 13:39:33,588 - INFO - [257/3990] Completed: sma_clean_20250705_0006_WITH_25_s.jpg
+2025-07-07 13:39:33,719 - INFO - [258/3990] Completed: sma_clean_20250705_0006_WITH_34_s.jpg
+2025-07-07 13:39:33,826 - INFO - [259/3990] Completed: sma_clean_20250705_0006_WITH_41_s.jpg
+2025-07-07 13:39:33,965 - INFO - [260/3990] Completed: sma_clean_20250705_0006_WITH_12_s.jpg
+2025-07-07 13:39:34,050 - INFO - [261/3990] Completed: sma_clean_20250705_0006_WITH_38_s.jpg
+2025-07-07 13:39:34,186 - INFO - [262/3990] Completed: sma_clean_20250705_0006_WITH_13_s.jpg
+2025-07-07 13:39:34,271 - INFO - [263/3990] Completed: sma_clean_20250705_0006_WITH_08_s.jpg
+2025-07-07 13:39:34,410 - INFO - [264/3990] Completed: sma_clean_20250705_0006_WITH_14_s.jpg
+2025-07-07 13:39:34,506 - INFO - [265/3990] Completed: sma_clean_20250705_0006_WITH_24_s.jpg
+2025-07-07 13:39:34,637 - INFO - [266/3990] Completed: sma_clean_20250705_0006_WITH_05_s.jpg
+2025-07-07 13:39:34,771 - INFO - [267/3990] Completed: sma_clean_20250705_0006_WITH_39_s.jpg
+2025-07-07 13:39:34,891 - INFO - [268/3990] Completed: sma_clean_20250705_0006_WITH_09_s.jpg
+2025-07-07 13:39:35,007 - INFO - [269/3990] Completed: sma_clean_20250705_0006_WITH_57_s.jpg
+2025-07-07 13:39:35,122 - INFO - [270/3990] Completed: sma_clean_20250705_0006_WITH_54_s.jpg
+2025-07-07 13:39:35,233 - INFO - [271/3990] Completed: sma_clean_20250705_0006_WITH_23_s.jpg
+2025-07-07 13:39:35,349 - INFO - [272/3990] Completed: sma_clean_20250705_0006_WITH_19_s.jpg
+2025-07-07 13:39:35,455 - INFO - [273/3990] Completed: sma_clean_20250705_0006_WITH_48_s.jpg
+2025-07-07 13:39:35,571 - INFO - [274/3990] Completed: sma_clean_20250705_0006_WITH_46_s.jpg
+2025-07-07 13:39:35,698 - INFO - [275/3990] Completed: sma_clean_20250705_0006_WITH_47_s.jpg
+2025-07-07 13:39:35,807 - INFO - [276/3990] Completed: sma_clean_20250705_0006_WITH_26_s.jpg
+2025-07-07 13:39:35,928 - INFO - [277/3990] Completed: sma_clean_20250705_0006_WITH_58_s.jpg
+2025-07-07 13:39:36,028 - INFO - [278/3990] Completed: sma_clean_20250705_0006_WITH_53_s.jpg
+2025-07-07 13:39:36,164 - INFO - [279/3990] Completed: sma_clean_20250705_0006_WITH_56_s.jpg
+2025-07-07 13:39:36,251 - INFO - [280/3990] Completed: sma_clean_20250705_0006_WITH_42_s.jpg
+2025-07-07 13:39:36,387 - INFO - [281/3990] Completed: sma_clean_20250705_0006_WITH_10_s.jpg
+2025-07-07 13:39:36,479 - INFO - [282/3990] Completed: sma_clean_20250705_0006_WITH_21_s.jpg
+2025-07-07 13:39:36,612 - INFO - [283/3990] Completed: sma_clean_20250705_0006_WITH_15_s.jpg
+2025-07-07 13:39:36,710 - INFO - [284/3990] Completed: sma_clean_20250705_0006_WITH_60_s.jpg
+2025-07-07 13:39:36,849 - INFO - [285/3990] Completed: sma_clean_20250705_0006_WITH_20_s.jpg
+2025-07-07 13:39:36,938 - INFO - [286/3990] Completed: sma_clean_20250705_0035_WITH_52_s.jpg
+2025-07-07 13:39:37,079 - INFO - [287/3990] Completed: sma_clean_20250705_0035_WITH_16_s.jpg
+2025-07-07 13:39:37,160 - INFO - [288/3990] Completed: sma_clean_20250705_0035_WITH_40_s.jpg
+2025-07-07 13:39:37,307 - INFO - [289/3990] Completed: sma_clean_20250705_0035_WITH_59_s.jpg
+2025-07-07 13:39:37,380 - INFO - [290/3990] Completed: sma_clean_20250705_0035_WITH_28_s.jpg
+2025-07-07 13:39:37,537 - INFO - [291/3990] Completed: sma_clean_20250705_0035_WITH_04_s.jpg
+2025-07-07 13:39:37,651 - INFO - [292/3990] Completed: sma_clean_20250705_0035_WITH_06_s.jpg
+2025-07-07 13:39:37,777 - INFO - [293/3990] Completed: sma_clean_20250705_0035_WITH_18_s.jpg
+2025-07-07 13:39:37,874 - INFO - [294/3990] Completed: sma_clean_20250705_0035_WITH_36_s.jpg
+2025-07-07 13:39:38,001 - INFO - [295/3990] Completed: sma_clean_20250705_0035_WITH_35_s.jpg
+2025-07-07 13:39:38,102 - INFO - [296/3990] Completed: sma_clean_20250705_0035_WITH_31_s.jpg
+2025-07-07 13:39:38,239 - INFO - [297/3990] Completed: sma_clean_20250705_0035_WITH_55_s.jpg
+2025-07-07 13:39:38,329 - INFO - [298/3990] Completed: sma_clean_20250705_0035_WITH_30_s.jpg
+2025-07-07 13:39:38,463 - INFO - [299/3990] Completed: sma_clean_20250705_0035_WITH_32_s.jpg
+2025-07-07 13:39:38,553 - INFO - [300/3990] Completed: sma_clean_20250705_0035_WITH_45_s.jpg
+2025-07-07 13:39:38,693 - INFO - [301/3990] Completed: sma_clean_20250705_0035_WITH_27_s.jpg
+2025-07-07 13:39:38,789 - INFO - [302/3990] Completed: sma_clean_20250705_0035_WITH_22_s.jpg
+2025-07-07 13:39:38,926 - INFO - [303/3990] Completed: sma_clean_20250705_0035_WITH_29_s.jpg
+2025-07-07 13:39:39,017 - INFO - [304/3990] Completed: sma_clean_20250705_0035_WITH_50_s.jpg
+2025-07-07 13:39:39,145 - INFO - [305/3990] Completed: sma_clean_20250705_0035_WITH_44_s.jpg
+2025-07-07 13:39:39,237 - INFO - [306/3990] Completed: sma_clean_20250705_0035_WITH_11_s.jpg
+2025-07-07 13:39:39,367 - INFO - [307/3990] Completed: sma_clean_20250705_0035_WITH_37_s.jpg
+2025-07-07 13:39:39,456 - INFO - [308/3990] Completed: sma_clean_20250705_0035_WITH_07_s.jpg
+2025-07-07 13:39:39,599 - INFO - [309/3990] Completed: sma_clean_20250705_0035_WITH_33_s.jpg
+2025-07-07 13:39:39,688 - INFO - [310/3990] Completed: sma_clean_20250705_0035_WITH_49_s.jpg
+2025-07-07 13:39:39,836 - INFO - [311/3990] Completed: sma_clean_20250705_0035_WITH_17_s.jpg
+2025-07-07 13:39:39,912 - INFO - [312/3990] Completed: sma_clean_20250705_0035_WITH_43_s.jpg
+2025-07-07 13:39:40,071 - INFO - [313/3990] Completed: sma_clean_20250705_0035_WITH_51_s.jpg
+2025-07-07 13:39:40,126 - INFO - [314/3990] Completed: sma_clean_20250705_0035_WITH_25_s.jpg
+2025-07-07 13:39:40,302 - INFO - [315/3990] Completed: sma_clean_20250705_0035_WITH_34_s.jpg
+2025-07-07 13:39:40,351 - INFO - [316/3990] Completed: sma_clean_20250705_0035_WITH_41_s.jpg
+2025-07-07 13:39:40,523 - INFO - [317/3990] Completed: sma_clean_20250705_0035_WITH_12_s.jpg
+2025-07-07 13:39:40,582 - INFO - [318/3990] Completed: sma_clean_20250705_0035_WITH_38_s.jpg
+2025-07-07 13:39:40,756 - INFO - [319/3990] Completed: sma_clean_20250705_0035_WITH_13_s.jpg
+2025-07-07 13:39:40,821 - INFO - [320/3990] Completed: sma_clean_20250705_0035_WITH_08_s.jpg
+2025-07-07 13:39:40,994 - INFO - [321/3990] Completed: sma_clean_20250705_0035_WITH_14_s.jpg
+2025-07-07 13:39:41,055 - INFO - [322/3990] Completed: sma_clean_20250705_0035_WITH_24_s.jpg
+2025-07-07 13:39:41,225 - INFO - [323/3990] Completed: sma_clean_20250705_0035_WITH_05_s.jpg
+2025-07-07 13:39:41,276 - INFO - [324/3990] Completed: sma_clean_20250705_0035_WITH_39_s.jpg
+2025-07-07 13:39:41,483 - INFO - [325/3990] Completed: sma_clean_20250705_0035_WITH_09_s.jpg
+2025-07-07 13:39:41,505 - INFO - [326/3990] Completed: sma_clean_20250705_0035_WITH_57_s.jpg
+2025-07-07 13:39:41,717 - INFO - [327/3990] Completed: sma_clean_20250705_0035_WITH_54_s.jpg
+2025-07-07 13:39:41,737 - INFO - [328/3990] Completed: sma_clean_20250705_0035_WITH_23_s.jpg
+2025-07-07 13:39:41,955 - INFO - [329/3990] Completed: sma_clean_20250705_0035_WITH_48_s.jpg
+2025-07-07 13:39:41,956 - INFO - [330/3990] Completed: sma_clean_20250705_0035_WITH_19_s.jpg
+2025-07-07 13:39:42,178 - INFO - [331/3990] Completed: sma_clean_20250705_0035_WITH_46_s.jpg
+2025-07-07 13:39:42,193 - INFO - [332/3990] Completed: sma_clean_20250705_0035_WITH_47_s.jpg
+2025-07-07 13:39:42,399 - INFO - [333/3990] Completed: sma_clean_20250705_0035_WITH_26_s.jpg
+2025-07-07 13:39:42,433 - INFO - [334/3990] Completed: sma_clean_20250705_0035_WITH_58_s.jpg
+2025-07-07 13:39:42,619 - INFO - [335/3990] Completed: sma_clean_20250705_0035_WITH_53_s.jpg
+2025-07-07 13:39:42,663 - INFO - [336/3990] Completed: sma_clean_20250705_0035_WITH_56_s.jpg
+2025-07-07 13:39:42,840 - INFO - [337/3990] Completed: sma_clean_20250705_0035_WITH_42_s.jpg
+2025-07-07 13:39:42,914 - INFO - [338/3990] Completed: sma_clean_20250705_0035_WITH_10_s.jpg
+2025-07-07 13:39:43,055 - INFO - [339/3990] Completed: sma_clean_20250705_0035_WITH_21_s.jpg
+2025-07-07 13:39:43,140 - INFO - [340/3990] Completed: sma_clean_20250705_0035_WITH_15_s.jpg
+2025-07-07 13:39:43,279 - INFO - [341/3990] Completed: sma_clean_20250705_0035_WITH_60_s.jpg
+2025-07-07 13:39:43,369 - INFO - [342/3990] Completed: sma_clean_20250705_0035_WITH_20_s.jpg
+2025-07-07 13:39:43,513 - INFO - [343/3990] Completed: sma_clean_20250705_0015_WITH_52_s.jpg
+2025-07-07 13:39:43,597 - INFO - [344/3990] Completed: sma_clean_20250705_0015_WITH_16_s.jpg
+2025-07-07 13:39:43,730 - INFO - [345/3990] Completed: sma_clean_20250705_0015_WITH_40_s.jpg
+2025-07-07 13:39:43,827 - INFO - [346/3990] Completed: sma_clean_20250705_0015_WITH_59_s.jpg
+2025-07-07 13:39:43,968 - INFO - [347/3990] Completed: sma_clean_20250705_0015_WITH_28_s.jpg
+2025-07-07 13:39:44,061 - INFO - [348/3990] Completed: sma_clean_20250705_0015_WITH_04_s.jpg
+2025-07-07 13:39:44,185 - INFO - [349/3990] Completed: sma_clean_20250705_0015_WITH_06_s.jpg
+2025-07-07 13:39:44,298 - INFO - [350/3990] Completed: sma_clean_20250705_0015_WITH_18_s.jpg
+2025-07-07 13:39:44,411 - INFO - [351/3990] Completed: sma_clean_20250705_0015_WITH_36_s.jpg
+2025-07-07 13:39:44,521 - INFO - [352/3990] Completed: sma_clean_20250705_0015_WITH_35_s.jpg
+2025-07-07 13:39:44,643 - INFO - [353/3990] Completed: sma_clean_20250705_0015_WITH_31_s.jpg
+2025-07-07 13:39:44,748 - INFO - [354/3990] Completed: sma_clean_20250705_0015_WITH_55_s.jpg
+2025-07-07 13:39:44,868 - INFO - [355/3990] Completed: sma_clean_20250705_0015_WITH_30_s.jpg
+2025-07-07 13:39:44,980 - INFO - [356/3990] Completed: sma_clean_20250705_0015_WITH_32_s.jpg
+2025-07-07 13:39:45,082 - INFO - [357/3990] Completed: sma_clean_20250705_0015_WITH_45_s.jpg
+2025-07-07 13:39:45,197 - INFO - [358/3990] Completed: sma_clean_20250705_0015_WITH_27_s.jpg
+2025-07-07 13:39:45,298 - INFO - [359/3990] Completed: sma_clean_20250705_0015_WITH_22_s.jpg
+2025-07-07 13:39:45,422 - INFO - [360/3990] Completed: sma_clean_20250705_0015_WITH_29_s.jpg
+2025-07-07 13:39:45,518 - INFO - [361/3990] Completed: sma_clean_20250705_0015_WITH_50_s.jpg
+2025-07-07 13:39:45,656 - INFO - [362/3990] Completed: sma_clean_20250705_0015_WITH_44_s.jpg
+2025-07-07 13:39:45,756 - INFO - [363/3990] Completed: sma_clean_20250705_0015_WITH_11_s.jpg
+2025-07-07 13:39:45,923 - INFO - [364/3990] Completed: sma_clean_20250705_0015_WITH_37_s.jpg
+2025-07-07 13:39:46,001 - INFO - [365/3990] Completed: sma_clean_20250705_0015_WITH_07_s.jpg
+2025-07-07 13:39:46,205 - INFO - [366/3990] Completed: sma_clean_20250705_0015_WITH_33_s.jpg
+2025-07-07 13:39:46,252 - INFO - [367/3990] Completed: sma_clean_20250705_0015_WITH_49_s.jpg
+2025-07-07 13:39:46,501 - INFO - [368/3990] Completed: sma_clean_20250705_0015_WITH_17_s.jpg
+2025-07-07 13:39:46,502 - INFO - [369/3990] Completed: sma_clean_20250705_0015_WITH_43_s.jpg
+2025-07-07 13:39:46,730 - INFO - [370/3990] Completed: sma_clean_20250705_0015_WITH_25_s.jpg
+2025-07-07 13:39:46,740 - INFO - [371/3990] Completed: sma_clean_20250705_0015_WITH_51_s.jpg
+2025-07-07 13:39:46,969 - INFO - [372/3990] Completed: sma_clean_20250705_0015_WITH_34_s.jpg
+2025-07-07 13:39:46,990 - INFO - [373/3990] Completed: sma_clean_20250705_0015_WITH_41_s.jpg
+2025-07-07 13:39:47,231 - INFO - [374/3990] Completed: sma_clean_20250705_0015_WITH_12_s.jpg
+2025-07-07 13:39:47,250 - INFO - [375/3990] Completed: sma_clean_20250705_0015_WITH_38_s.jpg
+2025-07-07 13:39:47,453 - INFO - [376/3990] Completed: sma_clean_20250705_0015_WITH_13_s.jpg
+2025-07-07 13:39:47,489 - INFO - [377/3990] Completed: sma_clean_20250705_0015_WITH_08_s.jpg
+2025-07-07 13:39:47,690 - INFO - [378/3990] Completed: sma_clean_20250705_0015_WITH_14_s.jpg
+2025-07-07 13:39:47,733 - INFO - [379/3990] Completed: sma_clean_20250705_0015_WITH_24_s.jpg
+2025-07-07 13:39:47,920 - INFO - [380/3990] Completed: sma_clean_20250705_0015_WITH_05_s.jpg
+2025-07-07 13:39:47,964 - INFO - [381/3990] Completed: sma_clean_20250705_0015_WITH_39_s.jpg
+2025-07-07 13:39:48,144 - INFO - [382/3990] Completed: sma_clean_20250705_0015_WITH_09_s.jpg
+2025-07-07 13:39:48,195 - INFO - [383/3990] Completed: sma_clean_20250705_0015_WITH_57_s.jpg
+2025-07-07 13:39:48,368 - INFO - [384/3990] Completed: sma_clean_20250705_0015_WITH_54_s.jpg
+2025-07-07 13:39:48,423 - INFO - [385/3990] Completed: sma_clean_20250705_0015_WITH_23_s.jpg
+2025-07-07 13:39:48,590 - INFO - [386/3990] Completed: sma_clean_20250705_0015_WITH_19_s.jpg
+2025-07-07 13:39:48,650 - INFO - [387/3990] Completed: sma_clean_20250705_0015_WITH_48_s.jpg
+2025-07-07 13:39:48,817 - INFO - [388/3990] Completed: sma_clean_20250705_0015_WITH_46_s.jpg
+2025-07-07 13:39:48,871 - INFO - [389/3990] Completed: sma_clean_20250705_0015_WITH_47_s.jpg
+2025-07-07 13:39:49,032 - INFO - [390/3990] Completed: sma_clean_20250705_0015_WITH_26_s.jpg
+2025-07-07 13:39:49,090 - INFO - [391/3990] Completed: sma_clean_20250705_0015_WITH_58_s.jpg
+2025-07-07 13:39:49,253 - INFO - [392/3990] Completed: sma_clean_20250705_0015_WITH_53_s.jpg
+2025-07-07 13:39:49,312 - INFO - [393/3990] Completed: sma_clean_20250705_0015_WITH_56_s.jpg
+2025-07-07 13:39:49,481 - INFO - [394/3990] Completed: sma_clean_20250705_0015_WITH_42_s.jpg
+2025-07-07 13:39:49,535 - INFO - [395/3990] Completed: sma_clean_20250705_0015_WITH_10_s.jpg
+2025-07-07 13:39:49,711 - INFO - [396/3990] Completed: sma_clean_20250705_0015_WITH_21_s.jpg
+2025-07-07 13:39:49,763 - INFO - [397/3990] Completed: sma_clean_20250705_0015_WITH_15_s.jpg
+2025-07-07 13:39:49,927 - INFO - [398/3990] Completed: sma_clean_20250705_0015_WITH_60_s.jpg
+2025-07-07 13:39:49,985 - INFO - [399/3990] Completed: sma_clean_20250705_0015_WITH_20_s.jpg
+2025-07-07 13:39:49,985 - INFO - Progress: 399/3990 (10%)
+2025-07-07 13:39:50,145 - INFO - [400/3990] Completed: img (169)_WITH_52_s.jpg
+2025-07-07 13:39:50,216 - INFO - [401/3990] Completed: img (169)_WITH_16_s.jpg
+2025-07-07 13:39:50,358 - INFO - [402/3990] Completed: img (169)_WITH_40_s.jpg
+2025-07-07 13:39:50,443 - INFO - [403/3990] Completed: img (169)_WITH_59_s.jpg
+2025-07-07 13:39:50,600 - INFO - [404/3990] Completed: img (169)_WITH_28_s.jpg
+2025-07-07 13:39:50,666 - INFO - [405/3990] Completed: img (169)_WITH_04_s.jpg
+2025-07-07 13:39:50,820 - INFO - [406/3990] Completed: img (169)_WITH_06_s.jpg
+2025-07-07 13:39:50,904 - INFO - [407/3990] Completed: img (169)_WITH_18_s.jpg
+2025-07-07 13:39:51,042 - INFO - [408/3990] Completed: img (169)_WITH_36_s.jpg
+2025-07-07 13:39:51,140 - INFO - [409/3990] Completed: img (169)_WITH_35_s.jpg
+2025-07-07 13:39:51,281 - INFO - [410/3990] Completed: img (169)_WITH_31_s.jpg
+2025-07-07 13:39:51,371 - INFO - [411/3990] Completed: img (169)_WITH_55_s.jpg
+2025-07-07 13:39:51,528 - INFO - [412/3990] Completed: img (169)_WITH_30_s.jpg
+2025-07-07 13:39:51,595 - INFO - [413/3990] Completed: img (169)_WITH_32_s.jpg
+2025-07-07 13:39:51,773 - INFO - [414/3990] Completed: img (169)_WITH_45_s.jpg
+2025-07-07 13:39:51,823 - INFO - [415/3990] Completed: img (169)_WITH_27_s.jpg
+2025-07-07 13:39:52,015 - INFO - [416/3990] Completed: img (169)_WITH_22_s.jpg
+2025-07-07 13:39:52,050 - INFO - [417/3990] Completed: img (169)_WITH_29_s.jpg
+2025-07-07 13:39:52,237 - INFO - [418/3990] Completed: img (169)_WITH_50_s.jpg
+2025-07-07 13:39:52,279 - INFO - [419/3990] Completed: img (169)_WITH_44_s.jpg
+2025-07-07 13:39:52,463 - INFO - [420/3990] Completed: img (169)_WITH_11_s.jpg
+2025-07-07 13:39:52,514 - INFO - [421/3990] Completed: img (169)_WITH_37_s.jpg
+2025-07-07 13:39:52,709 - INFO - [422/3990] Completed: img (169)_WITH_07_s.jpg
+2025-07-07 13:39:52,749 - INFO - [423/3990] Completed: img (169)_WITH_33_s.jpg
+2025-07-07 13:39:52,951 - INFO - [424/3990] Completed: img (169)_WITH_49_s.jpg
+2025-07-07 13:39:52,983 - INFO - [425/3990] Completed: img (169)_WITH_17_s.jpg
+2025-07-07 13:39:53,180 - INFO - [426/3990] Completed: img (169)_WITH_43_s.jpg
+2025-07-07 13:39:53,215 - INFO - [427/3990] Completed: img (169)_WITH_51_s.jpg
+2025-07-07 13:39:53,399 - INFO - [428/3990] Completed: img (169)_WITH_25_s.jpg
+2025-07-07 13:39:53,449 - INFO - [429/3990] Completed: img (169)_WITH_34_s.jpg
+2025-07-07 13:39:53,638 - INFO - [430/3990] Completed: img (169)_WITH_41_s.jpg
+2025-07-07 13:39:53,682 - INFO - [431/3990] Completed: img (169)_WITH_12_s.jpg
+2025-07-07 13:39:53,871 - INFO - [432/3990] Completed: img (169)_WITH_38_s.jpg
+2025-07-07 13:39:53,915 - INFO - [433/3990] Completed: img (169)_WITH_13_s.jpg
+2025-07-07 13:39:54,102 - INFO - [434/3990] Completed: img (169)_WITH_08_s.jpg
+2025-07-07 13:39:54,144 - INFO - [435/3990] Completed: img (169)_WITH_14_s.jpg
+2025-07-07 13:39:54,333 - INFO - [436/3990] Completed: img (169)_WITH_24_s.jpg
+2025-07-07 13:39:54,373 - INFO - [437/3990] Completed: img (169)_WITH_05_s.jpg
+2025-07-07 13:39:54,557 - INFO - [438/3990] Completed: img (169)_WITH_39_s.jpg
+2025-07-07 13:39:54,618 - INFO - [439/3990] Completed: img (169)_WITH_09_s.jpg
+2025-07-07 13:39:54,804 - INFO - [440/3990] Completed: img (169)_WITH_57_s.jpg
+2025-07-07 13:39:54,862 - INFO - [441/3990] Completed: img (169)_WITH_54_s.jpg
+2025-07-07 13:39:55,033 - INFO - [442/3990] Completed: img (169)_WITH_23_s.jpg
+2025-07-07 13:39:55,097 - INFO - [443/3990] Completed: img (169)_WITH_19_s.jpg
+2025-07-07 13:39:55,249 - INFO - [444/3990] Completed: img (169)_WITH_48_s.jpg
+2025-07-07 13:39:55,326 - INFO - [445/3990] Completed: img (169)_WITH_46_s.jpg
+2025-07-07 13:39:55,478 - INFO - [446/3990] Completed: img (169)_WITH_47_s.jpg
+2025-07-07 13:39:55,574 - INFO - [447/3990] Completed: img (169)_WITH_26_s.jpg
+2025-07-07 13:39:55,733 - INFO - [448/3990] Completed: img (169)_WITH_58_s.jpg
+2025-07-07 13:39:55,832 - INFO - [449/3990] Completed: img (169)_WITH_53_s.jpg
+2025-07-07 13:39:55,970 - INFO - [450/3990] Completed: img (169)_WITH_56_s.jpg
+2025-07-07 13:39:56,063 - INFO - [451/3990] Completed: img (169)_WITH_42_s.jpg
+2025-07-07 13:39:56,208 - INFO - [452/3990] Completed: img (169)_WITH_10_s.jpg
+2025-07-07 13:39:56,292 - INFO - [453/3990] Completed: img (169)_WITH_21_s.jpg
+2025-07-07 13:39:56,440 - INFO - [454/3990] Completed: img (169)_WITH_15_s.jpg
+2025-07-07 13:39:56,531 - INFO - [455/3990] Completed: img (169)_WITH_60_s.jpg
+2025-07-07 13:39:56,677 - INFO - [456/3990] Completed: img (169)_WITH_20_s.jpg
+2025-07-07 13:39:57,294 - INFO - [457/3990] Completed: 50_clean_20250705_0002_WITH_52_s.png
+2025-07-07 13:39:57,421 - INFO - [458/3990] Completed: 50_clean_20250705_0002_WITH_16_s.png
+2025-07-07 13:39:58,040 - INFO - [459/3990] Completed: 50_clean_20250705_0002_WITH_40_s.png
+2025-07-07 13:39:58,154 - INFO - [460/3990] Completed: 50_clean_20250705_0002_WITH_59_s.png
+2025-07-07 13:39:58,782 - INFO - [461/3990] Completed: 50_clean_20250705_0002_WITH_28_s.png
+2025-07-07 13:39:58,895 - INFO - [462/3990] Completed: 50_clean_20250705_0002_WITH_04_s.png
+2025-07-07 13:39:59,502 - INFO - [463/3990] Completed: 50_clean_20250705_0002_WITH_06_s.png
+2025-07-07 13:39:59,650 - INFO - [464/3990] Completed: 50_clean_20250705_0002_WITH_18_s.png
+2025-07-07 13:40:00,247 - INFO - [465/3990] Completed: 50_clean_20250705_0002_WITH_36_s.png
+2025-07-07 13:40:00,393 - INFO - [466/3990] Completed: 50_clean_20250705_0002_WITH_35_s.png
+2025-07-07 13:40:00,964 - INFO - [467/3990] Completed: 50_clean_20250705_0002_WITH_31_s.png
+2025-07-07 13:40:01,126 - INFO - [468/3990] Completed: 50_clean_20250705_0002_WITH_55_s.png
+2025-07-07 13:40:01,690 - INFO - [469/3990] Completed: 50_clean_20250705_0002_WITH_30_s.png
+2025-07-07 13:40:01,863 - INFO - [470/3990] Completed: 50_clean_20250705_0002_WITH_32_s.png
+2025-07-07 13:40:02,417 - INFO - [471/3990] Completed: 50_clean_20250705_0002_WITH_45_s.png
+2025-07-07 13:40:02,595 - INFO - [472/3990] Completed: 50_clean_20250705_0002_WITH_27_s.png
+2025-07-07 13:40:03,155 - INFO - [473/3990] Completed: 50_clean_20250705_0002_WITH_22_s.png
+2025-07-07 13:40:03,357 - INFO - [474/3990] Completed: 50_clean_20250705_0002_WITH_29_s.png
+2025-07-07 13:40:03,911 - INFO - [475/3990] Completed: 50_clean_20250705_0002_WITH_50_s.png
+2025-07-07 13:40:04,185 - INFO - [476/3990] Completed: 50_clean_20250705_0002_WITH_44_s.png
+2025-07-07 13:40:04,654 - INFO - [477/3990] Completed: 50_clean_20250705_0002_WITH_11_s.png
+2025-07-07 13:40:04,942 - INFO - [478/3990] Completed: 50_clean_20250705_0002_WITH_37_s.png
+2025-07-07 13:40:05,395 - INFO - [479/3990] Completed: 50_clean_20250705_0002_WITH_07_s.png
+2025-07-07 13:40:05,681 - INFO - [480/3990] Completed: 50_clean_20250705_0002_WITH_33_s.png
+2025-07-07 13:40:06,133 - INFO - [481/3990] Completed: 50_clean_20250705_0002_WITH_49_s.png
+2025-07-07 13:40:06,420 - INFO - [482/3990] Completed: 50_clean_20250705_0002_WITH_17_s.png
+2025-07-07 13:40:06,889 - INFO - [483/3990] Completed: 50_clean_20250705_0002_WITH_43_s.png
+2025-07-07 13:40:07,182 - INFO - [484/3990] Completed: 50_clean_20250705_0002_WITH_51_s.png
+2025-07-07 13:40:07,669 - INFO - [485/3990] Completed: 50_clean_20250705_0002_WITH_25_s.png
+2025-07-07 13:40:07,907 - INFO - [486/3990] Completed: 50_clean_20250705_0002_WITH_34_s.png
+2025-07-07 13:40:08,434 - INFO - [487/3990] Completed: 50_clean_20250705_0002_WITH_41_s.png
+2025-07-07 13:40:08,635 - INFO - [488/3990] Completed: 50_clean_20250705_0002_WITH_12_s.png
+2025-07-07 13:40:09,194 - INFO - [489/3990] Completed: 50_clean_20250705_0002_WITH_38_s.png
+2025-07-07 13:40:09,362 - INFO - [490/3990] Completed: 50_clean_20250705_0002_WITH_13_s.png
+2025-07-07 13:40:10,055 - INFO - [491/3990] Completed: 50_clean_20250705_0002_WITH_08_s.png
+2025-07-07 13:40:10,185 - INFO - [492/3990] Completed: 50_clean_20250705_0002_WITH_14_s.png
+2025-07-07 13:40:10,842 - INFO - [493/3990] Completed: 50_clean_20250705_0002_WITH_24_s.png
+2025-07-07 13:40:10,949 - INFO - [494/3990] Completed: 50_clean_20250705_0002_WITH_05_s.png
+2025-07-07 13:40:11,599 - INFO - [495/3990] Completed: 50_clean_20250705_0002_WITH_39_s.png
+2025-07-07 13:40:11,691 - INFO - [496/3990] Completed: 50_clean_20250705_0002_WITH_09_s.png
+2025-07-07 13:40:12,362 - INFO - [497/3990] Completed: 50_clean_20250705_0002_WITH_57_s.png
+2025-07-07 13:40:12,421 - INFO - [498/3990] Completed: 50_clean_20250705_0002_WITH_54_s.png
+2025-07-07 13:40:13,103 - INFO - [499/3990] Completed: 50_clean_20250705_0002_WITH_23_s.png
+2025-07-07 13:40:13,148 - INFO - [500/3990] Completed: 50_clean_20250705_0002_WITH_19_s.png
+2025-07-07 13:40:13,847 - INFO - [501/3990] Completed: 50_clean_20250705_0002_WITH_48_s.png
+2025-07-07 13:40:13,863 - INFO - [502/3990] Completed: 50_clean_20250705_0002_WITH_46_s.png
+2025-07-07 13:40:14,575 - INFO - [503/3990] Completed: 50_clean_20250705_0002_WITH_47_s.png
+2025-07-07 13:40:14,592 - INFO - [504/3990] Completed: 50_clean_20250705_0002_WITH_26_s.png
+2025-07-07 13:40:15,302 - INFO - [505/3990] Completed: 50_clean_20250705_0002_WITH_58_s.png
+2025-07-07 13:40:15,329 - INFO - [506/3990] Completed: 50_clean_20250705_0002_WITH_53_s.png
+2025-07-07 13:40:16,044 - INFO - [507/3990] Completed: 50_clean_20250705_0002_WITH_56_s.png
+2025-07-07 13:40:16,052 - INFO - [508/3990] Completed: 50_clean_20250705_0002_WITH_42_s.png
+2025-07-07 13:40:16,787 - INFO - [509/3990] Completed: 50_clean_20250705_0002_WITH_21_s.png
+2025-07-07 13:40:16,794 - INFO - [510/3990] Completed: 50_clean_20250705_0002_WITH_10_s.png
+2025-07-07 13:40:17,517 - INFO - [511/3990] Completed: 50_clean_20250705_0002_WITH_15_s.png
+2025-07-07 13:40:17,538 - INFO - [512/3990] Completed: 50_clean_20250705_0002_WITH_60_s.png
+2025-07-07 13:40:17,774 - INFO - [513/3990] Completed: sma_clean_20250705_0034_WITH_52_s.jpg
+2025-07-07 13:40:18,005 - INFO - [514/3990] Completed: sma_clean_20250705_0034_WITH_16_s.jpg
+2025-07-07 13:40:18,227 - INFO - [515/3990] Completed: sma_clean_20250705_0034_WITH_40_s.jpg
+2025-07-07 13:40:18,271 - INFO - [516/3990] Completed: 50_clean_20250705_0002_WITH_20_s.png
+2025-07-07 13:40:18,462 - INFO - [517/3990] Completed: sma_clean_20250705_0034_WITH_59_s.jpg
+2025-07-07 13:40:18,494 - INFO - [518/3990] Completed: sma_clean_20250705_0034_WITH_28_s.jpg
+2025-07-07 13:40:18,694 - INFO - [519/3990] Completed: sma_clean_20250705_0034_WITH_04_s.jpg
+2025-07-07 13:40:18,725 - INFO - [520/3990] Completed: sma_clean_20250705_0034_WITH_06_s.jpg
+2025-07-07 13:40:18,939 - INFO - [521/3990] Completed: sma_clean_20250705_0034_WITH_18_s.jpg
+2025-07-07 13:40:18,947 - INFO - [522/3990] Completed: sma_clean_20250705_0034_WITH_36_s.jpg
+2025-07-07 13:40:19,161 - INFO - [523/3990] Completed: sma_clean_20250705_0034_WITH_35_s.jpg
+2025-07-07 13:40:19,172 - INFO - [524/3990] Completed: sma_clean_20250705_0034_WITH_31_s.jpg
+2025-07-07 13:40:19,400 - INFO - [525/3990] Completed: sma_clean_20250705_0034_WITH_30_s.jpg
+2025-07-07 13:40:19,402 - INFO - [526/3990] Completed: sma_clean_20250705_0034_WITH_55_s.jpg
+2025-07-07 13:40:19,632 - INFO - [527/3990] Completed: sma_clean_20250705_0034_WITH_32_s.jpg
+2025-07-07 13:40:19,640 - INFO - [528/3990] Completed: sma_clean_20250705_0034_WITH_45_s.jpg
+2025-07-07 13:40:19,862 - INFO - [529/3990] Completed: sma_clean_20250705_0034_WITH_27_s.jpg
+2025-07-07 13:40:19,870 - INFO - [530/3990] Completed: sma_clean_20250705_0034_WITH_22_s.jpg
+2025-07-07 13:40:20,092 - INFO - [531/3990] Completed: sma_clean_20250705_0034_WITH_29_s.jpg
+2025-07-07 13:40:20,097 - INFO - [532/3990] Completed: sma_clean_20250705_0034_WITH_50_s.jpg
+2025-07-07 13:40:20,316 - INFO - [533/3990] Completed: sma_clean_20250705_0034_WITH_44_s.jpg
+2025-07-07 13:40:20,320 - INFO - [534/3990] Completed: sma_clean_20250705_0034_WITH_11_s.jpg
+2025-07-07 13:40:20,544 - INFO - [535/3990] Completed: sma_clean_20250705_0034_WITH_07_s.jpg
+2025-07-07 13:40:20,554 - INFO - [536/3990] Completed: sma_clean_20250705_0034_WITH_37_s.jpg
+2025-07-07 13:40:20,786 - INFO - [537/3990] Completed: sma_clean_20250705_0034_WITH_33_s.jpg
+2025-07-07 13:40:20,792 - INFO - [538/3990] Completed: sma_clean_20250705_0034_WITH_49_s.jpg
+2025-07-07 13:40:21,008 - INFO - [539/3990] Completed: sma_clean_20250705_0034_WITH_17_s.jpg
+2025-07-07 13:40:21,019 - INFO - [540/3990] Completed: sma_clean_20250705_0034_WITH_43_s.jpg
+2025-07-07 13:40:21,237 - INFO - [541/3990] Completed: sma_clean_20250705_0034_WITH_51_s.jpg
+2025-07-07 13:40:21,241 - INFO - [542/3990] Completed: sma_clean_20250705_0034_WITH_25_s.jpg
+2025-07-07 13:40:21,463 - INFO - [543/3990] Completed: sma_clean_20250705_0034_WITH_34_s.jpg
+2025-07-07 13:40:21,471 - INFO - [544/3990] Completed: sma_clean_20250705_0034_WITH_41_s.jpg
+2025-07-07 13:40:21,685 - INFO - [545/3990] Completed: sma_clean_20250705_0034_WITH_12_s.jpg
+2025-07-07 13:40:21,705 - INFO - [546/3990] Completed: sma_clean_20250705_0034_WITH_38_s.jpg
+2025-07-07 13:40:21,918 - INFO - [547/3990] Completed: sma_clean_20250705_0034_WITH_13_s.jpg
+2025-07-07 13:40:21,940 - INFO - [548/3990] Completed: sma_clean_20250705_0034_WITH_08_s.jpg
+2025-07-07 13:40:22,145 - INFO - [549/3990] Completed: sma_clean_20250705_0034_WITH_14_s.jpg
+2025-07-07 13:40:22,167 - INFO - [550/3990] Completed: sma_clean_20250705_0034_WITH_24_s.jpg
+2025-07-07 13:40:22,384 - INFO - [551/3990] Completed: sma_clean_20250705_0034_WITH_05_s.jpg
+2025-07-07 13:40:22,389 - INFO - [552/3990] Completed: sma_clean_20250705_0034_WITH_39_s.jpg
+2025-07-07 13:40:22,616 - INFO - [553/3990] Completed: sma_clean_20250705_0034_WITH_09_s.jpg
+2025-07-07 13:40:22,617 - INFO - [554/3990] Completed: sma_clean_20250705_0034_WITH_57_s.jpg
+2025-07-07 13:40:22,845 - INFO - [555/3990] Completed: sma_clean_20250705_0034_WITH_54_s.jpg
+2025-07-07 13:40:22,847 - INFO - [556/3990] Completed: sma_clean_20250705_0034_WITH_23_s.jpg
+2025-07-07 13:40:23,064 - INFO - [557/3990] Completed: sma_clean_20250705_0034_WITH_48_s.jpg
+2025-07-07 13:40:23,079 - INFO - [558/3990] Completed: sma_clean_20250705_0034_WITH_19_s.jpg
+2025-07-07 13:40:23,282 - INFO - [559/3990] Completed: sma_clean_20250705_0034_WITH_46_s.jpg
+2025-07-07 13:40:23,309 - INFO - [560/3990] Completed: sma_clean_20250705_0034_WITH_47_s.jpg
+2025-07-07 13:40:23,510 - INFO - [561/3990] Completed: sma_clean_20250705_0034_WITH_26_s.jpg
+2025-07-07 13:40:23,556 - INFO - [562/3990] Completed: sma_clean_20250705_0034_WITH_58_s.jpg
+2025-07-07 13:40:23,747 - INFO - [563/3990] Completed: sma_clean_20250705_0034_WITH_53_s.jpg
+2025-07-07 13:40:23,789 - INFO - [564/3990] Completed: sma_clean_20250705_0034_WITH_56_s.jpg
+2025-07-07 13:40:23,982 - INFO - [565/3990] Completed: sma_clean_20250705_0034_WITH_42_s.jpg
+2025-07-07 13:40:24,013 - INFO - [566/3990] Completed: sma_clean_20250705_0034_WITH_10_s.jpg
+2025-07-07 13:40:24,212 - INFO - [567/3990] Completed: sma_clean_20250705_0034_WITH_21_s.jpg
+2025-07-07 13:40:24,252 - INFO - [568/3990] Completed: sma_clean_20250705_0034_WITH_15_s.jpg
+2025-07-07 13:40:24,454 - INFO - [569/3990] Completed: sma_clean_20250705_0034_WITH_60_s.jpg
+2025-07-07 13:40:24,497 - INFO - [570/3990] Completed: sma_clean_20250705_0034_WITH_20_s.jpg
+2025-07-07 13:40:24,697 - INFO - [571/3990] Completed: 50_clean_20250705_0003_WITH_52_s.jpg
+2025-07-07 13:40:24,738 - INFO - [572/3990] Completed: 50_clean_20250705_0003_WITH_16_s.jpg
+2025-07-07 13:40:24,919 - INFO - [573/3990] Completed: 50_clean_20250705_0003_WITH_40_s.jpg
+2025-07-07 13:40:24,958 - INFO - [574/3990] Completed: 50_clean_20250705_0003_WITH_59_s.jpg
+2025-07-07 13:40:25,157 - INFO - [575/3990] Completed: 50_clean_20250705_0003_WITH_28_s.jpg
+2025-07-07 13:40:25,170 - INFO - [576/3990] Completed: 50_clean_20250705_0003_WITH_04_s.jpg
+2025-07-07 13:40:25,385 - INFO - [577/3990] Completed: 50_clean_20250705_0003_WITH_18_s.jpg
+2025-07-07 13:40:25,393 - INFO - [578/3990] Completed: 50_clean_20250705_0003_WITH_06_s.jpg
+2025-07-07 13:40:25,608 - INFO - [579/3990] Completed: 50_clean_20250705_0003_WITH_36_s.jpg
+2025-07-07 13:40:25,616 - INFO - [580/3990] Completed: 50_clean_20250705_0003_WITH_35_s.jpg
+2025-07-07 13:40:25,846 - INFO - [581/3990] Completed: 50_clean_20250705_0003_WITH_31_s.jpg
+2025-07-07 13:40:25,851 - INFO - [582/3990] Completed: 50_clean_20250705_0003_WITH_55_s.jpg
+2025-07-07 13:40:26,068 - INFO - [583/3990] Completed: 50_clean_20250705_0003_WITH_30_s.jpg
+2025-07-07 13:40:26,070 - INFO - [584/3990] Completed: 50_clean_20250705_0003_WITH_32_s.jpg
+2025-07-07 13:40:26,291 - INFO - [585/3990] Completed: 50_clean_20250705_0003_WITH_45_s.jpg
+2025-07-07 13:40:26,313 - INFO - [586/3990] Completed: 50_clean_20250705_0003_WITH_27_s.jpg
+2025-07-07 13:40:26,507 - INFO - [587/3990] Completed: 50_clean_20250705_0003_WITH_22_s.jpg
+2025-07-07 13:40:26,555 - INFO - [588/3990] Completed: 50_clean_20250705_0003_WITH_29_s.jpg
+2025-07-07 13:40:26,723 - INFO - [589/3990] Completed: 50_clean_20250705_0003_WITH_50_s.jpg
+2025-07-07 13:40:26,784 - INFO - [590/3990] Completed: 50_clean_20250705_0003_WITH_44_s.jpg
+2025-07-07 13:40:26,932 - INFO - [591/3990] Completed: 50_clean_20250705_0003_WITH_11_s.jpg
+2025-07-07 13:40:27,015 - INFO - [592/3990] Completed: 50_clean_20250705_0003_WITH_37_s.jpg
+2025-07-07 13:40:27,151 - INFO - [593/3990] Completed: 50_clean_20250705_0003_WITH_07_s.jpg
+2025-07-07 13:40:27,237 - INFO - [594/3990] Completed: 50_clean_20250705_0003_WITH_33_s.jpg
+2025-07-07 13:40:27,373 - INFO - [595/3990] Completed: 50_clean_20250705_0003_WITH_49_s.jpg
+2025-07-07 13:40:27,457 - INFO - [596/3990] Completed: 50_clean_20250705_0003_WITH_17_s.jpg
+2025-07-07 13:40:27,582 - INFO - [597/3990] Completed: 50_clean_20250705_0003_WITH_43_s.jpg
+2025-07-07 13:40:27,686 - INFO - [598/3990] Completed: 50_clean_20250705_0003_WITH_51_s.jpg
+2025-07-07 13:40:27,813 - INFO - [599/3990] Completed: 50_clean_20250705_0003_WITH_25_s.jpg
+2025-07-07 13:40:27,943 - INFO - [600/3990] Completed: 50_clean_20250705_0003_WITH_34_s.jpg
+2025-07-07 13:40:28,068 - INFO - [601/3990] Completed: 50_clean_20250705_0003_WITH_41_s.jpg
+2025-07-07 13:40:28,195 - INFO - [602/3990] Completed: 50_clean_20250705_0003_WITH_12_s.jpg
+2025-07-07 13:40:28,319 - INFO - [603/3990] Completed: 50_clean_20250705_0003_WITH_38_s.jpg
+2025-07-07 13:40:28,426 - INFO - [604/3990] Completed: 50_clean_20250705_0003_WITH_13_s.jpg
+2025-07-07 13:40:28,537 - INFO - [605/3990] Completed: 50_clean_20250705_0003_WITH_08_s.jpg
+2025-07-07 13:40:28,645 - INFO - [606/3990] Completed: 50_clean_20250705_0003_WITH_14_s.jpg
+2025-07-07 13:40:28,758 - INFO - [607/3990] Completed: 50_clean_20250705_0003_WITH_24_s.jpg
+2025-07-07 13:40:28,878 - INFO - [608/3990] Completed: 50_clean_20250705_0003_WITH_05_s.jpg
+2025-07-07 13:40:28,976 - INFO - [609/3990] Completed: 50_clean_20250705_0003_WITH_39_s.jpg
+2025-07-07 13:40:29,103 - INFO - [610/3990] Completed: 50_clean_20250705_0003_WITH_09_s.jpg
+2025-07-07 13:40:29,202 - INFO - [611/3990] Completed: 50_clean_20250705_0003_WITH_57_s.jpg
+2025-07-07 13:40:29,319 - INFO - [612/3990] Completed: 50_clean_20250705_0003_WITH_54_s.jpg
+2025-07-07 13:40:29,427 - INFO - [613/3990] Completed: 50_clean_20250705_0003_WITH_23_s.jpg
+2025-07-07 13:40:29,545 - INFO - [614/3990] Completed: 50_clean_20250705_0003_WITH_19_s.jpg
+2025-07-07 13:40:29,663 - INFO - [615/3990] Completed: 50_clean_20250705_0003_WITH_48_s.jpg
+2025-07-07 13:40:29,773 - INFO - [616/3990] Completed: 50_clean_20250705_0003_WITH_46_s.jpg
+2025-07-07 13:40:29,877 - INFO - [617/3990] Completed: 50_clean_20250705_0003_WITH_47_s.jpg
+2025-07-07 13:40:30,001 - INFO - [618/3990] Completed: 50_clean_20250705_0003_WITH_26_s.jpg
+2025-07-07 13:40:30,089 - INFO - [619/3990] Completed: 50_clean_20250705_0003_WITH_58_s.jpg
+2025-07-07 13:40:30,221 - INFO - [620/3990] Completed: 50_clean_20250705_0003_WITH_53_s.jpg
+2025-07-07 13:40:30,313 - INFO - [621/3990] Completed: 50_clean_20250705_0003_WITH_56_s.jpg
+2025-07-07 13:40:30,438 - INFO - [622/3990] Completed: 50_clean_20250705_0003_WITH_42_s.jpg
+2025-07-07 13:40:30,530 - INFO - [623/3990] Completed: 50_clean_20250705_0003_WITH_10_s.jpg
+2025-07-07 13:40:30,665 - INFO - [624/3990] Completed: 50_clean_20250705_0003_WITH_21_s.jpg
+2025-07-07 13:40:30,749 - INFO - [625/3990] Completed: 50_clean_20250705_0003_WITH_15_s.jpg
+2025-07-07 13:40:30,894 - INFO - [626/3990] Completed: 50_clean_20250705_0003_WITH_60_s.jpg
+2025-07-07 13:40:30,977 - INFO - [627/3990] Completed: 50_clean_20250705_0003_WITH_20_s.jpg
+2025-07-07 13:40:31,117 - INFO - [628/3990] Completed: img_(74)_WITH_52_s.jpg
+2025-07-07 13:40:31,190 - INFO - [629/3990] Completed: img_(74)_WITH_16_s.jpg
+2025-07-07 13:40:31,328 - INFO - [630/3990] Completed: img_(74)_WITH_40_s.jpg
+2025-07-07 13:40:31,413 - INFO - [631/3990] Completed: img_(74)_WITH_59_s.jpg
+2025-07-07 13:40:31,556 - INFO - [632/3990] Completed: img_(74)_WITH_28_s.jpg
+2025-07-07 13:40:31,649 - INFO - [633/3990] Completed: img_(74)_WITH_04_s.jpg
+2025-07-07 13:40:31,782 - INFO - [634/3990] Completed: img_(74)_WITH_06_s.jpg
+2025-07-07 13:40:31,882 - INFO - [635/3990] Completed: img_(74)_WITH_18_s.jpg
+2025-07-07 13:40:32,011 - INFO - [636/3990] Completed: img_(74)_WITH_36_s.jpg
+2025-07-07 13:40:32,102 - INFO - [637/3990] Completed: img_(74)_WITH_35_s.jpg
+2025-07-07 13:40:32,225 - INFO - [638/3990] Completed: img_(74)_WITH_31_s.jpg
+2025-07-07 13:40:32,310 - INFO - [639/3990] Completed: img_(74)_WITH_55_s.jpg
+2025-07-07 13:40:32,444 - INFO - [640/3990] Completed: img_(74)_WITH_30_s.jpg
+2025-07-07 13:40:32,519 - INFO - [641/3990] Completed: img_(74)_WITH_32_s.jpg
+2025-07-07 13:40:32,657 - INFO - [642/3990] Completed: img_(74)_WITH_45_s.jpg
+2025-07-07 13:40:32,731 - INFO - [643/3990] Completed: img_(74)_WITH_27_s.jpg
+2025-07-07 13:40:32,898 - INFO - [644/3990] Completed: img_(74)_WITH_22_s.jpg
+2025-07-07 13:40:32,950 - INFO - [645/3990] Completed: img_(74)_WITH_29_s.jpg
+2025-07-07 13:40:33,126 - INFO - [646/3990] Completed: img_(74)_WITH_50_s.jpg
+2025-07-07 13:40:33,168 - INFO - [647/3990] Completed: img_(74)_WITH_44_s.jpg
+2025-07-07 13:40:33,349 - INFO - [648/3990] Completed: img_(74)_WITH_11_s.jpg
+2025-07-07 13:40:33,380 - INFO - [649/3990] Completed: img_(74)_WITH_37_s.jpg
+2025-07-07 13:40:33,573 - INFO - [650/3990] Completed: img_(74)_WITH_07_s.jpg
+2025-07-07 13:40:33,596 - INFO - [651/3990] Completed: img_(74)_WITH_33_s.jpg
+2025-07-07 13:40:33,807 - INFO - [652/3990] Completed: img_(74)_WITH_17_s.jpg
+2025-07-07 13:40:33,828 - INFO - [653/3990] Completed: img_(74)_WITH_49_s.jpg
+2025-07-07 13:40:34,034 - INFO - [654/3990] Completed: img_(74)_WITH_43_s.jpg
+2025-07-07 13:40:34,062 - INFO - [655/3990] Completed: img_(74)_WITH_51_s.jpg
+2025-07-07 13:40:34,278 - INFO - [656/3990] Completed: img_(74)_WITH_25_s.jpg
+2025-07-07 13:40:34,279 - INFO - [657/3990] Completed: img_(74)_WITH_34_s.jpg
+2025-07-07 13:40:34,491 - INFO - [658/3990] Completed: img_(74)_WITH_12_s.jpg
+2025-07-07 13:40:34,499 - INFO - [659/3990] Completed: img_(74)_WITH_41_s.jpg
+2025-07-07 13:40:34,713 - INFO - [660/3990] Completed: img_(74)_WITH_38_s.jpg
+2025-07-07 13:40:34,723 - INFO - [661/3990] Completed: img_(74)_WITH_13_s.jpg
+2025-07-07 13:40:34,932 - INFO - [662/3990] Completed: img_(74)_WITH_08_s.jpg
+2025-07-07 13:40:34,958 - INFO - [663/3990] Completed: img_(74)_WITH_14_s.jpg
+2025-07-07 13:40:35,161 - INFO - [664/3990] Completed: img_(74)_WITH_24_s.jpg
+2025-07-07 13:40:35,172 - INFO - [665/3990] Completed: img_(74)_WITH_05_s.jpg
+2025-07-07 13:40:35,380 - INFO - [666/3990] Completed: img_(74)_WITH_09_s.jpg
+2025-07-07 13:40:35,382 - INFO - [667/3990] Completed: img_(74)_WITH_39_s.jpg
+2025-07-07 13:40:35,591 - INFO - [668/3990] Completed: img_(74)_WITH_57_s.jpg
+2025-07-07 13:40:35,608 - INFO - [669/3990] Completed: img_(74)_WITH_54_s.jpg
+2025-07-07 13:40:35,817 - INFO - [670/3990] Completed: img_(74)_WITH_23_s.jpg
+2025-07-07 13:40:35,829 - INFO - [671/3990] Completed: img_(74)_WITH_19_s.jpg
+2025-07-07 13:40:36,030 - INFO - [672/3990] Completed: img_(74)_WITH_48_s.jpg
+2025-07-07 13:40:36,045 - INFO - [673/3990] Completed: img_(74)_WITH_46_s.jpg
+2025-07-07 13:40:36,249 - INFO - [674/3990] Completed: img_(74)_WITH_47_s.jpg
+2025-07-07 13:40:36,269 - INFO - [675/3990] Completed: img_(74)_WITH_26_s.jpg
+2025-07-07 13:40:36,459 - INFO - [676/3990] Completed: img_(74)_WITH_58_s.jpg
+2025-07-07 13:40:36,504 - INFO - [677/3990] Completed: img_(74)_WITH_53_s.jpg
+2025-07-07 13:40:36,679 - INFO - [678/3990] Completed: img_(74)_WITH_56_s.jpg
+2025-07-07 13:40:36,718 - INFO - [679/3990] Completed: img_(74)_WITH_42_s.jpg
+2025-07-07 13:40:36,900 - INFO - [680/3990] Completed: img_(74)_WITH_10_s.jpg
+2025-07-07 13:40:36,954 - INFO - [681/3990] Completed: img_(74)_WITH_21_s.jpg
+2025-07-07 13:40:37,115 - INFO - [682/3990] Completed: img_(74)_WITH_15_s.jpg
+2025-07-07 13:40:37,182 - INFO - [683/3990] Completed: img_(74)_WITH_60_s.jpg
+2025-07-07 13:40:37,330 - INFO - [684/3990] Completed: img_(74)_WITH_20_s.jpg
+2025-07-07 13:40:37,408 - INFO - [685/3990] Completed: sma_clean_20250705_0036_WITH_52_s.jpg
+2025-07-07 13:40:37,557 - INFO - [686/3990] Completed: sma_clean_20250705_0036_WITH_16_s.jpg
+2025-07-07 13:40:37,626 - INFO - [687/3990] Completed: sma_clean_20250705_0036_WITH_40_s.jpg
+2025-07-07 13:40:37,786 - INFO - [688/3990] Completed: sma_clean_20250705_0036_WITH_59_s.jpg
+2025-07-07 13:40:37,842 - INFO - [689/3990] Completed: sma_clean_20250705_0036_WITH_28_s.jpg
+2025-07-07 13:40:38,004 - INFO - [690/3990] Completed: sma_clean_20250705_0036_WITH_04_s.jpg
+2025-07-07 13:40:38,061 - INFO - [691/3990] Completed: sma_clean_20250705_0036_WITH_06_s.jpg
+2025-07-07 13:40:38,228 - INFO - [692/3990] Completed: sma_clean_20250705_0036_WITH_18_s.jpg
+2025-07-07 13:40:38,272 - INFO - [693/3990] Completed: sma_clean_20250705_0036_WITH_36_s.jpg
+2025-07-07 13:40:38,463 - INFO - [694/3990] Completed: sma_clean_20250705_0036_WITH_35_s.jpg
+2025-07-07 13:40:38,491 - INFO - [695/3990] Completed: sma_clean_20250705_0036_WITH_31_s.jpg
+2025-07-07 13:40:38,685 - INFO - [696/3990] Completed: sma_clean_20250705_0036_WITH_55_s.jpg
+2025-07-07 13:40:38,718 - INFO - [697/3990] Completed: sma_clean_20250705_0036_WITH_30_s.jpg
+2025-07-07 13:40:38,895 - INFO - [698/3990] Completed: sma_clean_20250705_0036_WITH_32_s.jpg
+2025-07-07 13:40:38,945 - INFO - [699/3990] Completed: sma_clean_20250705_0036_WITH_45_s.jpg
+2025-07-07 13:40:39,106 - INFO - [700/3990] Completed: sma_clean_20250705_0036_WITH_27_s.jpg
+2025-07-07 13:40:39,176 - INFO - [701/3990] Completed: sma_clean_20250705_0036_WITH_22_s.jpg
+2025-07-07 13:40:39,321 - INFO - [702/3990] Completed: sma_clean_20250705_0036_WITH_29_s.jpg
+2025-07-07 13:40:39,398 - INFO - [703/3990] Completed: sma_clean_20250705_0036_WITH_50_s.jpg
+2025-07-07 13:40:39,541 - INFO - [704/3990] Completed: sma_clean_20250705_0036_WITH_44_s.jpg
+2025-07-07 13:40:39,621 - INFO - [705/3990] Completed: sma_clean_20250705_0036_WITH_11_s.jpg
+2025-07-07 13:40:39,770 - INFO - [706/3990] Completed: sma_clean_20250705_0036_WITH_37_s.jpg
+2025-07-07 13:40:39,849 - INFO - [707/3990] Completed: sma_clean_20250705_0036_WITH_07_s.jpg
+2025-07-07 13:40:39,988 - INFO - [708/3990] Completed: sma_clean_20250705_0036_WITH_33_s.jpg
+2025-07-07 13:40:40,065 - INFO - [709/3990] Completed: sma_clean_20250705_0036_WITH_49_s.jpg
+2025-07-07 13:40:40,205 - INFO - [710/3990] Completed: sma_clean_20250705_0036_WITH_17_s.jpg
+2025-07-07 13:40:40,286 - INFO - [711/3990] Completed: sma_clean_20250705_0036_WITH_43_s.jpg
+2025-07-07 13:40:40,415 - INFO - [712/3990] Completed: sma_clean_20250705_0036_WITH_51_s.jpg
+2025-07-07 13:40:40,518 - INFO - [713/3990] Completed: sma_clean_20250705_0036_WITH_25_s.jpg
+2025-07-07 13:40:40,631 - INFO - [714/3990] Completed: sma_clean_20250705_0036_WITH_34_s.jpg
+2025-07-07 13:40:40,743 - INFO - [715/3990] Completed: sma_clean_20250705_0036_WITH_41_s.jpg
+2025-07-07 13:40:40,856 - INFO - [716/3990] Completed: sma_clean_20250705_0036_WITH_12_s.jpg
+2025-07-07 13:40:40,961 - INFO - [717/3990] Completed: sma_clean_20250705_0036_WITH_38_s.jpg
+2025-07-07 13:40:41,082 - INFO - [718/3990] Completed: sma_clean_20250705_0036_WITH_13_s.jpg
+2025-07-07 13:40:41,190 - INFO - [719/3990] Completed: sma_clean_20250705_0036_WITH_08_s.jpg
+2025-07-07 13:40:41,294 - INFO - [720/3990] Completed: sma_clean_20250705_0036_WITH_14_s.jpg
+2025-07-07 13:40:41,428 - INFO - [721/3990] Completed: sma_clean_20250705_0036_WITH_24_s.jpg
+2025-07-07 13:40:41,507 - INFO - [722/3990] Completed: sma_clean_20250705_0036_WITH_05_s.jpg
+2025-07-07 13:40:41,653 - INFO - [723/3990] Completed: sma_clean_20250705_0036_WITH_39_s.jpg
+2025-07-07 13:40:41,735 - INFO - [724/3990] Completed: sma_clean_20250705_0036_WITH_09_s.jpg
+2025-07-07 13:40:41,878 - INFO - [725/3990] Completed: sma_clean_20250705_0036_WITH_57_s.jpg
+2025-07-07 13:40:41,964 - INFO - [726/3990] Completed: sma_clean_20250705_0036_WITH_54_s.jpg
+2025-07-07 13:40:42,112 - INFO - [727/3990] Completed: sma_clean_20250705_0036_WITH_23_s.jpg
+2025-07-07 13:40:42,188 - INFO - [728/3990] Completed: sma_clean_20250705_0036_WITH_19_s.jpg
+2025-07-07 13:40:42,349 - INFO - [729/3990] Completed: sma_clean_20250705_0036_WITH_48_s.jpg
+2025-07-07 13:40:42,412 - INFO - [730/3990] Completed: sma_clean_20250705_0036_WITH_46_s.jpg
+2025-07-07 13:40:42,580 - INFO - [731/3990] Completed: sma_clean_20250705_0036_WITH_47_s.jpg
+2025-07-07 13:40:42,632 - INFO - [732/3990] Completed: sma_clean_20250705_0036_WITH_26_s.jpg
+2025-07-07 13:40:42,815 - INFO - [733/3990] Completed: sma_clean_20250705_0036_WITH_58_s.jpg
+2025-07-07 13:40:42,854 - INFO - [734/3990] Completed: sma_clean_20250705_0036_WITH_53_s.jpg
+2025-07-07 13:40:43,034 - INFO - [735/3990] Completed: sma_clean_20250705_0036_WITH_56_s.jpg
+2025-07-07 13:40:43,086 - INFO - [736/3990] Completed: sma_clean_20250705_0036_WITH_42_s.jpg
+2025-07-07 13:40:43,256 - INFO - [737/3990] Completed: sma_clean_20250705_0036_WITH_10_s.jpg
+2025-07-07 13:40:43,307 - INFO - [738/3990] Completed: sma_clean_20250705_0036_WITH_21_s.jpg
+2025-07-07 13:40:43,474 - INFO - [739/3990] Completed: sma_clean_20250705_0036_WITH_15_s.jpg
+2025-07-07 13:40:43,527 - INFO - [740/3990] Completed: sma_clean_20250705_0036_WITH_60_s.jpg
+2025-07-07 13:40:43,709 - INFO - [741/3990] Completed: sma_clean_20250705_0036_WITH_20_s.jpg
+2025-07-07 13:40:43,752 - INFO - [742/3990] Completed: sma_clean_20250705_0025_WITH_52_s.jpg
+2025-07-07 13:40:43,945 - INFO - [743/3990] Completed: sma_clean_20250705_0025_WITH_16_s.jpg
+2025-07-07 13:40:43,965 - INFO - [744/3990] Completed: sma_clean_20250705_0025_WITH_40_s.jpg
+2025-07-07 13:40:44,172 - INFO - [745/3990] Completed: sma_clean_20250705_0025_WITH_28_s.jpg
+2025-07-07 13:40:44,177 - INFO - [746/3990] Completed: sma_clean_20250705_0025_WITH_59_s.jpg
+2025-07-07 13:40:44,375 - INFO - [747/3990] Completed: sma_clean_20250705_0025_WITH_04_s.jpg
+2025-07-07 13:40:44,414 - INFO - [748/3990] Completed: sma_clean_20250705_0025_WITH_06_s.jpg
+2025-07-07 13:40:44,587 - INFO - [749/3990] Completed: sma_clean_20250705_0025_WITH_18_s.jpg
+2025-07-07 13:40:44,642 - INFO - [750/3990] Completed: sma_clean_20250705_0025_WITH_36_s.jpg
+2025-07-07 13:40:44,815 - INFO - [751/3990] Completed: sma_clean_20250705_0025_WITH_35_s.jpg
+2025-07-07 13:40:44,867 - INFO - [752/3990] Completed: sma_clean_20250705_0025_WITH_31_s.jpg
+2025-07-07 13:40:45,041 - INFO - [753/3990] Completed: sma_clean_20250705_0025_WITH_55_s.jpg
+2025-07-07 13:40:45,096 - INFO - [754/3990] Completed: sma_clean_20250705_0025_WITH_30_s.jpg
+2025-07-07 13:40:45,258 - INFO - [755/3990] Completed: sma_clean_20250705_0025_WITH_32_s.jpg
+2025-07-07 13:40:45,328 - INFO - [756/3990] Completed: sma_clean_20250705_0025_WITH_45_s.jpg
+2025-07-07 13:40:45,471 - INFO - [757/3990] Completed: sma_clean_20250705_0025_WITH_27_s.jpg
+2025-07-07 13:40:45,565 - INFO - [758/3990] Completed: sma_clean_20250705_0025_WITH_22_s.jpg
+2025-07-07 13:40:45,700 - INFO - [759/3990] Completed: sma_clean_20250705_0025_WITH_29_s.jpg
+2025-07-07 13:40:45,789 - INFO - [760/3990] Completed: sma_clean_20250705_0025_WITH_50_s.jpg
+2025-07-07 13:40:45,917 - INFO - [761/3990] Completed: sma_clean_20250705_0025_WITH_44_s.jpg
+2025-07-07 13:40:46,008 - INFO - [762/3990] Completed: sma_clean_20250705_0025_WITH_11_s.jpg
+2025-07-07 13:40:46,125 - INFO - [763/3990] Completed: sma_clean_20250705_0025_WITH_37_s.jpg
+2025-07-07 13:40:46,234 - INFO - [764/3990] Completed: sma_clean_20250705_0025_WITH_07_s.jpg
+2025-07-07 13:40:46,342 - INFO - [765/3990] Completed: sma_clean_20250705_0025_WITH_33_s.jpg
+2025-07-07 13:40:46,462 - INFO - [766/3990] Completed: sma_clean_20250705_0025_WITH_49_s.jpg
+2025-07-07 13:40:46,568 - INFO - [767/3990] Completed: sma_clean_20250705_0025_WITH_17_s.jpg
+2025-07-07 13:40:46,697 - INFO - [768/3990] Completed: sma_clean_20250705_0025_WITH_43_s.jpg
+2025-07-07 13:40:46,788 - INFO - [769/3990] Completed: sma_clean_20250705_0025_WITH_51_s.jpg
+2025-07-07 13:40:46,928 - INFO - [770/3990] Completed: sma_clean_20250705_0025_WITH_25_s.jpg
+2025-07-07 13:40:47,012 - INFO - [771/3990] Completed: sma_clean_20250705_0025_WITH_34_s.jpg
+2025-07-07 13:40:47,161 - INFO - [772/3990] Completed: sma_clean_20250705_0025_WITH_41_s.jpg
+2025-07-07 13:40:47,229 - INFO - [773/3990] Completed: sma_clean_20250705_0025_WITH_12_s.jpg
+2025-07-07 13:40:47,399 - INFO - [774/3990] Completed: sma_clean_20250705_0025_WITH_38_s.jpg
+2025-07-07 13:40:47,448 - INFO - [775/3990] Completed: sma_clean_20250705_0025_WITH_13_s.jpg
+2025-07-07 13:40:47,627 - INFO - [776/3990] Completed: sma_clean_20250705_0025_WITH_08_s.jpg
+2025-07-07 13:40:47,658 - INFO - [777/3990] Completed: sma_clean_20250705_0025_WITH_14_s.jpg
+2025-07-07 13:40:47,871 - INFO - [778/3990] Completed: sma_clean_20250705_0025_WITH_24_s.jpg
+2025-07-07 13:40:47,872 - INFO - [779/3990] Completed: sma_clean_20250705_0025_WITH_05_s.jpg
+2025-07-07 13:40:48,096 - INFO - [780/3990] Completed: sma_clean_20250705_0025_WITH_09_s.jpg
+2025-07-07 13:40:48,125 - INFO - [781/3990] Completed: sma_clean_20250705_0025_WITH_39_s.jpg
+2025-07-07 13:40:48,325 - INFO - [782/3990] Completed: sma_clean_20250705_0025_WITH_57_s.jpg
+2025-07-07 13:40:48,348 - INFO - [783/3990] Completed: sma_clean_20250705_0025_WITH_54_s.jpg
+2025-07-07 13:40:48,551 - INFO - [784/3990] Completed: sma_clean_20250705_0025_WITH_23_s.jpg
+2025-07-07 13:40:48,580 - INFO - [785/3990] Completed: sma_clean_20250705_0025_WITH_19_s.jpg
+2025-07-07 13:40:48,804 - INFO - [786/3990] Completed: sma_clean_20250705_0025_WITH_48_s.jpg
+2025-07-07 13:40:48,838 - INFO - [787/3990] Completed: sma_clean_20250705_0025_WITH_46_s.jpg
+2025-07-07 13:40:49,067 - INFO - [788/3990] Completed: sma_clean_20250705_0025_WITH_47_s.jpg
+2025-07-07 13:40:49,081 - INFO - [789/3990] Completed: sma_clean_20250705_0025_WITH_26_s.jpg
+2025-07-07 13:40:49,303 - INFO - [790/3990] Completed: sma_clean_20250705_0025_WITH_58_s.jpg
+2025-07-07 13:40:49,332 - INFO - [791/3990] Completed: sma_clean_20250705_0025_WITH_53_s.jpg
+2025-07-07 13:40:49,542 - INFO - [792/3990] Completed: sma_clean_20250705_0025_WITH_56_s.jpg
+2025-07-07 13:40:49,565 - INFO - [793/3990] Completed: sma_clean_20250705_0025_WITH_42_s.jpg
+2025-07-07 13:40:49,788 - INFO - [794/3990] Completed: sma_clean_20250705_0025_WITH_10_s.jpg
+2025-07-07 13:40:49,797 - INFO - [795/3990] Completed: sma_clean_20250705_0025_WITH_21_s.jpg
+2025-07-07 13:40:50,003 - INFO - [796/3990] Completed: sma_clean_20250705_0025_WITH_15_s.jpg
+2025-07-07 13:40:50,019 - INFO - [797/3990] Completed: sma_clean_20250705_0025_WITH_60_s.jpg
+2025-07-07 13:40:50,220 - INFO - [798/3990] Completed: sma_clean_20250705_0025_WITH_20_s.jpg
+2025-07-07 13:40:50,220 - INFO - Progress: 798/3990 (20%)
+2025-07-07 13:40:50,237 - INFO - [799/3990] Completed: 91_clean_20250705_0006_WITH_52_s.jpg
+2025-07-07 13:40:50,440 - INFO - [800/3990] Completed: 91_clean_20250705_0006_WITH_16_s.jpg
+2025-07-07 13:40:50,452 - INFO - [801/3990] Completed: 91_clean_20250705_0006_WITH_40_s.jpg
+2025-07-07 13:40:50,664 - INFO - [802/3990] Completed: 91_clean_20250705_0006_WITH_59_s.jpg
+2025-07-07 13:40:50,670 - INFO - [803/3990] Completed: 91_clean_20250705_0006_WITH_28_s.jpg
+2025-07-07 13:40:50,893 - INFO - [804/3990] Completed: 91_clean_20250705_0006_WITH_04_s.jpg
+2025-07-07 13:40:50,895 - INFO - [805/3990] Completed: 91_clean_20250705_0006_WITH_06_s.jpg
+2025-07-07 13:40:51,116 - INFO - [806/3990] Completed: 91_clean_20250705_0006_WITH_36_s.jpg
+2025-07-07 13:40:51,123 - INFO - [807/3990] Completed: 91_clean_20250705_0006_WITH_18_s.jpg
+2025-07-07 13:40:51,334 - INFO - [808/3990] Completed: 91_clean_20250705_0006_WITH_35_s.jpg
+2025-07-07 13:40:51,341 - INFO - [809/3990] Completed: 91_clean_20250705_0006_WITH_31_s.jpg
+2025-07-07 13:40:51,553 - INFO - [810/3990] Completed: 91_clean_20250705_0006_WITH_55_s.jpg
+2025-07-07 13:40:51,563 - INFO - [811/3990] Completed: 91_clean_20250705_0006_WITH_30_s.jpg
+2025-07-07 13:40:51,774 - INFO - [812/3990] Completed: 91_clean_20250705_0006_WITH_32_s.jpg
+2025-07-07 13:40:51,779 - INFO - [813/3990] Completed: 91_clean_20250705_0006_WITH_45_s.jpg
+2025-07-07 13:40:51,998 - INFO - [814/3990] Completed: 91_clean_20250705_0006_WITH_27_s.jpg
+2025-07-07 13:40:51,999 - INFO - [815/3990] Completed: 91_clean_20250705_0006_WITH_22_s.jpg
+2025-07-07 13:40:52,217 - INFO - [816/3990] Completed: 91_clean_20250705_0006_WITH_29_s.jpg
+2025-07-07 13:40:52,219 - INFO - [817/3990] Completed: 91_clean_20250705_0006_WITH_50_s.jpg
+2025-07-07 13:40:52,436 - INFO - [818/3990] Completed: 91_clean_20250705_0006_WITH_11_s.jpg
+2025-07-07 13:40:52,438 - INFO - [819/3990] Completed: 91_clean_20250705_0006_WITH_44_s.jpg
+2025-07-07 13:40:52,660 - INFO - [820/3990] Completed: 91_clean_20250705_0006_WITH_37_s.jpg
+2025-07-07 13:40:52,661 - INFO - [821/3990] Completed: 91_clean_20250705_0006_WITH_07_s.jpg
+2025-07-07 13:40:52,881 - INFO - [822/3990] Completed: 91_clean_20250705_0006_WITH_33_s.jpg
+2025-07-07 13:40:52,896 - INFO - [823/3990] Completed: 91_clean_20250705_0006_WITH_49_s.jpg
+2025-07-07 13:40:53,100 - INFO - [824/3990] Completed: 91_clean_20250705_0006_WITH_17_s.jpg
+2025-07-07 13:40:53,130 - INFO - [825/3990] Completed: 91_clean_20250705_0006_WITH_43_s.jpg
+2025-07-07 13:40:53,310 - INFO - [826/3990] Completed: 91_clean_20250705_0006_WITH_51_s.jpg
+2025-07-07 13:40:53,351 - INFO - [827/3990] Completed: 91_clean_20250705_0006_WITH_25_s.jpg
+2025-07-07 13:40:53,524 - INFO - [828/3990] Completed: 91_clean_20250705_0006_WITH_34_s.jpg
+2025-07-07 13:40:53,564 - INFO - [829/3990] Completed: 91_clean_20250705_0006_WITH_41_s.jpg
+2025-07-07 13:40:53,747 - INFO - [830/3990] Completed: 91_clean_20250705_0006_WITH_12_s.jpg
+2025-07-07 13:40:53,785 - INFO - [831/3990] Completed: 91_clean_20250705_0006_WITH_38_s.jpg
+2025-07-07 13:40:53,965 - INFO - [832/3990] Completed: 91_clean_20250705_0006_WITH_13_s.jpg
+2025-07-07 13:40:54,013 - INFO - [833/3990] Completed: 91_clean_20250705_0006_WITH_08_s.jpg
+2025-07-07 13:40:54,188 - INFO - [834/3990] Completed: 91_clean_20250705_0006_WITH_14_s.jpg
+2025-07-07 13:40:54,236 - INFO - [835/3990] Completed: 91_clean_20250705_0006_WITH_24_s.jpg
+2025-07-07 13:40:54,411 - INFO - [836/3990] Completed: 91_clean_20250705_0006_WITH_05_s.jpg
+2025-07-07 13:40:54,465 - INFO - [837/3990] Completed: 91_clean_20250705_0006_WITH_39_s.jpg
+2025-07-07 13:40:54,642 - INFO - [838/3990] Completed: 91_clean_20250705_0006_WITH_09_s.jpg
+2025-07-07 13:40:54,693 - INFO - [839/3990] Completed: 91_clean_20250705_0006_WITH_57_s.jpg
+2025-07-07 13:40:54,884 - INFO - [840/3990] Completed: 91_clean_20250705_0006_WITH_54_s.jpg
+2025-07-07 13:40:54,924 - INFO - [841/3990] Completed: 91_clean_20250705_0006_WITH_23_s.jpg
+2025-07-07 13:40:55,095 - INFO - [842/3990] Completed: 91_clean_20250705_0006_WITH_19_s.jpg
+2025-07-07 13:40:55,145 - INFO - [843/3990] Completed: 91_clean_20250705_0006_WITH_48_s.jpg
+2025-07-07 13:40:55,305 - INFO - [844/3990] Completed: 91_clean_20250705_0006_WITH_46_s.jpg
+2025-07-07 13:40:55,377 - INFO - [845/3990] Completed: 91_clean_20250705_0006_WITH_47_s.jpg
+2025-07-07 13:40:55,530 - INFO - [846/3990] Completed: 91_clean_20250705_0006_WITH_26_s.jpg
+2025-07-07 13:40:55,609 - INFO - [847/3990] Completed: 91_clean_20250705_0006_WITH_58_s.jpg
+2025-07-07 13:40:55,744 - INFO - [848/3990] Completed: 91_clean_20250705_0006_WITH_53_s.jpg
+2025-07-07 13:40:55,839 - INFO - [849/3990] Completed: 91_clean_20250705_0006_WITH_56_s.jpg
+2025-07-07 13:40:55,973 - INFO - [850/3990] Completed: 91_clean_20250705_0006_WITH_42_s.jpg
+2025-07-07 13:40:56,061 - INFO - [851/3990] Completed: 91_clean_20250705_0006_WITH_10_s.jpg
+2025-07-07 13:40:56,204 - INFO - [852/3990] Completed: 91_clean_20250705_0006_WITH_21_s.jpg
+2025-07-07 13:40:56,291 - INFO - [853/3990] Completed: 91_clean_20250705_0006_WITH_15_s.jpg
+2025-07-07 13:40:56,414 - INFO - [854/3990] Completed: 91_clean_20250705_0006_WITH_60_s.jpg
+2025-07-07 13:40:56,503 - INFO - [855/3990] Completed: 91_clean_20250705_0006_WITH_20_s.jpg
+2025-07-07 13:40:56,634 - INFO - [856/3990] Completed: sma_clean_20250705_0017_WITH_52_s.jpg
+2025-07-07 13:40:56,715 - INFO - [857/3990] Completed: sma_clean_20250705_0017_WITH_16_s.jpg
+2025-07-07 13:40:56,850 - INFO - [858/3990] Completed: sma_clean_20250705_0017_WITH_40_s.jpg
+2025-07-07 13:40:56,942 - INFO - [859/3990] Completed: sma_clean_20250705_0017_WITH_59_s.jpg
+2025-07-07 13:40:57,070 - INFO - [860/3990] Completed: sma_clean_20250705_0017_WITH_28_s.jpg
+2025-07-07 13:40:57,167 - INFO - [861/3990] Completed: sma_clean_20250705_0017_WITH_04_s.jpg
+2025-07-07 13:40:57,284 - INFO - [862/3990] Completed: sma_clean_20250705_0017_WITH_06_s.jpg
+2025-07-07 13:40:57,385 - INFO - [863/3990] Completed: sma_clean_20250705_0017_WITH_18_s.jpg
+2025-07-07 13:40:57,496 - INFO - [864/3990] Completed: sma_clean_20250705_0017_WITH_36_s.jpg
+2025-07-07 13:40:57,620 - INFO - [865/3990] Completed: sma_clean_20250705_0017_WITH_35_s.jpg
+2025-07-07 13:40:57,715 - INFO - [866/3990] Completed: sma_clean_20250705_0017_WITH_31_s.jpg
+2025-07-07 13:40:57,853 - INFO - [867/3990] Completed: sma_clean_20250705_0017_WITH_55_s.jpg
+2025-07-07 13:40:57,934 - INFO - [868/3990] Completed: sma_clean_20250705_0017_WITH_30_s.jpg
+2025-07-07 13:40:58,076 - INFO - [869/3990] Completed: sma_clean_20250705_0017_WITH_32_s.jpg
+2025-07-07 13:40:58,153 - INFO - [870/3990] Completed: sma_clean_20250705_0017_WITH_45_s.jpg
+2025-07-07 13:40:58,310 - INFO - [871/3990] Completed: sma_clean_20250705_0017_WITH_27_s.jpg
+2025-07-07 13:40:58,374 - INFO - [872/3990] Completed: sma_clean_20250705_0017_WITH_22_s.jpg
+2025-07-07 13:40:58,540 - INFO - [873/3990] Completed: sma_clean_20250705_0017_WITH_29_s.jpg
+2025-07-07 13:40:58,604 - INFO - [874/3990] Completed: sma_clean_20250705_0017_WITH_50_s.jpg
+2025-07-07 13:40:58,775 - INFO - [875/3990] Completed: sma_clean_20250705_0017_WITH_44_s.jpg
+2025-07-07 13:40:58,840 - INFO - [876/3990] Completed: sma_clean_20250705_0017_WITH_11_s.jpg
+2025-07-07 13:40:59,012 - INFO - [877/3990] Completed: sma_clean_20250705_0017_WITH_37_s.jpg
+2025-07-07 13:40:59,063 - INFO - [878/3990] Completed: sma_clean_20250705_0017_WITH_07_s.jpg
+2025-07-07 13:40:59,237 - INFO - [879/3990] Completed: sma_clean_20250705_0017_WITH_33_s.jpg
+2025-07-07 13:40:59,282 - INFO - [880/3990] Completed: sma_clean_20250705_0017_WITH_49_s.jpg
+2025-07-07 13:40:59,453 - INFO - [881/3990] Completed: sma_clean_20250705_0017_WITH_17_s.jpg
+2025-07-07 13:40:59,493 - INFO - [882/3990] Completed: sma_clean_20250705_0017_WITH_43_s.jpg
+2025-07-07 13:40:59,689 - INFO - [883/3990] Completed: sma_clean_20250705_0017_WITH_51_s.jpg
+2025-07-07 13:40:59,715 - INFO - [884/3990] Completed: sma_clean_20250705_0017_WITH_25_s.jpg
+2025-07-07 13:40:59,898 - INFO - [885/3990] Completed: sma_clean_20250705_0017_WITH_34_s.jpg
+2025-07-07 13:40:59,928 - INFO - [886/3990] Completed: sma_clean_20250705_0017_WITH_41_s.jpg
+2025-07-07 13:41:00,126 - INFO - [887/3990] Completed: sma_clean_20250705_0017_WITH_12_s.jpg
+2025-07-07 13:41:00,140 - INFO - [888/3990] Completed: sma_clean_20250705_0017_WITH_38_s.jpg
+2025-07-07 13:41:00,358 - INFO - [889/3990] Completed: sma_clean_20250705_0017_WITH_13_s.jpg
+2025-07-07 13:41:00,370 - INFO - [890/3990] Completed: sma_clean_20250705_0017_WITH_08_s.jpg
+2025-07-07 13:41:00,586 - INFO - [891/3990] Completed: sma_clean_20250705_0017_WITH_14_s.jpg
+2025-07-07 13:41:00,607 - INFO - [892/3990] Completed: sma_clean_20250705_0017_WITH_24_s.jpg
+2025-07-07 13:41:00,828 - INFO - [893/3990] Completed: sma_clean_20250705_0017_WITH_05_s.jpg
+2025-07-07 13:41:00,831 - INFO - [894/3990] Completed: sma_clean_20250705_0017_WITH_39_s.jpg
+2025-07-07 13:41:01,053 - INFO - [895/3990] Completed: sma_clean_20250705_0017_WITH_57_s.jpg
+2025-07-07 13:41:01,061 - INFO - [896/3990] Completed: sma_clean_20250705_0017_WITH_09_s.jpg
+2025-07-07 13:41:01,275 - INFO - [897/3990] Completed: sma_clean_20250705_0017_WITH_54_s.jpg
+2025-07-07 13:41:01,283 - INFO - [898/3990] Completed: sma_clean_20250705_0017_WITH_23_s.jpg
+2025-07-07 13:41:01,495 - INFO - [899/3990] Completed: sma_clean_20250705_0017_WITH_19_s.jpg
+2025-07-07 13:41:01,516 - INFO - [900/3990] Completed: sma_clean_20250705_0017_WITH_48_s.jpg
+2025-07-07 13:41:01,716 - INFO - [901/3990] Completed: sma_clean_20250705_0017_WITH_46_s.jpg
+2025-07-07 13:41:01,755 - INFO - [902/3990] Completed: sma_clean_20250705_0017_WITH_47_s.jpg
+2025-07-07 13:41:01,934 - INFO - [903/3990] Completed: sma_clean_20250705_0017_WITH_26_s.jpg
+2025-07-07 13:41:01,995 - INFO - [904/3990] Completed: sma_clean_20250705_0017_WITH_58_s.jpg
+2025-07-07 13:41:02,158 - INFO - [905/3990] Completed: sma_clean_20250705_0017_WITH_53_s.jpg
+2025-07-07 13:41:02,218 - INFO - [906/3990] Completed: sma_clean_20250705_0017_WITH_56_s.jpg
+2025-07-07 13:41:02,368 - INFO - [907/3990] Completed: sma_clean_20250705_0017_WITH_42_s.jpg
+2025-07-07 13:41:02,434 - INFO - [908/3990] Completed: sma_clean_20250705_0017_WITH_10_s.jpg
+2025-07-07 13:41:02,588 - INFO - [909/3990] Completed: sma_clean_20250705_0017_WITH_21_s.jpg
+2025-07-07 13:41:02,665 - INFO - [910/3990] Completed: sma_clean_20250705_0017_WITH_15_s.jpg
