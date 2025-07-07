@@ -1050,6 +1050,7 @@
         let isTTSPlaying = false;
         let readingProgress = 0;
         let isMarkdown = false;
+        let debugMode = true; // Enable debug logging for API issues
 
         // Initialize
         window.onload = () => {
@@ -1059,6 +1060,15 @@
                     document.getElementById('apiKey').value = savedKey;
                     apiKey = savedKey;
                     console.log('API key loaded from storage');
+                }
+                
+                // Set the provided API key if none is saved
+                const providedKey = 'AIzaSyAYBfMZU6dFu_Qql8nARSTwlNevYCUP15k';
+                if (!savedKey && providedKey) {
+                    document.getElementById('apiKey').value = providedKey;
+                    apiKey = providedKey;
+                    localStorage.setItem('geminiApiKey', apiKey);
+                    console.log('Using provided API key');
                 }
             } catch (e) {
                 console.error('Error loading API key:', e);
@@ -1152,7 +1162,7 @@
             
             try {
                 // Test with a simple prompt
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
                 
                 const response = await fetch(url, {
                     method: 'POST',
@@ -1164,7 +1174,11 @@
                             parts: [{
                                 text: 'Hello! This is a test message. Please respond with "API key is working correctly."'
                             }]
-                        }]
+                        }],
+                        generationConfig: {
+                            temperature: 0.7,
+                            maxOutputTokens: 100
+                        }
                     })
                 });
 
@@ -1771,16 +1785,28 @@
                 addMessage('ai', response);
             } catch (error) {
                 console.error('API error:', error);
+                console.error('Error details:', {
+                    message: error.message,
+                    stack: error.stack,
+                    apiKey: apiKey ? `${apiKey.substring(0, 10)}...` : 'Not set'
+                });
+                
                 let errorMessage = 'Sorry, I encountered an error. ';
                 
-                if (error.message.includes('401') || error.message.includes('403')) {
+                if (error.message.includes('401') || error.message.includes('Authentication failed')) {
                     errorMessage += 'Please check your API key - it may be invalid or expired.';
-                } else if (error.message.includes('429')) {
+                } else if (error.message.includes('403') || error.message.includes('Access forbidden')) {
+                    errorMessage += 'Access denied. Please ensure your API key has the necessary permissions.';
+                } else if (error.message.includes('429') || error.message.includes('Rate limit')) {
                     errorMessage += 'API rate limit exceeded. Please wait a moment and try again.';
-                } else if (error.message.includes('quota')) {
-                    errorMessage += 'API quota exceeded. Please check your billing status.';
+                } else if (error.message.includes('quota') || error.message.includes('QUOTA_EXCEEDED')) {
+                    errorMessage += 'API quota exceeded. Please check your Google Cloud billing status.';
+                } else if (error.message.includes('Network error')) {
+                    errorMessage += 'Network connection error. Please check your internet connection.';
+                } else if (error.message.includes('safety') || error.message.includes('SAFETY')) {
+                    errorMessage += error.message;
                 } else {
-                    errorMessage += 'Please check your API key and internet connection.';
+                    errorMessage += error.message || 'Please check your API key and try again.';
                 }
                 
                 addMessage('ai', errorMessage);
@@ -1795,22 +1821,40 @@
                 throw new Error('API key is required');
             }
             
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
             
             const selectedText = window.getSelection().toString();
             const contextText = selectedText || currentText;
+            
+            // Limit context to avoid token limits
+            const maxContextLength = 4000;
+            const truncatedContext = contextText.length > maxContextLength 
+                ? contextText.substring(0, maxContextLength) + '...'
+                : contextText;
             
             let prompt = '';
             
             if (userMessage.toLowerCase().includes('quiz')) {
                 prompt = `Based on the following text, create 5 multiple-choice questions to test comprehension. Format each question with the question, 4 options (A, B, C, D), and indicate the correct answer.
 
-Text: ${contextText.substring(0, 3000)}${contextText.length > 3000 ? '...' : ''}`;
+Text: ${truncatedContext}`;
+            } else if (userMessage.toLowerCase().includes('summarize')) {
+                prompt = `Please provide a concise summary of the following text in 3-5 bullet points:
+
+Text: ${truncatedContext}`;
+            } else if (userMessage.toLowerCase().includes('key points')) {
+                prompt = `What are the key points and main ideas in the following text? List them as bullet points:
+
+Text: ${truncatedContext}`;
+            } else if (userMessage.toLowerCase().includes('explain')) {
+                prompt = `Please explain any difficult concepts or technical terms from the following text in simple language:
+
+Text: ${truncatedContext}`;
             } else {
                 prompt = `You are a helpful reading assistant. The user is reading the following text:
 
 ---
-${contextText.substring(0, 3000)}${contextText.length > 3000 ? '...' : ''}
+${truncatedContext}
 ---
 
 User question: ${userMessage}
@@ -1819,18 +1863,35 @@ Please provide a helpful, concise response based on the text provided.`;
             }
 
             try {
+                const requestBody = {
+                    contents: [{
+                        parts: [{
+                            text: prompt
+                        }]
+                    }],
+                    generationConfig: {
+                        temperature: 0.7,
+                        topK: 40,
+                        topP: 0.95,
+                        maxOutputTokens: 2048
+                    }
+                };
+                
+                if (debugMode) {
+                    console.log('Gemini API Request:', {
+                        url: url.replace(apiKey, 'API_KEY_HIDDEN'),
+                        method: 'POST',
+                        promptLength: prompt.length,
+                        promptPreview: prompt.substring(0, 100) + '...'
+                    });
+                }
+                
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [{
-                                text: prompt
-                            }]
-                        }]
-                    })
+                    body: JSON.stringify(requestBody)
                 });
 
                 if (!response.ok) {
@@ -1841,9 +1902,26 @@ Please provide a helpful, concise response based on the text provided.`;
                         const errorJson = JSON.parse(errorData);
                         if (errorJson.error && errorJson.error.message) {
                             errorMessage += ` - ${errorJson.error.message}`;
+                            
+                            // Provide specific guidance for common errors
+                            if (errorJson.error.message.includes('API_KEY_INVALID')) {
+                                errorMessage = 'Invalid API key. Please check your Gemini API key.';
+                            } else if (errorJson.error.message.includes('QUOTA_EXCEEDED')) {
+                                errorMessage = 'API quota exceeded. Please check your Google Cloud billing.';
+                            } else if (errorJson.error.message.includes('RATE_LIMIT_EXCEEDED')) {
+                                errorMessage = 'Rate limit exceeded. Please wait a moment and try again.';
+                            }
                         }
                     } catch (e) {
-                        errorMessage += ` - ${errorData}`;
+                        if (response.status === 400) {
+                            errorMessage = 'Bad request. The API key may be invalid or the request format is incorrect.';
+                        } else if (response.status === 401) {
+                            errorMessage = 'Authentication failed. Please check your API key.';
+                        } else if (response.status === 403) {
+                            errorMessage = 'Access forbidden. Your API key may not have the necessary permissions.';
+                        } else if (response.status === 429) {
+                            errorMessage = 'Too many requests. Please wait a moment and try again.';
+                        }
                     }
                     
                     throw new Error(errorMessage);
@@ -1851,22 +1929,40 @@ Please provide a helpful, concise response based on the text provided.`;
 
                 const data = await response.json();
                 
+                if (debugMode) {
+                    console.log('Gemini API Response:', {
+                        status: response.status,
+                        hasData: !!data,
+                        hasCandidates: !!(data && data.candidates),
+                        candidatesCount: data && data.candidates ? data.candidates.length : 0,
+                        finishReason: data && data.candidates && data.candidates[0] ? data.candidates[0].finishReason : 'N/A'
+                    });
+                }
+                
                 // Validate response structure
                 if (!data || !data.candidates || !Array.isArray(data.candidates) || data.candidates.length === 0) {
-                    throw new Error('Invalid API response: No candidates found');
+                    console.error('Invalid API response structure:', data);
+                    throw new Error('Invalid API response: No candidates found. The API may have rejected the request.');
                 }
                 
                 const candidate = data.candidates[0];
+                
+                // Check for safety ratings or blocked content
+                if (candidate.finishReason === 'SAFETY') {
+                    throw new Error('The response was blocked due to safety filters. Try rephrasing your question.');
+                }
+                
                 if (!candidate.content || !candidate.content.parts || !Array.isArray(candidate.content.parts) || candidate.content.parts.length === 0) {
-                    throw new Error('Invalid API response: No content found');
+                    console.error('Invalid candidate structure:', candidate);
+                    throw new Error('Invalid API response: No content found in the response.');
                 }
                 
                 const responseText = candidate.content.parts[0].text;
                 if (!responseText || typeof responseText !== 'string') {
-                    throw new Error('Invalid API response: No text content found');
+                    throw new Error('Invalid API response: No text content found in the response.');
                 }
                 
-                return responseText;
+                return responseText.trim();
                 
             } catch (error) {
                 if (error instanceof TypeError && error.message.includes('fetch')) {
