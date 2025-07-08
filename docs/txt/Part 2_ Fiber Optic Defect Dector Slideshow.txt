@@ -1,0 +1,103 @@
+Automated Fiber Optic Inspection System
+Updates: Image Processor Studio, Core Cladding Separation
+
+Image Processing Studio
+
+
+
+Separation(RANSAC Calculations)
+Results: Fail - Randomly Correct 
+
+Separation(David Method)
+Results: Fail - Universal Core Detection
+
+Separation(Mask Position Separation)
+Results: Success 
+
+Mask Position Separation Process
+1. Image Filtering - Converts to binary (black/white) and cleans noise
+Function: apply_filter(image)
+Step-by-step process:
+Create Copy: result = image.copy() - preserves original
+Grayscale Conversion:
+Checks if color image: if len(result.shape) == 3
+Converts BGR to grayscale: cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
+Formula: Gray = 0.299R + 0.587G + 0.114*B
+Binary Threshold:
+cv2.threshold(result, 127, 255, cv2.THRESH_BINARY)
+Pixels > 127 → 255 (white)
+Pixels ≤ 127 → 0 (black)
+Morphological Closing:
+Creates 5×5 elliptical kernel: cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+Applies closing: cv2.morphologyEx(result, cv2.MORPH_CLOSE, kernel)
+Effect: Fills small holes, connects nearby regions, smooths boundaries
+
+
+Mask Position Separation Process
+2. Region Detection - Finds the black annulus (cladding) and white inner region (core)
+Function: find_annulus_and_inner_circle(filtered_image)
+Smart Segmentation Process:
+Initial Setup:
+Creates empty masks for black annulus and inner white regions
+Identifies all black pixels: black_pixels = (filtered_image == 0)
+Find Black Regions:
+Inverts image and finds contours: cv2.findContours((~filtered_image).astype(np.uint8), ...)
+Uses RETR_EXTERNAL to get only outermost contours
+Intelligent Annulus Detection:
+For each black contour:
+Creates filled mask of the contour
+Key Logic: inner_white = (filtered_image == 255) & (filled_mask == 255)
+This identifies white pixels specifically INSIDE the black region
+If white pixels exist inside → this black region is an annulus
+This distinction is crucial since white pixels inside and outside the annulus have the same intensity
+Mask Building:
+Adds annulus pixels to black_mask: black_mask = black_mask | (temp_mask & black_pixels)
+Adds inner white pixels to inner_white_mask: inner_white_mask = inner_white_mask | inner_white
+
+
+Mask Position Separation Process
+3. Circle Fitting - Calculates best-fit circles for inner and outer boundaries
+Still within: find_annulus_and_inner_circle() function
+Outer Circle Calculation:
+Creates mask including entire annulus region
+Extracts all pixel coordinates: np.column_stack(np.where(full_mask > 0))
+Converts coordinates from (y,x) to (x,y) for OpenCV
+Fits minimum enclosing circle: cv2.minEnclosingCircle(outer_points_cv)
+Stores center (x,y) and radius
+Inner Circle Calculation:
+Uses only the inner white pixels
+Same coordinate extraction and conversion process
+Fits minimum enclosing circle for the core
+Returns both circle info dictionaries with center, radius, and diameter
+
+
+Mask Position Separation Process
+4. Concentricity Analysis
+Function: calculate_concentricity(inner_circle_info, outer_circle_info)
+Calculates Euclidean distance between centers
+Provides absolute offset (pixels) and normalized offset (relative to outer radius)
+Used for quality assessment
+5. Position Tracking
+In main() function:
+Saves the exact positions of pixels as coordinates:
+black_positions = np.column_stack(np.where(black_mask)) - annulus coordinates
+white_positions = np.column_stack(np.where(inner_white_mask)) - inner core coordinates
+outside_positions = np.column_stack(np.where(~(black_mask | inner_white_mask))) - external coordinates
+Each position array is Nx2 format: [y, x] per row
+
+
+Mask Position Separation Process
+6. Image Separation
+Function: segment_original_image(original, black_mask, inner_white_mask)
+Creates three output images from the original:
+Cleaned Image (everything outside the annulus removed): pythoncleaned_image = original.copy()
+cleaned_image[~combined_mask] = 0  # combined_mask = black_mask | inner_white_mask
+White Region Image (original image shown only at inner white pixel positions): pythonwhite_region_image = original.copy()
+white_region_image[~inner_white_mask] = 0
+Black Region Image (original image shown only at annulus positions): pythonblack_region_image = original.copy()
+black_region_image[~black_mask] = 0
+Outside Region Image (everything outside the fiber): pythonoutside_region_image = original.copy()
+outside_region_image[combined_mask] = 0
+
+
+

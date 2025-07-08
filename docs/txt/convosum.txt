@@ -1,0 +1,63 @@
+Weinert
+Transcript
+
+https://otter.ai/u/R2P_Cu1X89ao5OJygheB6GWG0tk?view=summary
+
+The meeting discussed the development and refinement of a data library for fiber optic defect detection. The process involves organizing data into a library containing scratches, blobs, and contamination anomalies. A script was created to overlay scratches from a scratch library onto clean images, resulting in a large data library. The team plans to use PyTorch for matrix operations and tensor conversions to improve processing efficiency. The goal is to create a rule set for manual filtering and to train an algorithm for real-time defect detection. The current detection step takes about 20 minutes, and the team aims to reduce this to seconds for real-time processing.
+
+Action Items
+[ ] Classify the existing data library into different categories (e.g., FMA, FC core flat, barrels scratch) and assign numerical labels to them.
+[ ] Investigate using an HPC system to train the PyTorch model on the data library, which could take around 10 hours.
+[ ] Simplify the current detection step to focus on the structural similarity index method, as it seems to be the most promising approach.
+[ ] Determine the specific requirements for real-time processing, such as the desired processing time per image, and optimize the detection algorithms accordingly.
+Outline
+Iterations and Data Library Creation
+Unknown Speaker discusses the iterations of the processing methods, moving from random processing to more direct methods.
+The old process involved full debugging and organizing data into a data library, including scratches, blobs, contamination anomalies, and defects.
+Unknown Speaker mentions searching online for proprietary GIF repositories and finding a scratch library with pixel scratches.
+A script was created to place scratches from the scratch library onto clean images, resulting in a large data library of scratches.
+Script Development and Manual Filtering
+Unknown Speaker explains the idea of creating a script that directs the network to specific data libraries based on fiber type and diameter.
+The rule set involves manual filtering, where users input fiber type, diameter, and expected defects.
+Unknown Speaker describes a studio created for quick processing and learning functions, using OpenCV functions to find the right processes.
+The studio can automatically try different processes to find the desired output image, aiding in training the algorithm and template matching.
+Matrix Operations and Tensor Conversion
+Unknown Speaker explains the use of PyTorch for matrix operations, converting arrays into tensors for more efficient calculations.
+Tensors are described as multi-dimensional matrices, with PyTorch converting images and processes into tensors for learning.
+The process involves flattening images and processes into linear systems, which PyTorch learns from to recognize outputs better.
+Unknown Speaker discusses the use of random matrices in PyTorch to learn variations and improve recognition.
+PyTorch and TensorFlow Functionality
+Unknown Speaker elaborates on PyTorch's ability to create random matrices and apply them to learn non-linear patterns.
+The discussion includes the use of TensorFlow for similar operations, with PyTorch being specifically mentioned.
+Unknown Speaker explains the process of flattening systems and images into linear systems for PyTorch to learn from.
+The conversation touches on the use of linear algebra and the challenges of remembering complex mathematical concepts.
+Classification and Feature Reduction
+Unknown Speaker discusses the process of defining classes and inheriting image classifiers in PyTorch.
+The importance of object-oriented programming and its application in PyTorch is highlighted.
+The conversation includes the reduction of pixel dimensions to manageable feature sets for PyTorch.
+Unknown Speaker explains the use of rectified linear units (ReLUs) for learning non-linear patterns and classifying outputs.
+Data Library and Training Process
+Unknown Speaker suggests classifying the data library and using TensorFlow to learn from the classified images.
+The need for consistent image sizes to avoid complications in learning is emphasized.
+Unknown Speaker considers using HPC with PyTorch for faster learning and training, mentioning the potential costs and benefits.
+The conversation includes the idea of using school computers for training due to full access and support.
+Real-Time Processing and Defect Recognition
+Unknown Speaker discusses the goal of real-time processing, where the system automatically analyzes images and overlay defects.
+The current detection step involves multiple methods, including structural similarity index, local binary, and Fourier analysis.
+Unknown Speaker explains the separation step, where different methods rank defects based on their findings.
+The conversation includes the need to identify which methods are most effective and contribute to the detection step.
+Learning and Adaptation in PyTorch
+Unknown Speaker describes the learning process in PyTorch, where the system learns from the defect library to recognize patterns.
+The structural similarity index is highlighted as a key method for learning and detecting defects.
+Unknown Speaker explains the distance calculation between outliers and normal groups to identify defects.
+The conversation includes the use of Hough line detection for circle recognition and pattern finding.
+Challenges and Future Improvements
+Unknown Speaker discusses the challenges of real-time processing and the need for faster methods.
+The conversation includes the idea of using HPC for faster learning and training, with potential costs and benefits.
+Unknown Speaker considers the use of school computers for training due to full access and support.
+The discussion includes the need for consistent image sizes and the potential for new libraries to improve learning.
+Final Thoughts and Next Steps
+Unknown Speaker summarizes the current state of the project, including the use of multiple methods for defect detection.
+The conversation includes the need to identify which methods are most effective and contribute to the detection step.
+Unknown Speaker discusses the potential for real-time processing and the challenges of achieving it.
+The final steps involve refining the methods, improving the learning process, and ensuring consistent results.

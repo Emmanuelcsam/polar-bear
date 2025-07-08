@@ -1,0 +1,654 @@
+Unknown Speaker  0:20  
+I
+
+Unknown Speaker  0:35  
+would go back through The slides and
+
+Unknown Speaker  0:41  
+yeah,
+
+Unknown Speaker  0:43  
+but like, if you, if you just read them,
+
+Unknown Speaker  0:46  
+not like read them, but like, just look this, you can see the
+
+Unknown Speaker  0:51  
+iterations
+
+Unknown Speaker  0:52  
+improve
+
+Unknown Speaker  0:54  
+from this, like random,
+
+Unknown Speaker  0:57  
+random processing methods to Something more, like direct, yeah.
+
+Unknown Speaker  1:33  
+This time you didn't put up your fasting.
+
+Unknown Speaker  1:41  
+Okay, you can Okay, so
+
+Unknown Speaker  1:48  
+this time, we're gonna go with the new process. Well, it's the same process, but we're building on top of it. So the old process was like, full debugging, seeing what everything does, seeing like our outputs and so everything from the old process, as I was telling you yesterday, I'm gonna take all that data, organize it, and then create a data library, and then that library, we'll have our scratches, our blogs, our contamination anomalies and digs. I tried to look online several times for like, maybe, like D scope, having, like, a GIF of repository or something like that, that would be very much proprietary, yeah, like, I rarely found anything, but I did find a scratch library. I don't it wasn't a fiber optics that was just like, a bunch of scratches, just faint, like pixel scratches. And so I made a script to take all my images, all my clean images, and then I just put all the scratches from the scratch library on the clean images. So now I have a large data library of scratches. At least we also see blobs on there. I'll have to show you. It's been running for like, a while, but, yeah, I have a day library of scratches, and then
+
+Unknown Speaker  3:09  
+having the fiber types too. So my idea later on is that the script you type in like the fiber type you're using, and then it kind of directs the network to, like, go through the data library of specific to
+
+Unknown Speaker  3:26  
+SMAs at a certain diameter, or FCS at a certain diameter,
+
+Unknown Speaker  3:31  
+and that's that.
+
+Unknown Speaker  3:33  
+And then it'll do the best processing methods for that specific one. And then we'll have a rule set. So the rule set more like the manual filtering, so that will be the rule set. So the rules would be,
+
+Unknown Speaker  3:49  
+you open up the script, and then you type in, like, what type of fiber, it is, your diameter, and then you have, like, a manual circle alignment operation, and then
+
+Unknown Speaker  4:02  
+in the amount of defects that you're expecting to see, or whatever.
+
+Unknown Speaker  4:08  
+Yeah, this is more on the data library. So we're re running the original process, and then we're going to, I'll get into the matrix operations later, but then earlier, I made a studio for just like quick processing when I was learning the functions. And so I found out that, like with that, I can create a way with the studio where I have an input image and an output image, right? And so since it has, like every open CV function that I would have gone through anyways, I just, I just had the program automatically try to find
+
+Unknown Speaker  4:50  
+the right processes, like, it's just like going down through like a maze, essentially trying to find the right processes to get to the alpha image.
+
+Unknown Speaker  5:00  
+Image that I want. So I vote, I insert both images, and then like tries to go through the process of finding that, and
+
+Unknown Speaker  5:08  
+I'm going to use that as a way to help train the algorithm, as well as like help this like template matching system. So let's say I have like a image of like a the plain fiber optic,
+
+Unknown Speaker  5:22  
+and I would just want the core. So I would insert the full fiber optic image, and then the core, and then it'll just run through any of the processes in combination with each other until it finds the core. Yeah.
+
+Unknown Speaker  5:37  
+So that this is all the ways we're creating this data Library.
+
+Unknown Speaker  5:43  
+In addition to that, there's going to be, like, a feedback system where we just tell the computer Hey, or, like, we see a defect that didn't catch, and we click on that, and then we can save defect here, and then it'll just learn based off those image values,
+
+Unknown Speaker  6:03  
+yeah, so you could, you could go next, yeah, there's, there's a lot. So
+
+Unknown Speaker  6:10  
+for the matrix operations, this is how like pytorch works in the background. So it takes a, like a array, like just a numpy array, or, like any type of array. And then it could be like array of our images, and then it goes into like the torch tensor library, and converts that array into a tensor.
+
+Unknown Speaker  6:31  
+And then you could convert it into a floating number, so it runs in RAM, so it does less calculations. What is
+
+Unknown Speaker  6:40  
+a tensor? Is So I've learned with tensors. A long time ago, I forgot what is a tensor. You have a you have a matrix, and then a tensor is like a cube. So one side of the rubik cube is just your matrix, but then the tensor is the full rubik cube, all nine sides.
+
+Unknown Speaker  7:16  
+A three dimensional matrix,
+
+Unknown Speaker  7:21  
+I guess, multi dimensional nature, yeah,
+
+Unknown Speaker  7:28  
+name it. Why
+
+Unknown Speaker  7:29  
+do they call it a tensor instead of just another kind of program? It has to do with set theory. It has to do with what's
+
+Unknown Speaker  7:39  
+it called, linear algebra, yeah. The way, it's an operator,
+
+Unknown Speaker  7:45  
+it's a basic form of operation,
+
+Unknown Speaker  7:52  
+yeah. So what pi squares does, so a tensor
+
+Unknown Speaker  7:58  
+is like a operator that converts matrices from one to another,
+
+Unknown Speaker  8:04  
+yeah, and then what's higher, taking our image, yeah, and
+
+Unknown Speaker  8:09  
+converting it to a tensor,
+
+Unknown Speaker  8:13  
+but yeah, so we can, we could do this with both our image, but we also do this with our processes. So for like the methods, if we convert like, if the output is x, x means
+
+Unknown Speaker  8:32  
+one right, one in this dimension. And then for every process, we give it like a set number. So now we have a matrix, or like a system of equations for the output of the processes, and then we send that to pi torch in the form of just a linear matrix, and then it converts it to a tensor, and then it learns based off those outputs. And then it can apply that like method back to it
+
+Unknown Speaker  9:00  
+in a way that it learns and like grows based off the output, so it can better recognize those outputs specifically. But for the same thing, with images, we give it like a linear system of an image. We're going to first flatten it. I'll show that the next slide,
+
+Unknown Speaker  9:18  
+but we'll flatten the image to like a linear system. Give that to pytorch, it'll like learn the linear system apply like a random linear system that's similar to our linear system, and then they'll just learn based off the random systems that it creates, is that something that pytorch does, is that something that you are doing the random system is something within pytorch. So this is just a way pytorch does its thing. It creates a random matrix of the same
+
+Unknown Speaker  9:51  
+grade, or whatever that word is, yeah,
+
+Unknown Speaker  9:55  
+to
+
+Unknown Speaker  9:58  
+to learn variations of.
+
+Unknown Speaker  10:00  
+Up we have, yeah,
+
+Unknown Speaker  10:04  
+you could
+
+Unknown Speaker  10:08  
+go there. What's the app upper? That's the dot product. Yeah, is that
+
+Unknown Speaker  10:14  
+Python dot product,
+
+Unknown Speaker  10:18  
+or is that
+
+Unknown Speaker  10:21  
+a TensorFlow
+
+Unknown Speaker  10:23  
+specific
+
+Unknown Speaker  10:25  
+this is, this is TensorFlow specific? Well, pytorch specific. Weird, yeah. I thought
+
+Unknown Speaker  10:32  
+it was interesting. You could also use torch map school, yeah, yeah, map move, and this is
+
+Unknown Speaker  10:41  
+what I was saying. So you would take your system and neural network,
+
+Unknown Speaker  10:51  
+neural network, yeah, so you'll take your system, you'll flatten your system to like a linear system of equations, and then we'll flatten that, as in,
+
+Unknown Speaker  11:01  
+take a matrix and take every element and make it its
+
+Unknown Speaker  11:06  
+own linear equation.
+
+Unknown Speaker  11:09  
+Yeah, I'm sorry, I'm very visible. So,
+
+Unknown Speaker  11:14  
+so you would have like, 123456789,
+
+Unknown Speaker  11:20  
+and then this is like x1 x2 x3
+
+Unknown Speaker  11:25  
+and then you would find the like,
+
+Unknown Speaker  11:29  
+I'm like blanking on linear algebra, but you would find the correlating value. And then it would be like,
+
+Unknown Speaker  11:35  
+a x1 plus B x2 plus C x3
+
+Unknown Speaker  11:41  
+and this would be your linear system, and that corresponds to that matrix? Yes, in some sort of fashion, yeah, so like you're taking this matrix and then you're flattening it to these values, yeah, I learned a crap load of linear algebra in undergrad in grad school, but I forgot everything. Yeah, please forgive me.
+
+Unknown Speaker  11:59  
+Let's keep going. Yeah, it.
+
+Unknown Speaker  12:03  
+Please forgive me. So after I liked it, yeah, after you flatten it, so you'll take your features and then you'll give it. Give TensorFlow, not sensor flow, pytorch, the features you like, the amount of features you want to see. So
+
+Unknown Speaker  12:22  
+So amount of spaces. So this right here is the pixel dimensions, yeah? So, like every pixel in that area, so we're giving it the area, and then we're saying, hey, we want this much instead of this much.
+
+Unknown Speaker  12:38  
+Yeah?
+
+Unknown Speaker  12:41  
+So yeah, if we, if we gave it that much, it would be, like,
+
+Unknown Speaker  12:46  
+near a million features.
+
+Unknown Speaker  12:48  
+But we So, we're, we're, yeah, yeah. We don't need every single pixel would be a feature, yeah, then just say any bright pixel or something, you know what? I mean. Yeah. Okay, so we're reducing the pixel amount. And then this one's a little, I don't know.
+
+Unknown Speaker  13:07  
+There's just this command that, like, tells pytorch to learn, and that's it, and dot r, e, l, u, rectified linear unit.
+
+Unknown Speaker  13:19  
+So, yeah, it just tells it to learn from non linear patterns.
+
+Unknown Speaker  13:27  
+And then we're taking this part, and then we're just classifying it to 10 outputs. So we're taking our giant matrix, reducing it, flattening it, then reducing it more. And then we get this. So we start out with defining class, and then we initialize the class, and we What's the word for that?
+
+Unknown Speaker  13:52  
+Inherit image classifier.
+
+Unknown Speaker  13:58  
+And what's image classifier? Why is it inheriting itself? That's just something you have to do for
+
+Unknown Speaker  14:06  
+high torch. That's weird, yeah, I was afraid. So we
+
+Unknown Speaker  14:10  
+so it takes itself as a parent class,
+
+Unknown Speaker  14:15  
+isn't that? Is it? So
+
+Unknown Speaker  14:19  
+that's just something they tell you to do, yeah, yeah, okay. I mean, I'm not gonna,
+
+Unknown Speaker  14:25  
+I mean, I would love to know why they need to do that. Normally, you inherit another class, right? Yeah, to get the functions, and that's sort of the whole point of inheriting the class. So why would you inherit the class? Hurry to define as constructed.
+
+Unknown Speaker  14:42  
+Is that something that is
+
+Unknown Speaker  14:45  
+that, something that
+
+Unknown Speaker  14:48  
+you should do, that's from the documentation, so it has to be done?
+
+Unknown Speaker  14:55  
+Yeah? All right, yeah. I mean,
+
+Unknown Speaker  14:59  
+we can get.
+
+Unknown Speaker  15:00  
+To object oriented theory and all that. But
+
+Unknown Speaker  15:05  
+so
+
+Unknown Speaker  15:07  
+what's object oriented theory? Well, my classes,
+
+Unknown Speaker  15:13  
+yeah, class function, method. Methods are the functions of the class attributes are there sort of variables and yeah, yeah. Classes exist to allow you to have classes, and it's
+
+Unknown Speaker  15:32  
+all very abstract,
+
+Unknown Speaker  15:35  
+yeah, so I like, had I have a whole book on it. I have multiple books on it, because I got really into reading about computer programming. It's actually really interesting, I think. And then there's another form of functional programming, which I've never really gotten into, but apparently it's also really a whole different paradigm how to code. I think I'm an absolute look into that. Yeah. I mean, it's interesting. I mean, I mean, Python is the bastion of object oriented, yeah, like, they teach classes, like, it's just how to program what, in reality, that's how object oriented. I mean,
+
+Unknown Speaker  16:11  
+like, since I've gotten more into like C, which is just, you know, you define a function, you define global variables, or, you know, and that's it, that's as far as he goes. Like, C goes, is just goes to function, yeah? So, like, there's nothing abstract about it, yeah, but it's interesting that, like, how much?
+
+Unknown Speaker  16:34  
+Anyways,
+
+Unknown Speaker  16:38  
+so this is all just sort of following the documentation on how to do, yeah, okay, all
+
+Unknown Speaker  16:44  
+right, this is good,
+
+Unknown Speaker  16:51  
+because I've always wanted to learn this stuff. That's why I actually, I'm not, like analyzing you.
+
+Unknown Speaker  16:57  
+Actually just interested in, yeah, I figured that's why I had so much.
+
+Unknown Speaker  17:02  
+So we have to define a forecast, so the data just flows through that network. Specifically, it's the same thing we did before. So this is just like summarized we define the class, we flatten it, and then we just go sequentially through layers, and it returns like a different value based off and what's a layer? Is it just what's a layer? Is that defined earlier? It's
+
+Unknown Speaker  17:29  
+we would call the production a layer.
+
+Unknown Speaker  17:34  
+So
+
+Unknown Speaker  17:35  
+the linear equation the layer? Yeah, so
+
+Unknown Speaker  17:40  
+the first nine. I mean, the first 900,000
+
+Unknown Speaker  17:44  
+would be our first layer, but then we're reducing that to get our second layer, which is the 512
+
+Unknown Speaker  17:51  
+and then we're reducing that to get so we're like, averaging
+
+Unknown Speaker  17:56  
+how,
+
+Unknown Speaker  17:58  
+yeah, W
+
+Unknown Speaker  18:06  
+Yeah,
+
+Unknown Speaker  18:08  
+yeah, yeah,
+
+Unknown Speaker  18:10  
+yeah. So x would represent the batch of images, and then we would flatten it from 2d to 1d
+
+Unknown Speaker  18:17  
+and then after flattening we get like a just like a straight line, essentially, that we can help a computer to, like, easily compute and do fun together.
+
+Unknown Speaker  18:29  
+So it would, it would help us for learning,
+
+Unknown Speaker  18:33  
+but it would also, like, help us in, like, processing at that point, because so we need to first teach it, right? Yeah. So that's what most
+
+Unknown Speaker  18:43  
+of this is, is teaching. So, yeah, that's what. That's why I have, like, an old program like, producing so much output. So the output would be categorized into like FMA and then like FC core flat and barrels scratch, while things like that. And each of those outputs I'm going to classify with a number and then make a matrix based off those outputs. Well, I'm, I would, I would like, I would just like, code those as variables. So like, sma becomes like ones, and then sc becomes like 375, or something like that. And every time the computer sees a 375 it would know the operation to go to like SMA, and then further on. And then based off the image, I'll do a different combination of our like data library based off the number inputs of our data library. That's how I'm thinking of doing it,
+
+Unknown Speaker  19:41  
+making our data library into its own set of like matrix equations, and then putting that into TensorFlow so it can run that.
+
+Unknown Speaker  19:51  
+Another way to do it would be to have not TensorFlow high push run straight on the images, and then figure out a way to like run that with.
+
+Unknown Speaker  20:00  
+It the data library. I don't know. I don't know if that would be, well, we would need it to run again. We needed to run only on the
+
+Unknown Speaker  20:08  
+core platting for feral regions. You can't run it just on the images, so it will probably mess up. So yeah. So I think the best method would be to classify the library that we already have and then put that into TensorFlow so they can learn based off our library.
+
+Unknown Speaker  20:31  
+Well, we gotta be careful, because we can't give you a bunch of different images with different sizes. Yeah. Everything needs to be the same, the same, except for the ones that have debris and stuff, yeah? So, if anything, we should just, if we're
+
+Unknown Speaker  20:45  
+going to do it this way,
+
+Unknown Speaker  20:47  
+get a new library. If anything, we just delete that library.
+
+Unknown Speaker  20:52  
+Right? Is that, like it takes what it takes, like, overnight or, like, a couple days to run? Yeah, on that, if we, if we end up, I mean, it sounds, sounds like every time we we are going to make an instrument that this, that test fiber.
+
+Unknown Speaker  21:09  
+We'll just have to have it trained on that for like, 1000 images or something. Yeah. I mean, I'm just throwing that number out there, yeah, and that'll be the protocol. Yeah,
+
+Unknown Speaker  21:20  
+we can't, I don't think there's an I don't I don't
+
+Unknown Speaker  21:25  
+see how it can do different dimensions, of course, and learn without any user interference, right? Yeah. Well, on the
+
+Unknown Speaker  21:33  
+we have a lot of similar images. Let me, let me pull it up so they're similar, but the pixels are different sizes. I mean,
+
+Unknown Speaker  21:42  
+I fixed the pixel size error. But the thing, the thing I'm thinking is that, yes, we can't, like, have it, yeah, good. We can't have it, like, run on, like, different images. So that's why I'm thinking of, like, classifying the images in the data set. So, like,
+
+Unknown Speaker  22:05  
+so here is, like, each one of you is a different version of the FMA already.
+
+Unknown Speaker  22:14  
+So, like, these are all different images that you took of the same
+
+Unknown Speaker  22:18  
+SMA, or they all so, yeah.
+
+Unknown Speaker  22:22  
+So, so this is a same size as May, and then this
+
+Unknown Speaker  22:29  
+is another size,
+
+Unknown Speaker  22:32  
+like another size, not a another picture entirely. Oh, the same as yet. Is that with the length? Or no, it isn't the district.
+
+Unknown Speaker  22:42  
+Yeah, so they're all like, I don't know if I could see
+
+Unknown Speaker  22:48  
+the picture. I don't think I can see the pixels, but they're all 1152,
+
+Unknown Speaker  22:54  
+by 864,
+
+Unknown Speaker  22:56  
+and so instead of liking this, I would just add like another folder
+
+Unknown Speaker  23:08  
+to like classify. So I was just wondering what to name it. Yeah, I also wanted to make this a little entertaining, because these are a lot of slides, but I was wondering, what's name it. And then, like, you know, Microsoft spotlight on it just changed my wallpaper to a polar bear. I was like, You know
+
+Unknown Speaker  23:29  
+what? I'll just name that. We could change the name.
+
+Unknown Speaker  23:32  
+Yeah.
+
+Unknown Speaker  23:34  
+But yeah, so we have a bear.
+
+Unknown Speaker  23:41  
+Well, you know what? Candace,
+
+Unknown Speaker  23:44  
+yeah. There's also polars,
+
+Unknown Speaker  23:47  
+and polars is, like, way faster than pandas,
+
+Unknown Speaker  23:51  
+which is like a data science, like
+
+Unknown Speaker  23:54  
+data frame library, yeah, so I think we would just create another classification.
+
+Unknown Speaker  24:04  
+And we just continue doing that based off that, instead of wiping all the images we already have, because some of these are good, yeah.
+
+Unknown Speaker  24:14  
+But if you want to train more of like, similar images, I'm considering moving, turning the learning portion of the code to HPC with pytorch. And then
+
+Unknown Speaker  24:28  
+I asked, How long does it take her to learn?
+
+Unknown Speaker  24:33  
+Like overnight, but like mine, I ran on the full data library, and it's still going, yeah, so I'm thinking, how long would an HPC go and would we need to pay for that order? If I do it, it would be super confusing from like
+
+Unknown Speaker  24:51  
+Amazon.
+
+Unknown Speaker  24:52  
+That would be awesome, yeah, but more tangible, like I.
+
+Unknown Speaker  25:00  
+So we would have to have something a little more like, this
+
+Unknown Speaker  25:04  
+is what we're going to test. This is like, yeah, I don't
+
+Unknown Speaker  25:08  
+know how much it costs. Probably isn't that expensive, yeah. But, um, I can do it at the school computer. I have, like, full access to that. And they, they kind of want me to use it, yeah, yeah. So I would be able to do it there. And all I would need to do, I would have to change it from normal Python, and then I would have to, like, tell it operations to run in parallel. Like, change it from CPUs and GPU, and then run it on the HPC, and, like, have that going for like, 10 hours, and then after that, we would get, like, just a set of data that we can use later on that's already learned and trained. Yeah.
+
+Unknown Speaker  25:52  
+Okay, yeah, you good.
+
+Unknown Speaker  25:57  
+Yeah,
+
+Unknown Speaker  26:01  
+yeah. So that's it. So we're going, so my imagine that, yeah, we just click and drag the circle. Yeah, right. I mean, that would just get rid of so much frustration with these programs. Yeah? Because it's because, because
+
+Unknown Speaker  26:15  
+finding circles and measuring that is its own separate project. Yeah, that will have the utility, but,
+
+Unknown Speaker  26:23  
+but it's not,
+
+Unknown Speaker  26:25  
+it's not the main point of it. Yeah, this is defect recognition,
+
+Unknown Speaker  26:30  
+yeah, so,
+
+Unknown Speaker  26:32  
+but we're capable of separating circles now, which is good, yeah? But it takes a while. It takes a while. But, I mean, that's just because we're trying every single method all at once. Yeah, but yeah, so we can have the hardware help us. You know, either they click and drag it, or it's there and they align it to the circle, or
+
+Unknown Speaker  26:54  
+we have it back lit. If there's one circle and then see the inner circle, would take the I was thinking that like we also have to do concentricity. Wow, does
+
+Unknown Speaker  27:04  
+this? Yeah, that's not something we want to do right
+
+Unknown Speaker  27:08  
+now. Yeah, there's no reason to go that far.
+
+Unknown Speaker  27:11  
+Because one, the fiber itself has a concentricity spec
+
+Unknown Speaker  27:17  
+with tolerance normally. And two,
+
+Unknown Speaker  27:22  
+if they're using this, they don't need to,
+
+Unknown Speaker  27:26  
+if they're if they're going to put it in check, the feedback.
+
+Unknown Speaker  27:32  
+Also have to have a duconstercy every time it's going to be extra time, yeah,
+
+Unknown Speaker  27:37  
+but yeah, I was imagining club circle. Would like suggest the circle, and then you just align that. And then you, like, get another circle and align that. Oh, I was thinking we would just have it.
+
+Unknown Speaker  27:48  
+It would tell you what the circle size is.
+
+Unknown Speaker  27:52  
+You like, Oh, it's a 50 micron core, 125, micron platting. So it just gives you that circle, yeah, you just click it over there, yeah. I mean, that could be one, yeah, or rough circle.
+
+Unknown Speaker  28:04  
+I guess in terms of time, if a person has to intervene, it's also going to be very time.
+
+Unknown Speaker  28:10  
+But yeah, we could do a combination of the two,
+
+Unknown Speaker  28:14  
+because sometimes hub circles, right? And so you can just like, it'll just like, populate in that space. But like we can like the program I'm thinking will also have us put in the diameter so it would like align that in accordance to it. So we would, we would take the like 50 micron circle and then move it to our center, and then Huff, circle would like, align it, like, focus it there
+
+Unknown Speaker  28:44  
+better on the circle. Because sometimes, like, I might say the circle here, whereas it's right here. And then how circle would just, like, auto correct
+
+Unknown Speaker  28:54  
+to the right spot. That's my idea.
+
+Unknown Speaker  28:58  
+And then, yeah, the rule set will take the fiber dimensions, and then we'll also filter size, type, angle and depth. So Stuart wanted to see angle and depth of the defects. I've been mainly focusing on size and height, mostly height for now.
+
+Unknown Speaker  29:21  
+So he's saying that
+
+Unknown Speaker  29:24  
+if you flash a light on the deep face, oh, yeah, he wants to see. He wants to see if it's inside or outside. Yeah, no, he will see if it's any or now, yeah, that makes sense, yeah, because that would tell us a lot of information.
+
+Unknown Speaker  29:37  
+So it would tell us if it's a crater or if it's at least it does, yeah, yeah, depth in a so angle and depth are kind of the same thing. Yeah, very much though. Yeah, yeah, okay,
+
+Unknown Speaker  29:51  
+wrong way.
+
+Unknown Speaker  29:55  
+All right, so
+
+Unknown Speaker  29:58  
+the detection step only.
+
+Unknown Speaker  30:00  
+Me for, like, when we're running it, it'll be a rule set detection step, and then just run and that would be, that would be the main processes that you would see on the screen. Everything else would have, like, a billion things in the background. So what do you mean? It would just
+
+Unknown Speaker  30:20  
+so real time processing. It's a,
+
+Unknown Speaker  30:24  
+I thought real time processing is if you just put it on and automatically does it right? Well, yeah, yeah. So, like,
+
+Unknown Speaker  30:32  
+that was why I was asking for your, like, old
+
+Unknown Speaker  30:36  
+videos that. So, like, you would just, like the D scope, you would just not the dimension scope. You'll just put it in, and then it'll, like, take, like, quick images of the picture, but you see a video, and then I'll analyze those quick images, and, like, run this thing and then overlay the defects based off,
+
+Unknown Speaker  30:57  
+basically, you're just putting it in a while, yeah, while they just re it keeps taking images and it keeps doing its process. The problem I had was I was doing a circle recognition thing because I wanted to roll it and get concentricity
+
+Unknown Speaker  31:10  
+it like, slows it down. So if you're rolling it or moving it like, it's real choppy, yeah, it's not, I mean, it's, it's, I'm hoping that it's fast, fast. But it's not like, you know
+
+Unknown Speaker  31:23  
+that's it's not blazing fast,
+
+Unknown Speaker  31:26  
+yeah? So once we, I think once we, like, incorporate like pytorch and like other processes, it'll be a little faster.
+
+Unknown Speaker  31:37  
+Yeah, so many moving parts, yeah? So next, this is,
+
+Unknown Speaker  31:45  
+this is the detection step, how it's going right now.
+
+Unknown Speaker  31:49  
+So we would have to convert this like simplify this for the neural
+
+Unknown Speaker  31:54  
+network. So is this the one that does everything, it's just doing all the different steps, or is this? Yeah. So this is the current approach. So the structural similarity index adds up all the pixel pixels and divides it by total so this is what I've been calling like template matching. So we have our reference image, and then it just like takes, like different calculations based off the reference image.
+
+Unknown Speaker  32:24  
+The rest of them do similar things to that, but in different ways. So I'll go through local binary so for each pixel, it finds the surrounding pixel brightness and then tries to detect the defect. That way,
+
+Unknown Speaker  32:38  
+the gray level co occurrence matrix does the same thing, but like in a different way, whereas the local binary finds patterns, the grade level co occurrence matrix doesn't Fourier analysis breaks the image into wave patterns where high frequencies are scratches and low frequencies are just like the overall features. So like, if you blur out the image, you'll just see the overall features. But like, so what it does is it,
+
+Unknown Speaker  33:09  
+what does it mask the high frequency?
+
+Unknown Speaker  33:14  
+Yeah. So like, when you, when you blur out the image, like, really blurred out, it becomes like blobs, yeah. But when you like, see all the like, find details, you see all the noise, and you see the variations, whereas you'll really see a scratch or things like that. And then it creates a frequency map, showing where the scratches or patterns that it sees. And then what does it do? What that's a frequency method. So after all of them find their like defects, they populate like the image for like possible anomalies. And so when they so the separation step. So none of this is this is all just, this is all just straight up open CV functions, yeah. Okay, this, none of this is neural network stuff, right? No, this is what's running on your computer. Yeah, yeah, right now, yeah,
+
+Unknown Speaker  34:09  
+yeah. And this is doing a bunch of different things all at once, whereas, in the end, we're really just gonna choose a couple of these as the main way we're gonna do it,
+
+Unknown Speaker  34:18  
+right? Or is, or do you feel we could use all I feel you need to use all of them, but there might be one or two that we could remove. But, um, I feel that they all like. The combination of these for the detection step has proved that it works for the most part. Yeah. The question now is, how long does it
+
+Unknown Speaker  34:42  
+take the detection stuff alone? I haven't tried for one image, yeah, I can find that Well, I mean, like broad strokes, yeah, like 20 minutes.
+
+Unknown Speaker  34:52  
+I think detection step alone is like 20 minutes. Okay, yeah, the separation step takes a while. Yeah. So in these.
+
+Unknown Speaker  35:00  
+To be like, faster, like a second or two, yeah, yeah, yeah, ideally, yeah. So we can do real time, yeah, ideally, yeah, yeah. But at the end of the day,
+
+Unknown Speaker  35:12  
+well, it's like, it's a quality check, yeah? We're,
+
+Unknown Speaker  35:17  
+I mean, we're just gonna put it in, it's gonna run and it's gonna tell them pass or fail, yeah? And so if it takes 20 minutes,
+
+Unknown Speaker  35:25  
+it's slowing down the process, instead of speeding it up, yeah, which is why we gotta maybe figure out which ones are actually contributing, yeah. So this is the detection step for learning. So after we gain, like the defect library, we would just need to use the structural similarity index. So like everything else is just for the moment of like finding all patterns. But then after we learn, after we run the learning program, we just need to find similar patterns based off our library. And then if it finds, like, a similar pattern between a clean versus a dirty, it'll tell you, like, hey, this one's closer to dirty. And then run the processes for that dirty one and tell and
+
+Unknown Speaker  36:19  
+represent that on the
+
+Unknown Speaker  36:26  
+image.
+
+Unknown Speaker  36:29  
+So it's the distance of like you have a group of pixels with like a normal set, and then you have the like outlier, and it tells you the distance between the outlier and the group. So this works where you have like a blob and you have like the normal part of the ferrule. So be able to tell the blob from the normal part of the ferrule, because the outlier is like, really far. But whereas you can have like, you have a blob, but you have noise, and you have several outliers in the group, if the distance is close enough, but like they're not, they're not following like a pattern, then it's just noise and it's not actually a defect.
+
+Unknown Speaker  37:19  
+Yeah, and then the last three operations, Huff, line, scratch detection actually kind of works. So all health line does it just like, brings it up and then finds the pattern. Yeah, that's
+
+Unknown Speaker  37:32  
+how it does a circle, too. This is just a more basic, yeah, it's the same sort of thing. It's the same algorithm. I think it's just for different purpose. Yeah. So, yeah. So they all find defects in their own way, and then they just rank the defects they find. If, like one finds a defect others don't, then it's just ranked as a lower likely defect. But.
+
