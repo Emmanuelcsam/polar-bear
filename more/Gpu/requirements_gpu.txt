@@ -1,0 +1,25 @@
+# Core dependencies
+numpy>=1.21.0
+opencv-python>=4.5.0
+matplotlib>=3.3.0
+scipy>=1.7.0
+scikit-learn>=0.24.0
+Pillow>=8.0
+
+# GPU acceleration dependencies
+cupy-cuda11x>=10.0.0  # Adjust based on your CUDA version (cuda11x, cuda12x, etc.)
+
+# RAPIDS dependencies (optional, for GPU clustering)
+# Note: RAPIDS requires specific CUDA versions and conda installation
+# cuml-cu11>=22.0.0  # Install via conda: conda install -c rapidsai -c conda-forge -c nvidia cuml
+
+# Additional utilities
+tqdm>=4.62.0
+pyyaml>=5.4.0
+
+# For development and testing
+pytest>=6.2.0
+pytest-cov>=2.12.0
+
+# Note: For full GPU support with OpenCV, you need to build OpenCV from source with CUDA support
+# or use a pre-built package like opencv-contrib-python-headless with CUDA
