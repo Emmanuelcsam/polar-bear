@@ -1,0 +1,6 @@
+-91-clean
+-91-dirty-oil-wet-blob
+-91-dirty-scratched-oil-wet-blob
+-91-scratched
+-91-scratched
+-50-clean
