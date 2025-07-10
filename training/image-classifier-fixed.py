@@ -196,14 +196,12 @@ class KnowledgeBank:
 class AdvancedImageClassifier:
     def __init__(self, config_file="classifier_config.json"):
         self.config_file = config_file
+        self.load_config()
         
         print(f"[{timestamp()}] Using CPU processing (simplified version)")
         
-        # Initialize knowledge bank first
+        # Initialize knowledge bank
         self.knowledge_bank = KnowledgeBank()
-        
-        # Then load config
-        self.load_config()
         
         # Supported image formats
         self.image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.webp'}
@@ -331,7 +329,7 @@ class AdvancedImageClassifier:
         for theta in np.arange(0, np.pi, np.pi/4):
             for sigma in [1, 3]:
                 for frequency in [0.05, 0.25]:
-                    kernel = cv2.getGaborKernel((21, 21), sigma, float(theta), frequency, 0.5, 0)
+                    kernel = cv2.getGaborKernel((21, 21), sigma, theta, frequency, 0.5, 0)
                     filtered = cv2.filter2D(gray, cv2.CV_32F, kernel)
                     features.append(filtered.mean())
                     features.append(filtered.var())
@@ -731,7 +729,7 @@ class AdvancedImageClassifier:
                 # Classify image
                 classification, components, confidence = self.classify_image(image_path)
                 
-                if classification and confidence is not None and confidence > 0.6:  # Minimum confidence threshold
+                if classification and confidence > 0.6:  # Minimum confidence threshold
                     # Generate new filename
                     extension = Path(image_path).suffix
                     new_filename = f"{classification}{extension}"
@@ -798,7 +796,7 @@ class AdvancedImageClassifier:
             # Try automatic classification first
             classification, components, confidence = self.classify_image(image_path)
             
-            if classification and confidence is not None and confidence > 0.5:
+            if classification and confidence > 0.5:
                 print(f"[{timestamp()}] Suggested classification: {classification} (confidence: {confidence:.3f})")
                 print(f"[{timestamp()}] Components: {components}")
             
