@@ -1,0 +1,97 @@
+ADV-SORT.PY - ADVANCED CHARACTER/IMAGE SORTER
+=============================================
+
+QUICK DEBRIEF (First 5 Points):
+1. Advanced image clustering system using perceptual hashing and color analysis
+2. Implements adaptive DBSCAN clustering with automatic parameter adjustment
+3. Features SQLite caching (features.sqlite) for performance optimization on large datasets
+4. Creates detailed reports and color-coded montages for each cluster
+5. Interactive mode with configurable outlier percentage targets (default: 5%)
+
+DETAILED DESCRIPTION:
+====================
+
+PURPOSE:
+--------
+Advanced image sorter that automatically groups visually similar images using machine learning clustering techniques. Designed for large-scale image organization with sophisticated similarity detection.
+
+KEY FEATURES:
+-------------
+• Perceptual Hashing: Uses 16x16 pHash and dHash for 128-dimensional feature vectors
+• Color Analysis: Computes normalized 32x32x32 color histograms
+• Adaptive Clustering: DBSCAN with automatic epsilon adjustment (starts at 0.45, grows by 0.25)
+• Performance Optimization: SQLite database caches feature vectors to avoid recomputation
+• Smart Stopping: Continues clustering until ≤5% of images remain unsorted
+• Comprehensive Reporting: JSON + TXT reports with detailed statistics
+• Visual Output: Color-coded montages showing clustered images
+
+TECHNICAL IMPLEMENTATION:
+------------------------
+• Hash Size: 16x16 for both pHash and dHash (64-bit each, total 128-D vector)
+• Clustering Algorithm: DBSCAN with StandardScaler normalization
+• Database: features.sqlite for persistent feature caching
+• Maximum Passes: 4 safety limit to prevent infinite loops
+• Minimum Samples: 2 initially, adjusts based on clustering results
+
+WORKFLOW:
+---------
+1. Recursively scans input folder for image files
+2. Computes or retrieves cached perceptual hash and color features
+3. Applies StandardScaler normalization to feature vectors
+4. Runs DBSCAN clustering with current epsilon value
+5. Evaluates outlier percentage and adjusts parameters if needed
+6. Repeats clustering with increased epsilon until target reached
+7. Generates comprehensive reports and visual montages
+8. Creates organized output directories for each cluster
+
+INPUT/OUTPUT:
+-------------
+• Input: Directory containing images (any common format)
+• Output: Clustered directories, JSON report, TXT summary, montage images
+• Cache: features.sqlite database for performance optimization
+• Logs: Detailed processing information with progress tracking
+
+DEPENDENCIES:
+-------------
+• Core: opencv-python, numpy, PIL, scikit-learn
+• Hashing: imagehash library for perceptual hashing
+• Database: sqlite3 (built-in Python)
+• Progress: tqdm for progress bars
+• Utilities: pathlib, collections, contextlib
+
+USE CASES:
+----------
+• Large photo collections organization
+• Duplicate and near-duplicate image detection
+• Dataset cleaning for machine learning
+• Digital asset management
+• Content deduplication workflows
+• Visual similarity analysis
+
+CONFIGURATION OPTIONS:
+---------------------
+• HASH_SIZE: Perceptual hash dimensions (default: 16)
+• TARGET_OUTLIER_PCT: Stop when this % remain unsorted (default: 5)
+• MAX_PASSES: Maximum clustering iterations (default: 4)
+• EPS_START: Initial DBSCAN epsilon value (default: 0.45)
+• EPS_GROWTH: Epsilon increment per pass (default: 0.25)
+• MIN_SAMPLES_INIT: Initial DBSCAN minPts (default: 2)
+
+PERFORMANCE CHARACTERISTICS:
+---------------------------
+• Processing Speed: ~100-1000 images per minute (depending on size/complexity)
+• Memory Usage: Scales with number of images and feature dimensions
+• Disk Usage: SQLite cache grows with unique images processed
+• Accuracy: High precision for visually similar images
+• Scalability: Handles thousands of images efficiently with caching
+
+ADVANCED FEATURES:
+-----------------
+• Classification Rules: Optional classification.txt file for manual overrides
+• Feature Caching: Persistent SQLite storage prevents recomputation
+• Adaptive Parameters: Automatic epsilon adjustment based on clustering results
+• Progress Tracking: Real-time progress bars and status updates
+• Error Recovery: Robust handling of corrupted or unsupported images
+• Cross-Platform: Works on Windows, macOS, and Linux systems
+
+This tool represents a sophisticated approach to image organization, combining computer vision techniques with machine learning clustering for intelligent automated sorting.

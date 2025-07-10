@@ -1,6 +1,0 @@
-2025-07-07 13:46:16,493 - INFO - Searching for images...
-2025-07-07 13:46:16,501 - INFO - Found 922 JPG/PNG files and 57 BMP files
-2025-07-07 13:46:16,501 - INFO - Generating 52554 combinations...
-2025-07-07 13:46:16,501 - INFO - [1/52554] Processing: 91_clean_20250705_0007.jpg + 52_s.bmp
-2025-07-07 13:46:22,579 - INFO - [2/52554] Processing: 91_clean_20250705_0007.jpg + 16_s.bmp
-2025-07-07 13:46:29,188 - INFO - [3/52554] Processing: 91_clean_20250705_0007.jpg + 40_s.bmp

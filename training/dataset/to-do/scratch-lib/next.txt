@@ -1,2 +1,0 @@
-make the script run different combinations of every file
-
