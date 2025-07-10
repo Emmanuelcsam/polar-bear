@@ -10,3 +10,8 @@ decrepit-versions/version732025/results/fiber_defective/2_separated/recolor_colo
 *.pkl
 *.afm
 *.csv
+*.jpg
+*.png
+*.jpeg
+*.db
+

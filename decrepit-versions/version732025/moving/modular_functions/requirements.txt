@@ -1,0 +1,26 @@
+# Requirements for Modular Fiber Optic Analysis Functions
+# Core dependencies
+opencv-python>=4.5.0
+numpy>=1.19.0
+pathlib2>=2.3.5
+
+# Image processing and scientific computing
+pillow>=8.0.0
+scipy>=1.6.0  # Optional - only needed for gradient_fiber_segmenter
+scikit-learn>=0.24.0  # Optional - only needed for traditional_defect_detector
+scikit-image>=0.18.0  # Optional - only needed for some advanced functions
+
+# Data handling
+pandas>=1.2.0  # Optional - for data analysis
+
+# Visualization (optional)
+matplotlib>=3.3.0  # Optional - for plotting
+
+# Machine Learning (optional)
+torch>=1.7.0  # Optional - for ML-based detection
+torchvision>=0.8.0  # Optional - for ML-based detection
+tensorflow>=2.4.0  # Optional - alternative to PyTorch
+
+# Development and testing
+pytest>=6.0.0  # Optional - for testing
+black>=21.0.0  # Optional - for code formatting

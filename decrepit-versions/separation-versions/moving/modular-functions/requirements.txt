@@ -1,0 +1,25 @@
+# Fiber Optic Image Analysis - Modular Functions Library
+# Requirements file for all dependencies
+
+# Core image processing
+opencv-python==4.12.0.88
+opencv-contrib-python==4.12.0.88
+
+# Scientific computing
+numpy>=2.2.0
+scipy>=1.16.0
+
+# Advanced image processing
+scikit-image>=0.25.0
+
+# Data visualization and analysis
+matplotlib>=3.10.0
+pandas>=2.3.0
+
+# Image I/O
+pillow>=11.3.0
+imageio>=2.37.0
+
+# Additional dependencies for specific features
+networkx>=3.5  # Required by scikit-image
+tifffile>=2025.6.0  # For TIFF image support
