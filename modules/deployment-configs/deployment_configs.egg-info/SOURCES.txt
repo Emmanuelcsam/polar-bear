@@ -1,0 +1,6 @@
+setup.py
+deployment_configs.egg-info/PKG-INFO
+deployment_configs.egg-info/SOURCES.txt
+deployment_configs.egg-info/dependency_links.txt
+deployment_configs.egg-info/requires.txt
+deployment_configs.egg-info/top_level.txt

@@ -74,6 +74,7 @@ pip install -r test_requirements.txt
 ### Quick Start
 
 1. **Prepare Reference Images**
+
    ```
    references/
    ├── cats/
@@ -91,31 +92,34 @@ pip install -r test_requirements.txt
    ```
 
 2. **Build Pixel Database**
+
    ```python
    import pixel_sampler_refactored as ps
-   
+
    # Build database from reference images
    pixel_db = ps.build_pixel_database('references/', sample_size=100)
    ps.save_pixel_database(pixel_db, 'pixel_db.pkl')
    ```
 
 3. **Analyze Images**
+
    ```python
    import correlation_analyzer_refactored as ca
-   
+
    # Load database and weights
    pixel_db = ca.load_pixel_database('pixel_db.pkl')
    weights = ca.load_weights('weights.pkl') or {cat: 1.0 for cat in pixel_db}
-   
+
    # Analyze single image
    category, scores, confidence = ca.analyze_image('test_image.jpg', pixel_db, weights)
    print(f"Category: {category}, Confidence: {confidence:.2%}")
    ```
 
 4. **Batch Processing**
+
    ```python
    import batch_processor_refactored as bp
-   
+
    # Process directory of images
    results = bp.process_batch('images_to_process/', pixel_db, weights)
    bp.save_results(results, 'results.json')
@@ -124,6 +128,7 @@ pip install -r test_requirements.txt
 ### Advanced Usage
 
 #### Weight Learning
+
 ```python
 # Update weights based on feedback
 weights = ca.update_weights_from_feedback(weights, predicted='cat', correct='dog')
@@ -131,6 +136,7 @@ ca.save_weights(weights, 'weights.pkl')
 ```
 
 #### Result Review
+
 ```python
 import self_reviewer_refactored as sr
 
@@ -141,6 +147,7 @@ inconsistencies = sr.review_category_consistency(grouped)
 ```
 
 #### Statistics
+
 ```python
 # Get system statistics
 stats = ps.get_database_stats(pixel_db)
@@ -180,6 +187,7 @@ python -m unittest test_pixel_sampler -v
 ### Test Coverage
 
 The test suite covers:
+
 - ✅ Function-level unit tests
 - ✅ Error handling and edge cases
 - ✅ File I/O operations
@@ -224,16 +232,19 @@ confidence = best_score / sum(all_scores)
 ## Performance Characteristics
 
 ### Scalability
+
 - **Database Size**: Handles thousands of categories with millions of pixels
 - **Processing Speed**: ~1-10 images per second (depends on comparisons parameter)
 - **Memory Usage**: Linear with database size (~100MB per 100K pixels)
 
 ### Accuracy
+
 - **Baseline**: 60-80% accuracy on diverse datasets
 - **With Learning**: Can improve to 85-95% with sufficient feedback
 - **Best Use Cases**: Images with distinct color patterns
 
 ### Limitations
+
 - **Color Dependency**: Relies heavily on color information
 - **Texture Blind**: Doesn't consider texture or shape
 - **Randomness**: Results may vary due to random pixel sampling
@@ -259,24 +270,28 @@ confidence = best_score / sum(all_scores)
 ### Common Issues
 
 1. **Import Errors**
+
    ```bash
    # Install missing dependencies
    python auto_installer_refactored.py
    ```
 
 2. **Memory Issues**
+
    ```python
    # Reduce sample size
    pixel_db = ps.build_pixel_database('refs/', sample_size=50)
    ```
 
 3. **Low Accuracy**
+
    ```python
    # Increase comparisons
    category, scores, conf = ca.analyze_image(img, db, weights, comparisons=200)
    ```
 
 4. **Inconsistent Results**
+
    ```python
    # Review and re-analyze
    inconsistencies = sr.review_category_consistency(grouped)
@@ -285,6 +300,7 @@ confidence = best_score / sum(all_scores)
 ### Debug Mode
 
 Enable verbose logging by setting environment variable:
+
 ```bash
 export DEBUG=1
 python your_script.py
@@ -330,6 +346,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Changelog
 
 ### v1.0.0 (Current)
+
 - Initial release
 - Complete refactoring of original scripts
 - Comprehensive test suite
@@ -341,6 +358,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Support
 
 For issues and questions:
+
 1. Check the troubleshooting section
 2. Review test cases for usage examples
 3. Create an issue in the repository

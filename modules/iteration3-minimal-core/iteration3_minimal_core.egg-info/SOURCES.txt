@@ -1,0 +1,5 @@
+setup.py
+iteration3_minimal_core.egg-info/PKG-INFO
+iteration3_minimal_core.egg-info/SOURCES.txt
+iteration3_minimal_core.egg-info/dependency_links.txt
+iteration3_minimal_core.egg-info/top_level.txt

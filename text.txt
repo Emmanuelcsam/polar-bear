@@ -1,0 +1,56 @@
+make a script that does a deep deep crawl through the folders 
+  /home/jarvis/Documents/GitHub/polar-bear/training 
+  /home/jarvis/Documents/GitHub/polar-bear/ruleset and 
+  /home/jarvis/Documents/GitHub/polar-bear/modules finding all the python 
+  scripts, images, and data files(.json, .log, .pkl, PKG-info, .txt) that 
+  arent in venv or virtual environment in all subfolders and subfolders of 
+  subfolders and subfolders of all subsequent subfolders, the script you 
+  make will be a master controler hive mind that finds the connection 
+  between these scripts, and understands how to run them, all scripts in 
+  those folders I listed earlier(and subsequent subfolders) are going to be
+   a part of a deep neural network for image classification which is geared
+   toward fiberoptic images, you will create the hivemind or head of this 
+  network that will be able to tune the parameters, variables, and values 
+  of each script so that it can better analyze an image with their 
+  features, it will also know what best combinations of the scripts to use 
+  to better analyze an image, it will also log all the paramters and 
+  information and paths it used, Make a robust python system               
+                 │
+  │    do not use argparse flags or arguments                              
+   │
+  │    make it autodetect if I have all my requirements and libraries      
+   │
+  │    installed                                                           
+   │
+  │    if I don't have something installed it will autoinstall the latest  
+   │
+  │    version and not the decrepit version                                
+   │
+  │    make it detailed and make it log every action that it takes in the  
+   │
+  │    terminal and a log file as soon as it takes the action              
+   │
+  │     for anything that need to be configured it will ask me in string   
+   │
+  │    questions  
+  I prefer that the script is very          │
+  │    intelligent robust and detailed since these will be nodes on a 
+  neural network,  │
+  │    Im doing image classification so the network will essentailly come  
+   │
+  │    back to these scripts and attempt to use them to better classify or 
+   │
+  │    characterize an image depending on what its seeing, the overall     
+   │
+  │    netowork will run both processes intially but after running on its  
+   │
+  │    specific dataset long enough it will choose the process that works  
+   │
+  │    best for it, you should also make it so that the network has the    
+   │
+  │    ability to tune all parameters or variables within all scripts that 
+  way the more it runs on its data set  │
+  │    the more it knows what processes to use and the better it can tune  
+   │
+  │    processes for more refined results
+

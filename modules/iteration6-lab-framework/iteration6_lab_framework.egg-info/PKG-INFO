@@ -1,0 +1,14 @@
+Metadata-Version: 2.4
+Name: iteration6-lab-framework
+Version: 0.1.0
+Summary: A project dynamically packaged by the Neural Framework.
+Requires-Python: >=3.6
+Requires-Dist: torch>=2.3.0
+Requires-Dist: opencv-python>=4.10.0
+Requires-Dist: numpy>=1.27.0
+Requires-Dist: pillow>=10.3.0
+Requires-Dist: scikit-learn>=1.6.0
+Requires-Dist: watchdog>=4.0.0
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary

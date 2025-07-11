@@ -1,0 +1,7 @@
+README.md
+setup.py
+iteration10_numbered_pipeline.egg-info/PKG-INFO
+iteration10_numbered_pipeline.egg-info/SOURCES.txt
+iteration10_numbered_pipeline.egg-info/dependency_links.txt
+iteration10_numbered_pipeline.egg-info/requires.txt
+iteration10_numbered_pipeline.egg-info/top_level.txt

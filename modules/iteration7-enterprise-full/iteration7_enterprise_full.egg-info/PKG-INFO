@@ -1,0 +1,22 @@
+Metadata-Version: 2.4
+Name: iteration7-enterprise-full
+Version: 0.1.0
+Summary: A project dynamically packaged by the Neural Framework.
+Requires-Python: >=3.6
+Requires-Dist: Pillow==11.0.0
+Requires-Dist: numpy==2.2.1
+Requires-Dist: scikit-learn==1.6.0
+Requires-Dist: matplotlib==3.10.0
+Requires-Dist: scipy==1.15.0
+Requires-Dist: opencv-python==4.11.0.88
+Requires-Dist: torch==2.5.1
+Requires-Dist: torchvision==0.20.1
+Requires-Dist: psutil==6.1.1
+Requires-Dist: h5py==3.12.1
+Requires-Dist: pyyaml==6.0.2
+Requires-Dist: seaborn==0.13.2
+Requires-Dist: joblib==1.5.0
+Requires-Dist: requests==2.32.3
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary

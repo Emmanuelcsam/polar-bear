@@ -1,0 +1,5 @@
+setup.py
+iteration2_basic_stats.egg-info/PKG-INFO
+iteration2_basic_stats.egg-info/SOURCES.txt
+iteration2_basic_stats.egg-info/dependency_links.txt
+iteration2_basic_stats.egg-info/top_level.txt

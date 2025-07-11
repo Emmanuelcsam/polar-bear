@@ -50,37 +50,60 @@ def check_and_install_packages():
                     log("Note: autopy might require additional system dependencies", "WARNING")
                 sys.exit(1)
 
-# Run the package check
-check_and_install_packages()
+def main():
+    """Main function to run the full Murtaza workshop application."""
+    # Run the package check
+    check_and_install_packages()
 
-# Now import all required modules
-log("Importing required modules...")
-import cv2
-import mediapipe as mp
-import numpy as np
-import math
-import time
+    # Now import all required modules
+    log("Importing required modules...")
+    # Imports are moved here to ensure they are only imported when the script is run directly
+    # and after dependencies are checked.
+    global cv2, mp, np, math, time, autopy, AudioUtilities, IAudioEndpointVolume, cast, POINTER, CLSCTX_ALL
+    global AUTOPY_AVAILABLE, PYCAW_AVAILABLE
+    
+    import cv2
+    import mediapipe as mp
+    import numpy as np
+    import math
+    import time
 
-# Try to import optional modules
-try:
-    import autopy
-    AUTOPY_AVAILABLE = True
-    log("✓ autopy imported successfully")
-except ImportError:
-    AUTOPY_AVAILABLE = False
-    log("✗ autopy not available - Virtual Mouse project will be limited", "WARNING")
+    try:
+        import autopy
+        AUTOPY_AVAILABLE = True
+        log("✓ autopy imported successfully")
+    except ImportError:
+        AUTOPY_AVAILABLE = False
+        log("✗ autopy not available - Virtual Mouse project will be limited", "WARNING")
 
-try:
-    from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
-    from ctypes import cast, POINTER
-    from comtypes import CLSCTX_ALL
-    PYCAW_AVAILABLE = True
-    log("✓ pycaw imported successfully")
-except ImportError:
-    PYCAW_AVAILABLE = False
-    log("✗ pycaw not available - Volume Control project will be limited", "WARNING")
+    try:
+        from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
+        from ctypes import cast, POINTER
+        from comtypes import CLSCTX_ALL
+        PYCAW_AVAILABLE = True
+        log("✓ pycaw imported successfully")
+    except ImportError:
+        PYCAW_AVAILABLE = False
+        log("✗ pycaw not available - Volume Control project will be limited", "WARNING")
 
-log("All imports completed")
+    log("All imports completed")
+
+    log("Starting Advanced Computer Vision Course")
+    log("Based on Murtaza's Workshop Tutorial")
+    log("="*60)
+    
+    try:
+        main_menu()
+    except KeyboardInterrupt:
+        log("\nProgram interrupted by user", "WARNING")
+    except Exception as e:
+        log(f"Unexpected error: {e}", "ERROR")
+    finally:
+        cv2.destroyAllWindows()
+        log("Program ended")
+
+if __name__ == "__main__":
+    main()
 
 # ==================== HAND TRACKING MODULE ====================
 class HandDetector:

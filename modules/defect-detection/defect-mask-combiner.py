@@ -3,7 +3,7 @@ from typing import Dict, Optional, Tuple
 import cv2
 import numpy as np
 
-from log_message import log_message
+from neural_framework.core.logger import log
 from inspector_config import InspectorConfig
 from load_single_image import load_single_image
 from preprocess_image import preprocess_image
@@ -29,7 +29,7 @@ def combine_defect_masks(
     Returns:
         A single binary mask representing confirmed defects.
     """
-    log_message("Combining defect masks from multiple methods...")
+    log.info("Combining defect masks from multiple methods...")
     h, w = image_shape
     vote_map = np.zeros((h, w), dtype=np.float32)
 
@@ -43,7 +43,7 @@ def combine_defect_masks(
     confirmation_threshold = float(config.MIN_METHODS_FOR_CONFIRMED_DEFECT)
     combined_mask = np.where(vote_map >= confirmation_threshold, 255, 0).astype(np.uint8)
     
-    log_message(f"Mask combination complete. Final mask has {np.count_nonzero(combined_mask)} defect pixels.")
+    log.info(f"Mask combination complete. Final mask has {np.count_nonzero(combined_mask)} defect pixels.")
     return combined_mask
 
 if __name__ == '__main__':

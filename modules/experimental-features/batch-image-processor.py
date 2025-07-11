@@ -35,8 +35,19 @@ import aiofiles
 from functools import lru_cache
 
 # Import the main inspection system
-from ultimate_defect_detector import UltimateDefectDetector, DefectDetectionConfig
-from integration_workflow import CompleteFiberInspectionSystem
+try:
+    from ultimate_defect_detector import UltimateDefectDetector, DefectDetectionConfig
+    from integration_workflow import CompleteFiberInspectionSystem
+    ULTIMATE_DETECTOR_AVAILABLE = True
+except ImportError:
+    print("Warning: 'ultimate_defect_detector' or 'integration_workflow' not found. BatchProcessor functionality will be limited.")
+    ULTIMATE_DETECTOR_AVAILABLE = False
+    # Define dummy classes to allow the script to be imported without errors
+    class UltimateDefectDetector: pass
+    class DefectDetectionConfig: pass
+    class CompleteFiberInspectionSystem:
+        def __init__(self, config): pass
+        def inspect_fiber(self, path): return {}
 
 warnings.filterwarnings('ignore')
 
@@ -902,7 +913,7 @@ class BatchProcessor:
         for r in successful_results:
             for defect in r.get('defects', []):
                 dtype = defect.get('type', 'unknown')
-                defectTypes[dtype] = (defectTypes[dtype] || 0) + 1
+                defectTypes[dtype] = defectTypes.get(dtype, 0) + 1
                 
                 region = defect.get('region', '').lower()
                 if region in defectRegions:

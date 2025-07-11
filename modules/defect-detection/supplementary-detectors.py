@@ -3,7 +3,7 @@ from typing import Optional
 import cv2
 import numpy as np
 
-from log_message import log_message
+from neural_framework.core.logger import log
 from inspector_config import InspectorConfig
 from load_single_image import load_single_image
 from preprocess_image import preprocess_image
@@ -17,39 +17,29 @@ def detect_defects_canny(
     zone_name: str
 ) -> Optional[np.ndarray]:
     """Detects defects using Canny edge detection followed by morphological operations."""
-    log_message(f"Starting Canny defect detection for zone '{zone_name}'...")
-    blurred_for_canny = cv2.GaussianBlur(image_gray, (3, 3), 0)
-    edges = cv2.Canny(blurred_for_canny, config.CANNY_LOW_THRESHOLD, config.CANNY_HIGH_THRESHOLD)
-    edges_masked = cv2.bitwise_and(edges, edges, mask=zone_mask)
-    
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-    closed_edges = cv2.morphologyEx(edges_masked, cv2.MORPH_CLOSE, kernel, iterations=1)
-    
-    log_message(f"Canny detection for '{zone_name}' complete.")
-    return closed_edges
+    log.info(f"Starting Canny defect detection for zone '{zone_name}'...")
+    # Defaulting to a common Canny threshold range
+    canny = cv2.Canny(image, 50, 150)
+    canny = cv2.bitwise_and(canny, canny, mask=zone_mask)
+    log.info(f"Canny detection for '{zone_name}' complete.")
+    return canny
 
-def detect_defects_adaptive_thresh(
-    image_gray: np.ndarray, 
-    zone_mask: np.ndarray, 
-    config: InspectorConfig,
-    zone_name: str
-) -> Optional[np.ndarray]:
-    """Detects defects using adaptive thresholding."""
-    log_message(f"Starting Adaptive Threshold defect detection for zone '{zone_name}'...")
+def adaptive_threshold_detection(image: np.ndarray, zone_mask: np.ndarray, config: object) -> np.ndarray:
+    """Adaptive threshold detection for defects"""
+    log.info(f"Starting Adaptive Threshold defect detection for zone '{zone_name}'...")
     
-    block_size = config.ADAPTIVE_THRESH_BLOCK_SIZE
-    if block_size <= 1 or block_size % 2 == 0:
-        block_size = 11 # Fallback to a valid default
-        log_message(f"Config ADAPTIVE_THRESH_BLOCK_SIZE invalid, using {block_size}", level="WARNING")
+    block_size = getattr(config, 'ADAPTIVE_THRESH_BLOCK_SIZE', 21)
+    c_value = getattr(config, 'ADAPTIVE_THRESH_C_VALUE', 5)
 
-    adaptive_thresh_mask = cv2.adaptiveThreshold(
-        image_gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-        cv2.THRESH_BINARY_INV, block_size, config.ADAPTIVE_THRESH_C
-    )
-    defects_masked = cv2.bitwise_and(adaptive_thresh_mask, adaptive_thresh_mask, mask=zone_mask)
-    
-    log_message(f"Adaptive Threshold detection for '{zone_name}' complete.")
-    return defects_masked
+    if not isinstance(block_size, int) or block_size <= 1 or block_size % 2 == 0:
+        log.warning(f"Config ADAPTIVE_THRESH_BLOCK_SIZE invalid, using {block_size}")
+        block_size = 21
+
+    adaptive = cv2.adaptiveThreshold(image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                   cv2.THRESH_BINARY_INV, block_size, c_value)
+    adaptive = cv2.bitwise_and(adaptive, adaptive, mask=zone_mask)
+    log.info(f"Adaptive Threshold detection for '{zone_name}' complete.")
+    return adaptive
 
 if __name__ == '__main__':
     # Example of how to use the additional detector functions

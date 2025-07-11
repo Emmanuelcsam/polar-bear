@@ -30,7 +30,7 @@ def auto_install_dependencies(libraries=None):
     """Auto-install all required dependencies"""
     if libraries is None:
         libraries = ['torch', 'torchvision', 'numpy', 'opencv-python', 'pillow', 'scikit-learn']
-    
+
     results = {}
     for lib in libraries:
         if check_library_installed(lib):
@@ -44,7 +44,7 @@ def auto_install_dependencies(libraries=None):
             else:
                 print(f"✗ Failed to install {lib}")
                 results[lib] = 'failed'
-    
+
     return results
 
 

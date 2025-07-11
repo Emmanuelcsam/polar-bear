@@ -1,0 +1,5 @@
+setup.py
+pytorch_img_gen.egg-info/PKG-INFO
+pytorch_img_gen.egg-info/SOURCES.txt
+pytorch_img_gen.egg-info/dependency_links.txt
+pytorch_img_gen.egg-info/top_level.txt

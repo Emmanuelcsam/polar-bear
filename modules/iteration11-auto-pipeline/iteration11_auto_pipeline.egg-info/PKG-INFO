@@ -1,0 +1,12 @@
+Metadata-Version: 2.4
+Name: iteration11-auto-pipeline
+Version: 0.1.0
+Summary: A project dynamically packaged by the Neural Framework.
+Requires-Python: >=3.6
+Requires-Dist: numpy
+Requires-Dist: torch
+Requires-Dist: torchvision
+Requires-Dist: opencv-python
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary

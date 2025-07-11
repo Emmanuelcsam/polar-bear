@@ -29,43 +29,43 @@ def sample_pixels_from_image(image: np.ndarray, sample_size: int) -> List[np.nda
     """Sample random pixels from an image"""
     h, w = image.shape[:2]
     pixels = []
-    
+
     for _ in range(sample_size):
         y, x = random.randint(0, h-1), random.randint(0, w-1)
         pixels.append(image[y, x])
-    
+
     return pixels
 
 
 def build_pixel_database(reference_dir: str, sample_size: int = 100) -> Dict[str, List[np.ndarray]]:
     """Build a pixel database from reference images organized in directories"""
     pixel_db = {}
-    
+
     if not os.path.exists(reference_dir):
         raise ValueError(f"Reference directory does not exist: {reference_dir}")
-    
+
     for root, dirs, files in os.walk(reference_dir):
         for filename in files:
             if is_image_file(filename):
                 image_path = os.path.join(root, filename)
                 category = os.path.relpath(root, reference_dir)
-                
+
                 # Handle root directory case
                 if category == '.':
                     category = 'root'
-                
+
                 print(f"Sampling {image_path} → {category}")
-                
+
                 image = load_image(image_path)
                 if image is None:
                     continue
-                
+
                 if category not in pixel_db:
                     pixel_db[category] = []
-                
+
                 sampled_pixels = sample_pixels_from_image(image, sample_size)
                 pixel_db[category].extend(sampled_pixels)
-    
+
     return pixel_db
 
 
@@ -104,13 +104,13 @@ if __name__ == "__main__":
     print("Pixel Sampler starting...")
     ref_dir = input("Reference directory path: ")
     sample_size = int(input("Pixels per image to sample: "))
-    
+
     pixel_db = build_pixel_database(ref_dir, sample_size)
-    
+
     if pixel_db:
         stats = get_database_stats(pixel_db)
         print(f"Built database with {stats['categories']} categories and {stats['total_pixels']} pixels")
-        
+
         if save_pixel_database(pixel_db):
             print("✓ Pixel database saved successfully")
         else:

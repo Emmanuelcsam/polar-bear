@@ -1,0 +1,5 @@
+setup.py
+iteration8_pytorch_training.egg-info/PKG-INFO
+iteration8_pytorch_training.egg-info/SOURCES.txt
+iteration8_pytorch_training.egg-info/dependency_links.txt
+iteration8_pytorch_training.egg-info/top_level.txt

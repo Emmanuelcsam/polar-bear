@@ -17,3 +17,6 @@ decrepit-versions/version732025/results/fiber_defective/2_separated/recolor_colo
 *.sqlite
 *.pyc
 *.pyc
+*.log
+/modules/experimental-features/.venv-neural-connector
+/venv

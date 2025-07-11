@@ -1,0 +1,5 @@
+setup.py
+initial_thoughts_good.egg-info/PKG-INFO
+initial_thoughts_good.egg-info/SOURCES.txt
+initial_thoughts_good.egg-info/dependency_links.txt
+initial_thoughts_good.egg-info/top_level.txt

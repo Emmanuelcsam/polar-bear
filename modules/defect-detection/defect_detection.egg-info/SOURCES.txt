@@ -1,0 +1,5 @@
+setup.py
+defect_detection.egg-info/PKG-INFO
+defect_detection.egg-info/SOURCES.txt
+defect_detection.egg-info/dependency_links.txt
+defect_detection.egg-info/top_level.txt

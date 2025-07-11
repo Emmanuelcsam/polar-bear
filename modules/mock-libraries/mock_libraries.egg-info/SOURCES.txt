@@ -1,0 +1,11 @@
+setup.py
+mock_libraries.egg-info/PKG-INFO
+mock_libraries.egg-info/SOURCES.txt
+mock_libraries.egg-info/dependency_links.txt
+mock_libraries.egg-info/top_level.txt
+scikit-image-mock/__init__.py
+scikit-image-mock/feature/__init__.py
+scikit-image-mock/feature/texture-analysis-mock.py
+scikit-learn-mock/__init__.py
+scikit-learn-mock/clustering-algorithms-mock.py
+scikit-learn-mock/data-preprocessing-mock.py
