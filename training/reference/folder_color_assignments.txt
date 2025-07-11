@@ -1,0 +1,118 @@
+Folder Color Assignments
+============================================================
+
+Folder                                        | Color File
+------------------------------------------------------------
+
+ANOMALY Branch:
+------------------------------------------------------------
+anomaly                                       | darkgray_20.jpg
+
+BLOB Branch:
+------------------------------------------------------------
+blob                                          | darkred_3.jpg
+
+CLADDING Branch:
+------------------------------------------------------------
+cladding                                      | darkred.jpg
+
+CLEAN Branch:
+------------------------------------------------------------
+clean                                         | darkgray_23.jpg
+
+CORE Branch:
+------------------------------------------------------------
+core                                          | gray_31.jpg
+
+DIG Branch:
+------------------------------------------------------------
+dig                                           | darkgray_33.jpg
+
+DIRTY Branch:
+------------------------------------------------------------
+dirty                                         | gray_2.jpg
+
+FC Branch:
+------------------------------------------------------------
+fc                                            | darkgray_34.jpg
+fc/50                                         | gray_6.jpg
+fc/50/cladding                                | orange_2.jpg
+fc/50/core                                    | gray_27.jpg
+fc/50/ferrule                                 | darkgray_3.jpg
+fc/91                                         | cyan.jpg
+fc/91/cladding                                | gray_30.jpg
+fc/91/cladding/anomaly                        | gray_39.jpg
+fc/91/cladding/blob                           | darkgray_19.jpg
+fc/91/cladding/clean                          | gray_12.jpg
+fc/91/cladding/core                           | gray_36.jpg
+fc/91/cladding/dig                            | darkgray_21.jpg
+fc/91/cladding/dirty                          | darkgray_29.jpg
+fc/91/cladding/ferrule                        | darkgray_30.jpg
+fc/91/cladding/oil                            | darkred_2.jpg
+fc/91/cladding/scratched                      | gray_22.jpg
+fc/91/core                                    | gray_7.jpg
+fc/91/core/anomaly                            | gray_16.jpg
+fc/91/core/blob                               | darkgray_28.jpg
+fc/91/core/clean                              | gray_26.jpg
+fc/91/core/core                               | darkgray_12.jpg
+fc/91/core/dig                                | darkgray_38.jpg
+fc/91/core/dirty                              | darkgray_24.jpg
+fc/91/core/ferrule                            | darkgray_36.jpg
+fc/91/core/oil                                | darkgray_5.jpg
+fc/91/core/scratched                          | gray_18.jpg
+fc/91/ferrule                                 | darkgray_37.jpg
+fc/91/ferrule/anomaly                         | gray_28.jpg
+fc/91/ferrule/blob                            | gray_25.jpg
+fc/91/ferrule/clean                           | gray_23.jpg
+fc/91/ferrule/core                            | gray_15.jpg
+fc/91/ferrule/dig                             | darkgray_7.jpg
+fc/91/ferrule/dirty                           | darkgray_35.jpg
+fc/91/ferrule/ferrule                         | pink.jpg
+fc/91/ferrule/oil                             | darkgray_8.jpg
+fc/91/ferrule/scratched                       | gray_13.jpg
+
+FERRULE Branch:
+------------------------------------------------------------
+ferrule                                       | darkgray_11.jpg
+
+OIL Branch:
+------------------------------------------------------------
+oil                                           | darkgray_6.jpg
+
+SCRATCHED Branch:
+------------------------------------------------------------
+scratched                                     | gray_20.jpg
+
+SMA Branch:
+------------------------------------------------------------
+sma                                           | white.jpg
+sma/cladding                                  | lime.jpg
+sma/cladding/anomaly                          | gray_4.jpg
+sma/cladding/blob                             | darkgray_31.jpg
+sma/cladding/clean                            | darkgray_13.jpg
+sma/cladding/core                             | gray_11.jpg
+sma/cladding/dig                              | gray_5.jpg
+sma/cladding/dirty                            | gray_24.jpg
+sma/cladding/ferrule                          | teal.jpg
+sma/cladding/oil                              | darkgray_16.jpg
+sma/cladding/scratched                        | gray_34.jpg
+sma/core                                      | darkgray_9.jpg
+sma/core/anomaly                              | gray_35.jpg
+sma/core/blob                                 | darkgray_32.jpg
+sma/core/clean                                | darkgray_26.jpg
+sma/core/core                                 | darkgray_15.jpg
+sma/core/dig                                  | gray_21.jpg
+sma/core/dirty                                | darkgray_4.jpg
+sma/core/ferrule                              | darkgray_17.jpg
+sma/core/oil                                  | darkgray_2.jpg
+sma/core/scratched                            | darkgray_18.jpg
+sma/ferrule                                   | gray_14.jpg
+sma/ferrule/anomaly                           | darkgray_25.jpg
+sma/ferrule/blob                              | orange.jpg
+sma/ferrule/clean                             | gray_37.jpg
+sma/ferrule/core                              | darkgray_22.jpg
+sma/ferrule/dig                               | gray_29.jpg
+sma/ferrule/dirty                             | gray_3.jpg
+sma/ferrule/ferrule                           | darkgray_10.jpg
+sma/ferrule/oil                               | gray_32.jpg
+sma/ferrule/scratched                         | gray_33.jpg
