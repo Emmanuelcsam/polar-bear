@@ -20,3 +20,8 @@ decrepit-versions/version732025/results/fiber_defective/2_separated/recolor_colo
 *.log
 /modules/experimental-features/.venv-neural-connector
 /venv
+/training/venv
+/training/data-gen-cpu/dupe/test_env
+/training/studio-tools/tests/test_env
+/training/data-gen-cpu/tests/test_env
+/modules/iteration11-auto-pipeline/venv
