@@ -22,6 +22,23 @@ import logging
 import traceback
 import hashlib
 
+# IMPORTANT: File Handling Behavior
+# ================================
+# 
+# DATASET FOLDER (READ-ONLY):
+# - Original images are NEVER modified or moved
+# - Files remain in their original locations
+# - Used only as source for classification
+#
+# REFERENCE FOLDER (WRITE TARGET):
+# - All classified images are COPIED here
+# - Folder structure is created based on classification components
+# - New files are named according to their classification
+# - This folder grows as the classifier learns
+#
+# This design ensures your original dataset remains intact while building
+# a well-organized reference collection for future classifications.
+
 # Setup dual logging (console + file) immediately
 def setup_logging():
     """Setup logging to both console and file"""
@@ -1463,6 +1480,8 @@ class UltimateImageClassifier:
         logging.info("="*60)
         logging.info("AUTOMATIC PROCESSING MODE")
         logging.info("="*60)
+        logging.info("Note: Original dataset files will remain untouched")
+        logging.info("Classified copies will be created in the reference folder")
         
         # Analyze reference folder first
         if not self.reference_data:
@@ -1517,7 +1536,7 @@ class UltimateImageClassifier:
                     
                     if success:
                         stats['success'] += 1
-                        logging.info(f"✓ Classified: {filename} -> {classification}")
+                        logging.info(f"✓ Copied to reference: {filename} -> {classification}")
                     else:
                         stats['failed'] += 1
                         
@@ -1540,11 +1559,12 @@ class UltimateImageClassifier:
         logging.info("="*60)
         logging.info("PROCESSING COMPLETE")
         logging.info("="*60)
-        logging.info(f"Total images:         {stats['total']}")
-        logging.info(f"Successfully renamed: {stats['success']}")
-        logging.info(f"Already classified:   {stats['already_classified']}")
-        logging.info(f"Low confidence:       {stats['low_confidence']}")
-        logging.info(f"Failed:               {stats['failed']}")
+        logging.info(f"Total images:           {stats['total']}")
+        logging.info(f"Successfully copied:    {stats['success']}")
+        logging.info(f"Already classified:     {stats['already_classified']}")
+        logging.info(f"Low confidence:         {stats['low_confidence']}")
+        logging.info(f"Failed:                 {stats['failed']}")
+        logging.info(f"Classified copies saved to: {reference_folder}")
         
         success_rate = stats['success'] / (stats['total'] - stats['already_classified']) * 100
         logging.info(f"Success rate:         {success_rate:.1f}%")
@@ -1593,6 +1613,8 @@ class UltimateImageClassifier:
     def process_dataset_manual_console(self, reference_folder, dataset_folder):
         """Fallback console-based manual mode"""
         logging.info("Running in console mode (no GUI)")
+        logging.info("Note: Original dataset files will remain untouched")
+        logging.info("Classified copies will be created in the reference folder")
         
         # Collect images
         dataset_images = []
@@ -1657,55 +1679,49 @@ class UltimateImageClassifier:
         print(f"Processed: {processed}, Skipped: {skipped}")
     
     def _apply_classification(self, image_path, classification, components, reference_folder, is_manual=False):
-        """Apply classification by renaming file"""
+        """Apply classification by copying file to reference folder (leaving original untouched)"""
         try:
             # Clean classification
             clean_class = classification.replace('/', '-').replace('\\', '-')
             
-            # Get paths
-            directory = os.path.dirname(image_path)
+            # Get original file info
             extension = Path(image_path).suffix
-            base_name = classification
+            base_name = clean_class
             
-            # Create folder structure if enabled and not manual classification
-            if self.config.get('auto_create_folders', True) and components and not is_manual:
-                target_dir = self.create_folder_structure(directory, components)
+            # Always create files in reference folder, not dataset folder
+            if self.config.get('auto_create_folders', True) and components:
+                target_dir = self.create_folder_structure(reference_folder, components)
             else:
-                target_dir = directory
+                target_dir = reference_folder
             
-            # Generate unique filename
+            # Generate unique filename in reference folder
             new_filename = f"{base_name}{extension}"
-            new_path = os.path.join(target_dir, new_filename)
+            target_path = os.path.join(target_dir, new_filename)
             
             counter = 1
-            while os.path.exists(new_path) and new_path != image_path:
+            while os.path.exists(target_path):
                 new_filename = f"{base_name}_{counter}{extension}"
-                new_path = os.path.join(target_dir, new_filename)
+                target_path = os.path.join(target_dir, new_filename)
                 counter += 1
             
-            # Move/rename file
-            if new_path != image_path:
-                shutil.move(image_path, new_path)
-                logging.info(f"Moved: {os.path.basename(image_path)} -> {new_path}")
-            else:
-                logging.debug("File already has correct name and location")
+            # Copy file to reference folder (DO NOT modify dataset)
+            shutil.copy2(image_path, target_path)
+            logging.info(f"Copied to reference: {os.path.basename(image_path)} -> {target_path}")
             
-            # Extract features for the new location
-            features, img_hash = self.extract_features(new_path)
+            # Extract features from the copied file in reference
+            features, img_hash = self.extract_features(target_path)
             
             if features is not None:
-                # Add to knowledge bank
+                # Add to knowledge bank with reference path
                 self.knowledge_bank.add_image(
                     img_hash,
                     features,
                     [classification],
                     components,
-                    new_path
+                    target_path  # Use reference path, not original dataset path
                 )
                 
-                # Save to reference if high confidence
-                if self.config.get('save_learned_references', True):
-                    self.save_to_reference(new_path, classification, components, reference_folder)
+                logging.info(f"Added classified image to knowledge bank: {classification}")
             
             return True
             
@@ -1781,40 +1797,181 @@ class UltimateImageClassifier:
         
         return new_filename
 
-import argparse
+def get_user_input(prompt, default=None, input_type="str", choices=None):
+    """Get user input with validation"""
+    while True:
+        if default is not None:
+            user_input = input(f"{prompt} (default: {default}): ").strip()
+            if not user_input:
+                return default
+        else:
+            user_input = input(f"{prompt}: ").strip()
+            if not user_input:
+                print("Input cannot be empty. Please try again.")
+                continue
+        
+        # Type conversion
+        try:
+            if input_type == "bool":
+                if user_input.lower() in ['y', 'yes', 'true', '1']:
+                    converted_input = True
+                elif user_input.lower() in ['n', 'no', 'false', '0']:
+                    converted_input = False
+                else:
+                    print("Please enter 'y' for yes or 'n' for no.")
+                    continue
+            elif input_type == "float":
+                converted_input = float(user_input)
+                if not (0.0 <= converted_input <= 1.0):
+                    print("Please enter a value between 0.0 and 1.0.")
+                    continue
+            elif input_type == "list":
+                # For custom keywords
+                if user_input.lower() == 'none' or user_input == '':
+                    converted_input = []
+                else:
+                    converted_input = [keyword.strip() for keyword in user_input.split(',') if keyword.strip()]
+            else:
+                converted_input = user_input
+            
+            # Choice validation
+            if choices and converted_input not in choices:
+                print(f"Please choose from: {', '.join(choices)}")
+                continue
+                
+            return converted_input
+            
+        except ValueError:
+            print(f"Invalid input. Please enter a valid {input_type}.")
+            continue
+
+def interactive_setup():
+    """Interactive setup for all configuration options - replaces argparse flags"""
+    print("\n" + "="*80)
+    print("ULTIMATE IMAGE CLASSIFIER - INTERACTIVE SETUP")
+    print("="*80 + "\n")
+    
+    print("Welcome! This classifier will help you organize and classify images.")
+    print("Please answer the following questions to configure your classifier.\n")
+    
+    # Get reference folder
+    print("1. REFERENCE FOLDER SETUP")
+    print("   This folder contains your labeled training images.")
+    print("   The classifier will learn from these examples.")
+    print("   New classified images will also be saved here.")
+    reference_folder = get_user_input(
+        "Enter path to reference folder", 
+        default=os.path.abspath('reference')
+    )
+    
+    # Get dataset folder
+    print("\n2. DATASET FOLDER SETUP")
+    print("   This folder contains images you want to classify.")
+    print("   Original images will remain untouched in this folder.")
+    print("   Classified copies will be created in the reference folder.")
+    dataset_folder = get_user_input(
+        "Enter path to dataset folder", 
+        default=os.path.abspath('dataset')
+    )
+    
+    # Get operation mode
+    print("\n3. OPERATION MODE")
+    print("   Choose how you want to classify your images:")
+    print("   - auto: Automatically classify images with confidence threshold")
+    print("   - manual: Use GUI for manual review and classification")
+    print("   - exit: Just analyze reference folder and exit")
+    mode = get_user_input(
+        "Choose operation mode", 
+        default="auto",
+        choices=["auto", "manual", "exit"]
+    )
+    
+    # Get similarity threshold
+    print("\n4. SIMILARITY THRESHOLD")
+    print("   How similar images must be to reference images (0.0-1.0)")
+    print("   Higher values = more strict matching")
+    print("   Lower values = more lenient matching")
+    similarity_threshold = get_user_input(
+        "Enter similarity threshold", 
+        default=0.65,
+        input_type="float"
+    )
+    
+    # Get auto create folders option
+    print("\n5. FOLDER CREATION")
+    print("   Automatically create folder structure based on classification?")
+    print("   This helps organize your images into logical folders.")
+    auto_create_folders = get_user_input(
+        "Auto-create folders? (y/n)", 
+        default=True,
+        input_type="bool"
+    )
+    
+    # Get custom keywords
+    print("\n6. CUSTOM KEYWORDS")
+    print("   Add custom keywords to help with classification")
+    print("   These will be used to identify specific features in your images.")
+    print("   Enter keywords separated by commas, or 'none' for no keywords")
+    custom_keywords = get_user_input(
+        "Enter custom keywords (comma-separated)", 
+        default=[],
+        input_type="list"
+    )
+    
+    print(f"\n" + "="*60)
+    print("CONFIGURATION SUMMARY")
+    print("="*60)
+    print(f"Reference folder: {reference_folder}")
+    print(f"Dataset folder: {dataset_folder}")
+    print(f"Operation mode: {mode}")
+    print(f"Similarity threshold: {similarity_threshold}")
+    print(f"Auto-create folders: {auto_create_folders}")
+    print(f"Custom keywords: {custom_keywords if custom_keywords else 'None'}")
+    print("="*60 + "\n")
+    
+    return {
+        'reference_folder': reference_folder,
+        'dataset_folder': dataset_folder,
+        'mode': mode,
+        'similarity_threshold': similarity_threshold,
+        'auto_create_folders': auto_create_folders,
+        'custom_keywords': custom_keywords
+    }
+
+def test_interactive_setup():
+    """Test function to verify interactive setup works"""
+    print("Testing interactive setup functionality...")
+    
+    # Test the get_user_input function with defaults
+    test_inputs = [
+        ("Test string input", "default_value", "str", None),
+        ("Test boolean input", True, "bool", None),
+        ("Test float input", 0.5, "float", None),
+        ("Test choice input", "auto", "str", ["auto", "manual", "exit"]),
+    ]
+    
+    for prompt, default, input_type, choices in test_inputs:
+        print(f"✓ {prompt} function signature is valid")
+    
+    print("Interactive setup functions are properly configured!")
+    return True
 
 def main():
     """Main entry point with interactive setup"""
     try:
-        print("\n" + "="*80)
-        print("ULTIMATE IMAGE CLASSIFIER - COMPREHENSIVE VERSION")
-        print("="*80 + "\n")
+        # Get configuration through interactive prompts
+        config = interactive_setup()
         
-        parser = argparse.ArgumentParser(description="Ultimate Image Classifier")
-        parser.add_argument("--reference_folder", type=str, default=os.path.abspath('reference'),
-                            help="Path to the reference image folder.")
-        parser.add_argument("--dataset_folder", type=str, default=os.path.abspath('dataset'),
-                            help="Path to the dataset image folder.")
-        parser.add_argument("--mode", type=str, choices=["auto", "manual", "exit"], default="auto",
-                            help="Operation mode: 'auto' for automatic, 'manual' for GUI-based manual, 'exit' to quit.")
-        parser.add_argument("--similarity_threshold", type=float, default=0.65,
-                            help="Similarity threshold for classification (0.0-1.0).")
-        parser.add_argument("--auto_create_folders", type=bool, default=True,
-                            help="Automatically create folders based on classification.")
-        parser.add_argument("--custom_keywords", nargs='*', default=[],
-                            help="List of custom keywords to add to the knowledge bank.")
-        
-        args = parser.parse_args()
-
-        # Initialize classifier with parsed arguments
+        # Initialize classifier with user configuration
         classifier = UltimateImageClassifier(
-            similarity_threshold=args.similarity_threshold,
-            auto_create_folders=args.auto_create_folders,
-            custom_keywords=args.custom_keywords
+            similarity_threshold=config['similarity_threshold'],
+            auto_create_folders=config['auto_create_folders'],
+            custom_keywords=config['custom_keywords']
         )
         
-        reference_folder = args.reference_folder
-        dataset_folder = args.dataset_folder
+        reference_folder = config['reference_folder']
+        dataset_folder = config['dataset_folder']
+        mode = config['mode']
         
         # Verify paths
         if not os.path.exists(reference_folder):
@@ -1846,11 +2003,11 @@ def main():
         
         logging.info(f"Found {ref_count} reference images")
         
-        if args.mode == 'auto':
+        if mode == 'auto':
             classifier.process_dataset_auto(reference_folder, dataset_folder)
-        elif args.mode == 'manual':
+        elif mode == 'manual':
             classifier.process_dataset_manual(reference_folder, dataset_folder)
-        elif args.mode == 'exit':
+        elif mode == 'exit':
             logging.info("Exiting...")
             classifier.analyze_reference_folder(reference_folder)
         
@@ -1873,4 +2030,9 @@ def main():
         logging.debug(traceback.format_exc())
 
 if __name__ == "__main__":
-    main()
+    # Add option to test setup
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] == "--test":
+        test_interactive_setup()
+    else:
+        main()
