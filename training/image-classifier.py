@@ -170,6 +170,7 @@ class KnowledgeBank:
         self.classifications_db = {}  # hash -> classifications
         self.characteristics_db = {}  # hash -> characteristics dict
         self.file_paths_db = {}  # hash -> original file paths
+        self.file_tracking_db = {}  # file_path -> {'hash': str, 'mtime': float, 'size': int}
         
         # Learning data
         self.relationships = defaultdict(list)  # classification -> [hashes]
@@ -227,6 +228,8 @@ class KnowledgeBank:
         self.characteristics_db[image_hash] = characteristics
         if file_path:
             self.file_paths_db[image_hash] = file_path
+            # Track file processing state
+            self.track_file(file_path, image_hash)
         
         # Update relationships
         for classification in classifications:
@@ -287,6 +290,7 @@ class KnowledgeBank:
                 'classifications_db': self.classifications_db,
                 'characteristics_db': self.characteristics_db,
                 'file_paths_db': self.file_paths_db,
+                'file_tracking_db': self.file_tracking_db,
                 'relationships': dict(self.relationships),
                 'classification_weights': dict(self.classification_weights),
                 'user_feedback': dict(self.user_feedback),
@@ -331,6 +335,7 @@ class KnowledgeBank:
             self.classifications_db = data.get('classifications_db', {})
             self.characteristics_db = data.get('characteristics_db', {})
             self.file_paths_db = data.get('file_paths_db', {})
+            self.file_tracking_db = data.get('file_tracking_db', {})
             self.relationships = defaultdict(list, data.get('relationships', {}))
             self.classification_weights = defaultdict(
                 lambda: defaultdict(float), 
@@ -356,6 +361,85 @@ class KnowledgeBank:
         except Exception as e:
             logging.error(f"Error loading knowledge bank: {e}")
             logging.info("Starting with empty knowledge bank")
+    
+    def is_file_processed(self, file_path):
+        """Check if file has been processed and is up to date"""
+        if file_path not in self.file_tracking_db:
+            return False
+        
+        try:
+            # Get current file stats
+            stat = os.stat(file_path)
+            current_mtime = stat.st_mtime
+            current_size = stat.st_size
+            
+            # Compare with stored stats
+            stored_info = self.file_tracking_db[file_path]
+            return (stored_info['mtime'] == current_mtime and 
+                    stored_info['size'] == current_size)
+        except OSError:
+            # File doesn't exist anymore
+            return False
+    
+    def track_file(self, file_path, image_hash):
+        """Track file processing information"""
+        try:
+            stat = os.stat(file_path)
+            self.file_tracking_db[file_path] = {
+                'hash': image_hash,
+                'mtime': stat.st_mtime,
+                'size': stat.st_size,
+                'processed_time': datetime.now().isoformat()
+            }
+            logging.debug(f"Tracking file: {file_path}")
+        except OSError as e:
+            logging.warning(f"Failed to track file {file_path}: {e}")
+    
+    def get_unprocessed_files(self, file_list):
+        """Filter file list to only include unprocessed or modified files"""
+        unprocessed = []
+        for file_path in file_list:
+            if not self.is_file_processed(file_path):
+                unprocessed.append(file_path)
+        return unprocessed
+    
+    def cleanup_stale_entries(self):
+        """Remove tracking entries for files that no longer exist"""
+        stale_files = []
+        for file_path in self.file_tracking_db:
+            if not os.path.exists(file_path):
+                stale_files.append(file_path)
+        
+        for file_path in stale_files:
+            logging.debug(f"Removing stale tracking entry: {file_path}")
+            del self.file_tracking_db[file_path]        
+        if stale_files:
+            logging.info(f"Cleaned up {len(stale_files)} stale file tracking entries")
+
+    def add_feedback(self, image_hash, correct_class, wrong_class=None):
+        """Add user feedback for continuous learning"""
+        self.user_feedback[image_hash].append((correct_class, wrong_class))
+        self.classification_history[image_hash].append({
+            'timestamp': datetime.now().isoformat(),
+            'correct': correct_class,
+            'wrong': wrong_class
+        })
+        self.learning_stats['user_corrections'] += 1
+        logging.info(f"User feedback recorded. Total corrections: {self.learning_stats['user_corrections']}")
+    
+    def get_statistics(self):
+        """Get comprehensive statistics"""
+        stats = {
+            **self.learning_stats,
+            'classifications': dict(Counter(
+                cls for clss in self.classifications_db.values() for cls in clss
+            ).most_common(10)),
+            'characteristics': {
+                char_type: dict(counter.most_common(5))
+                for char_type, counter in self.characteristic_patterns.items()
+            }
+        }
+        return stats
 
 class ImageClassifierGUI:
     """Enhanced GUI for manual classification with image preview"""
@@ -1231,27 +1315,46 @@ class UltimateImageClassifier:
         return classification
     
     def analyze_reference_folder(self, reference_folder):
-        """Analyze reference folder structure and images"""
+        """Analyze reference folder structure and images - incremental processing"""
         logging.info(f"Analyzing reference folder: {reference_folder}")
         
         self.reference_data = {}
         total_images = 0
         failed_images = 0
+        processed_images = 0
+        skipped_images = 0
         
-        # Progress tracking
+        # Clean up stale entries first
+        self.knowledge_bank.cleanup_stale_entries()
+        
+        # Collect all image files
         all_files = []
         for root, dirs, files in os.walk(reference_folder):
             for file in files:
                 if self.is_image_file(file):
-                    all_files.append((root, file))
+                    image_path = os.path.join(root, file)
+                    all_files.append(image_path)
         
-        logging.info(f"Found {len(all_files)} images to analyze")
+        logging.info(f"Found {len(all_files)} images in reference folder")
         
-        # Process with progress bar
-        for root, file in tqdm(all_files, desc="Analyzing reference images"):
-            image_path = os.path.join(root, file)
-            
+        # Filter to only unprocessed or modified files
+        unprocessed_files = self.knowledge_bank.get_unprocessed_files(all_files)
+        
+        if not unprocessed_files:
+            logging.info("All images are already processed and up to date!")
+            # Still need to rebuild reference_data from existing knowledge bank
+            self._rebuild_reference_data_from_knowledge_bank(reference_folder)
+            return self.reference_data
+        
+        logging.info(f"Processing {len(unprocessed_files)} new/modified images "
+                    f"(skipping {len(all_files) - len(unprocessed_files)} already processed)")
+        
+        # Process only unprocessed files with progress bar
+        for image_path in tqdm(unprocessed_files, desc="Processing new/modified images"):
             try:
+                root = os.path.dirname(image_path)
+                file = os.path.basename(image_path)
+                
                 # Get relative path for classification
                 rel_path = os.path.relpath(root, reference_folder)
                 if rel_path == '.':
@@ -1261,7 +1364,7 @@ class UltimateImageClassifier:
                 features, img_hash = self.extract_features(image_path)
                 
                 if features is not None:
-                    total_images += 1
+                    processed_images += 1
                     
                     # Parse classification from path and filename
                     components = self.parse_classification(file)
@@ -1304,7 +1407,7 @@ class UltimateImageClassifier:
                             seen.add(c)
                             unique_classifications.append(c)
                     
-                    # Add to knowledge bank
+                    # Add to knowledge bank (this will also track the file)
                     self.knowledge_bank.add_image(
                         img_hash,
                         features,
@@ -1313,18 +1416,8 @@ class UltimateImageClassifier:
                         image_path
                     )
                     
-                    # Store in reference data
-                    key = rel_path if rel_path else 'root'
-                    if key not in self.reference_data:
-                        self.reference_data[key] = []
+                    total_images += 1
                     
-                    self.reference_data[key].append({
-                        'path': image_path,
-                        'hash': img_hash,
-                        'features': features,
-                        'components': components,
-                        'classifications': unique_classifications
-                    })
                 else:
                     failed_images += 1
                     
@@ -1332,14 +1425,18 @@ class UltimateImageClassifier:
                 logging.error(f"Error processing {image_path}: {e}")
                 failed_images += 1
         
+        # Rebuild reference_data from complete knowledge bank
+        self._rebuild_reference_data_from_knowledge_bank(reference_folder)
+        
         # Save knowledge bank
         self.knowledge_bank.save()
         
         # Summary
         logging.info(f"Reference analysis complete:")
-        logging.info(f"  - Total images: {total_images}")
+        logging.info(f"  - New/modified images processed: {processed_images}")
+        logging.info(f"  - Already processed (skipped): {len(all_files) - len(unprocessed_files)}")
         logging.info(f"  - Failed: {failed_images}")
-        logging.info(f"  - Folders: {len(self.reference_data)}")
+        logging.info(f"  - Total images in knowledge bank: {len(self.knowledge_bank.features_db)}")
         logging.info(f"  - Classifications: {len(self.knowledge_bank.relationships)}")
         
         # Display statistics
@@ -1349,6 +1446,41 @@ class UltimateImageClassifier:
         logging.info(f"  - User corrections: {stats['user_corrections']}")
         
         return self.reference_data
+    
+    def _rebuild_reference_data_from_knowledge_bank(self, reference_folder):
+        """Rebuild reference_data structure from knowledge bank for current session"""
+        self.reference_data = {}
+        
+        for img_hash, file_path in self.knowledge_bank.file_paths_db.items():
+            # Only include files from the current reference folder
+            if file_path.startswith(reference_folder):
+                try:
+                    root = os.path.dirname(file_path)
+                    rel_path = os.path.relpath(root, reference_folder)
+                    if rel_path == '.':
+                        rel_path = ''
+                    
+                    # Get data from knowledge bank
+                    features = self.knowledge_bank.features_db.get(img_hash)
+                    classifications = self.knowledge_bank.classifications_db.get(img_hash, [])
+                    components = self.knowledge_bank.characteristics_db.get(img_hash, {})
+                    
+                    if features is not None:
+                        key = rel_path if rel_path else 'root'
+                        if key not in self.reference_data:
+                            self.reference_data[key] = []
+                        
+                        self.reference_data[key].append({
+                            'path': file_path,
+                            'hash': img_hash,
+                            'features': features,
+                            'components': components,
+                            'classifications': classifications
+                        })
+                except Exception as e:
+                    logging.debug(f"Error rebuilding reference data for {file_path}: {e}")
+        
+        logging.debug(f"Rebuilt reference data with {len(self.reference_data)} folders")
     
     def find_similar_images(self, features, top_k=10):
         """Find similar images from knowledge bank"""
@@ -1837,6 +1969,7 @@ def get_user_input(prompt, default=None, input_type="str", choices=None):
             # Choice validation
             if choices and converted_input not in choices:
                 print(f"Please choose from: {', '.join(choices)}")
+               
                 continue
                 
             return converted_input
