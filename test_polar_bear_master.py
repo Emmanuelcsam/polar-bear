@@ -1,4 +1,3 @@
-
 import unittest
 import os
 import logging
@@ -121,34 +120,125 @@ class TestScriptAnalyzer(unittest.TestCase):
 class TestTaskManager(unittest.TestCase):
     def setUp(self):
         self.logger = logging.getLogger("TestLogger")
+        self.logger.setLevel(logging.INFO)
+        self.logger.propagate = False
+        
+        self.test_log_file = "test_diagnostics.log"
+        if self.logger.hasHandlers():
+            self.logger.handlers.clear()
+        
+        self.logger.addHandler(logging.StreamHandler(sys.stdout))
+        self.logger.addHandler(logging.FileHandler(self.test_log_file))
+
+        self.config_manager = ConfigurationManager(self.logger)
         self.analyzer = ScriptAnalyzer(self.logger)
         self.connectors = ConnectorManager(self.logger)
-        self.task_manager = TaskManager(self.logger, self.analyzer, self.connectors)
+        self.task_manager = TaskManager(self.logger, self.config_manager, self.analyzer, self.connectors)
 
-    @patch('builtins.input', return_value='1')
-    def test_get_task(self, mock_input):
-        """Test that the correct task is returned based on user input."""
-        with patch.object(self.task_manager, 'analyze_project') as mock_analyze_project:
-            task = self.task_manager.get_task()
-            task()
-            mock_analyze_project.assert_called_once()
+    def tearDown(self):
+        for handler in self.logger.handlers[:]:
+            handler.close()
+            self.logger.removeHandler(handler)
+        
+        if os.path.exists(self.test_log_file):
+            os.remove(self.test_log_file)
 
+    @patch('builtins.input', side_effect=['1', 'n'])
+    @patch('pathlib.Path.rglob')
+    @patch('polar_bear_master.ScriptAnalyzer.analyze_script')
+    def test_analyze_project_flow(self, mock_analyze_script, mock_rglob, mock_input):
+        """Test the full flow of the analyze_project task."""
+        dummy_file = Path("dummy_test_file.py")
+        mock_rglob.return_value = [dummy_file]
+        mock_analyze_script.return_value = {
+            'path': str(dummy_file), 'functions': ['a', 'b'], 'classes': ['C'],
+            'imports': ['os', 'sys'], 'error': None
+        }
+        with self.assertLogs('TestLogger', level='INFO') as cm:
+            task_func = self.task_manager.get_task()
+            task_func()
+            self.assertTrue(any("Project Analysis Summary" in s for s in cm.output))
+        mock_analyze_script.assert_called_once_with(dummy_file)
+
+    @patch('builtins.input', return_value='4')
+    def test_get_task_exit(self, mock_input):
+        """Test that the exit task is returned and raises SystemExit."""
+        task_func = self.task_manager.get_task()
+        with self.assertRaises(SystemExit):
+            task_func()
+
+    @patch('pathlib.Path.is_dir')
+    @patch('pathlib.Path.exists')
+    def test_run_diagnostics(self, mock_exists, mock_is_dir):
+        """Test the diagnostics task runs and logs correctly."""
+        mock_exists.return_value = True
+        mock_is_dir.side_effect = [True, True, False, True]
+
+        # Run the function that writes to the log
+        self.task_manager.run_diagnostics()
+
+        # Close the handlers to ensure the log file is written to disk
+        for handler in self.logger.handlers:
+            handler.flush()
+            handler.close()
+        
+        # Read the log file and check its contents
+        with open(self.test_log_file, 'r') as f:
+            log_output = f.read()
+
+        self.assertIn("Diagnostics Summary", log_output)
+        self.assertIn("[PASS] Configuration file found.", log_output)
+        self.assertIn("[PASS] Log file found", log_output)
+        self.assertIn("[PASS] Directory 'modules' found.", log_output)
+        self.assertIn("[FAIL] Required directory 'docs' not found.", log_output)
+        self.assertIn("Some diagnostic checks failed.", log_output)
+
+    @patch('builtins.input', side_effect=['1', '2']) # List connectors, then exit
+    @patch('polar_bear_master.ConnectorManager.find_connectors')
+    def test_manage_connectors(self, mock_find_connectors, mock_input):
+        """Test the connector management flow."""
+        mock_find_connectors.return_value = [Path("conn1.py"), Path("conn2.py")]
+
+        with self.assertLogs('TestLogger', level='INFO') as cm:
+            self.task_manager.manage_connectors()
+            log_output = "".join(cm.output)
+            self.assertIn("Found 2 connector scripts.", log_output)
+            self.assertIn("1. List all connector paths", log_output)
+            self.assertIn("001: conn1.py", log_output)
+            self.assertIn("002: conn2.py", log_output)
+            self.assertIn("Exiting Connector Management.", log_output)
 
 class TestPolarBearMaster(unittest.TestCase):
-    @patch('polar_bear_master.PolarBearMaster.run_interactive_mode')
-    @patch('polar_bear_master.ConfigurationManager.interactive_setup')
-    def test_run_interactive(self, mock_interactive_setup, mock_run_interactive):
-        """Test that the master script runs in interactive mode."""
+    @patch('polar_bear_master.TaskManager.display_menu')
+    @patch('polar_bear_master.TaskManager.get_task')
+    @patch('polar_bear_master.ConfigurationManager.load_config')
+    @patch('polar_bear_master.DependencyManager.check_and_install')
+    def test_run_interactive_mode(self, mock_check_install, mock_load_config, mock_get_task, mock_display_menu):
+        """Test that the master script runs in interactive mode and can exit."""
+        # Mock get_task to return the exit function after one loop
+        mock_get_task.side_effect = [lambda: None, SystemExit]
+        
         master = PolarBearMaster(test_mode=False)
-        master.run()
-        mock_run_interactive.assert_called_once()
+        with self.assertRaises(SystemExit):
+            master.run_interactive_mode()
 
-    @patch('polar_bear_master.PolarBearMaster.run_tests')
-    def test_run_test_mode(self, mock_run_tests):
-        """Test that the master script runs in test mode."""
+        mock_display_menu.assert_called()
+        self.assertGreaterEqual(mock_get_task.call_count, 1)
+
+    @patch('polar_bear_master.TaskManager.run_diagnostics')
+    @patch('polar_bear_master.TaskManager.analyze_project')
+    @patch('polar_bear_master.TaskManager.manage_connectors')
+    @patch('polar_bear_master.ConfigurationManager.load_config')
+    @patch('polar_bear_master.DependencyManager.check_and_install')
+    def test_run_test_mode(self, mock_check_install, mock_load_config, mock_manage, mock_analyze, mock_diagnostics):
+        """Test that the master script runs the full test suite in test mode."""
         master = PolarBearMaster(test_mode=True)
-        master.run()
-        mock_run_tests.assert_called_once()
+        master.run_tests()
+
+        mock_diagnostics.assert_called_once()
+        mock_analyze.assert_called_once()
+        mock_manage.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()

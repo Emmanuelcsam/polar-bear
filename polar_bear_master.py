@@ -188,15 +188,16 @@ class ScriptAnalyzer:
 
 class TaskManager:
     """Manages and executes high-level tasks."""
-    def __init__(self, logger, analyzer, connectors):
+    def __init__(self, logger, config, analyzer, connectors):
         self.logger = logger
+        self.config = config
         self.analyzer = analyzer
         self.connectors = connectors
         self.tasks = {
-            "1": ("Analyze Project", self.analyze_project),
-            "2": ("Run Diagnostics", self.run_diagnostics),
-            "3": ("Manage Connectors", self.manage_connectors),
-            "4": ("Exit", sys.exit)
+            "1": ("Analyze Project", "analyze_project"),
+            "2": ("Run Diagnostics", "run_diagnostics"),
+            "3": ("Manage Connectors", "manage_connectors"),
+            "4": ("Exit", "exit_program")
         }
 
     def display_menu(self):
@@ -209,36 +210,138 @@ class TaskManager:
         """Gets a task from the user."""
         while True:
             choice = input("Select a task: ")
-            if choice in self.tasks:
-                return self.tasks[choice][1]
+            task_info = self.tasks.get(choice)
+            if task_info:
+                task_name = task_info[1]
+                return getattr(self, task_name, self.invalid_task)
             else:
                 self.logger.warning("Invalid choice. Please try again.")
 
     def analyze_project(self):
-        """Analyzes all Python scripts in the project."""
-        self.logger.info("Analyzing project...")
-        with ThreadPoolExecutor() as executor:
-            futures = [executor.submit(self.analyzer.analyze_script, p) for p in Path.cwd().rglob("*.py")]
+        """Analyzes all Python scripts in the project and displays a summary."""
+        self.logger.info("Starting project analysis...")
+        
+        py_files = list(Path.cwd().rglob("*.py"))
+        self.logger.info(f"Found {len(py_files)} Python files to analyze.")
+        
+        all_metadata = []
+        with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
+            futures = [executor.submit(self.analyzer.analyze_script, p) for p in py_files]
             for future in futures:
                 try:
-                    future.result()
+                    result = future.result()
+                    if not result['error']:
+                        all_metadata.append(result)
                 except Exception as e:
-                    self.logger.error(f"Error during script analysis: {e}")
+                    self.logger.error(f"Error during script analysis execution: {e}")
+
+        if not all_metadata:
+            self.logger.warning("No Python files were successfully analyzed.")
+            return
+
+        # Aggregate results
+        total_files = len(all_metadata)
+        total_functions = sum(len(m['functions']) for m in all_metadata)
+        total_classes = sum(len(m['classes']) for m in all_metadata)
+        
+        all_imports = set()
+        for m in all_metadata:
+            all_imports.update(m['imports'])
+
+        self.logger.info("--- Project Analysis Summary ---")
+        self.logger.info(f"Total Python Files Analyzed: {total_files}")
+        self.logger.info(f"Total Functions Found: {total_functions}")
+        self.logger.info(f"Total Classes Found: {total_classes}")
+        self.logger.info(f"Total Unique Imports: {len(all_imports)}")
+        self.logger.info("---------------------------------")
+        
+        # Optionally, save the detailed analysis to a file
+        save_report = input("Save detailed analysis report to a file? (y/n): ").lower()
+        if save_report == 'y':
+            report_path = "project_analysis_report.json"
+            with open(report_path, 'w') as f:
+                json.dump(all_metadata, f, indent=4)
+            self.logger.info(f"Detailed report saved to {report_path}")
+        
         self.logger.info("Project analysis complete.")
 
     def run_diagnostics(self):
-        """Runs diagnostic tests."""
+        """Runs basic diagnostic checks on the project environment."""
         self.logger.info("Running diagnostics...")
-        # Placeholder for diagnostic logic
-        self.logger.info("Diagnostics complete.")
+        checks_passed = True
+
+        # Check 1: Configuration file existence
+        if self.config.config_file.exists():
+            self.logger.info("[PASS] Configuration file found.")
+        else:
+            self.logger.warning("[FAIL] Configuration file not found.")
+            checks_passed = False
+
+        # Check 2: Log file was created
+        log_file_found = False
+        for handler in self.logger.handlers:
+            if isinstance(handler, logging.FileHandler):
+                log_file = Path(handler.baseFilename)
+                if log_file.exists():
+                    self.logger.info(f"[PASS] Log file found at {log_file}.")
+                    log_file_found = True
+                break
+        if not log_file_found:
+            self.logger.error(f"[FAIL] Log file could not be verified.")
+            checks_passed = False
+            
+        # Check 3: Required directories
+        required_dirs = ["modules", "used", "docs", "meta-tools"]
+        for req_dir in required_dirs:
+            if Path(req_dir).is_dir():
+                self.logger.info(f"[PASS] Directory '{req_dir}' found.")
+            else:
+                self.logger.warning(f"[FAIL] Required directory '{req_dir}' not found.")
+                checks_passed = False
+
+        self.logger.info("--- Diagnostics Summary ---")
+        if checks_passed:
+            self.logger.info("All basic diagnostic checks passed.")
+        else:
+            self.logger.warning("Some diagnostic checks failed. Please review the logs.")
+        self.logger.info("---------------------------")
 
     def manage_connectors(self):
-        """Manages connector scripts."""
-        self.logger.info("Managing connectors...")
-        self.connectors.find_connectors(os.getcwd())
-        self.logger.info(f"Found {len(self.connectors.connectors)} connectors.")
-        # Placeholder for connector management logic
-        self.logger.info("Connector management complete.")
+        """Finds and provides options for managing connector scripts."""
+        self.logger.info("--- Connector Management ---")
+        connectors = self.connectors.find_connectors(os.getcwd())
+        
+        if not connectors:
+            self.logger.warning("No connector scripts found in the project.")
+            return
+
+        self.logger.info(f"Found {len(connectors)} connector scripts.")
+        
+        while True:
+            self.logger.info("\nConnector Options:")
+            self.logger.info("  1. List all connector paths")
+            self.logger.info("  2. Return to main menu")
+            choice = input("Select an option: ").strip()
+
+            if choice == '1':
+                self.logger.info("--- Listing All Connector Paths ---")
+                for i, conn_path in enumerate(connectors):
+                    self.logger.info(f"  {i+1:03d}: {conn_path}")
+                self.logger.info("------------------------------------")
+            elif choice == '2':
+                break
+            else:
+                self.logger.warning("Invalid choice. Please try again.")
+        self.logger.info("Exiting Connector Management.")
+
+    def exit_program(self):
+        """Exits the program."""
+        self.logger.info("Exiting Polar Bear Master System.")
+        sys.exit()
+
+    def invalid_task(self):
+        """Handles an invalid task selection."""
+        self.logger.error("Selected task does not exist.")
 
 
 class PolarBearMaster:
@@ -253,7 +356,7 @@ class PolarBearMaster:
         self.deps = DependencyManager(self.logger)
         self.connectors = ConnectorManager(self.logger)
         self.analyzer = ScriptAnalyzer(self.logger)
-        self.task_manager = TaskManager(self.logger, self.analyzer, self.connectors)
+        self.task_manager = TaskManager(self.logger, self.config, self.analyzer, self.connectors)
 
     def run(self):
         """Main execution method."""
@@ -272,30 +375,30 @@ class PolarBearMaster:
             self.run_interactive_mode()
 
     def run_tests(self):
-        """Runs all unit tests and other automated checks."""
-        self.logger.info("Running in test mode...")
-        # Here we will call the unit tests
-        self.logger.info("Test mode finished.")
+        """Runs a non-interactive suite of tests and diagnostics."""
+        self.logger.info("--- Running Non-Interactive Test Suite ---")
+        self.task_manager.run_diagnostics()
+        self.task_manager.analyze_project()
+        self.task_manager.manage_connectors()
+        self.logger.info("--- Non-Interactive Test Suite Complete ---")
 
     def run_interactive_mode(self):
         """Runs the main interactive functionality of the script."""
-        self.logger.info("Running in interactive mode...")
+        self.logger.info("Entering interactive mode...")
+        self.logger.info("Welcome to the Polar Bear Master Control System!")
         while True:
             self.task_manager.display_menu()
-            task = self.task_manager.get_task()
-            task()
-
-
-    def run_tests(self):
-        """Runs all unit tests and other automated checks."""
-        self.logger.info("Running in test mode...")
-        # Here we will call the unit tests
-        self.logger.info("Test mode finished.")
-
-    def run_interactive_mode(self):
-        """Runs the main interactive functionality of the script."""
-        self.logger.info("Running in interactive mode...")
-        # Main application logic will go here
+            try:
+                task = self.task_manager.get_task()
+                if task:
+                    task()
+                else:
+                    self.logger.warning("Invalid task selected. Please try again.")
+            except SystemExit:
+                self.logger.info("Exiting Polar Bear Master System.")
+                raise # Re-raise the exception to exit the program
+            except Exception as e:
+                self.logger.error(f"An unexpected error occurred: {e}", exc_info=True)
         self.logger.info("Interactive mode finished.")
 
 
