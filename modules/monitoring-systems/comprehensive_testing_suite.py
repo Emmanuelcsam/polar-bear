@@ -12,6 +12,7 @@ Features:
 
 import pytest
 import asyncio
+from connector_interface import ConnectorInterface
 import numpy as np
 import cv2
 import json
@@ -41,6 +42,15 @@ import logging
 # Test fixtures and utilities
 fake = Faker()
 logger = logging.getLogger(__name__)
+
+# Initialize connector
+connector = ConnectorInterface('comprehensive_testing_suite.py')
+
+# Register test parameters
+connector.register_parameter('test_mode', 'normal', 'str', 'Test execution mode', choices=['normal', 'stress', 'chaos'])
+connector.register_parameter('test_iterations', 100, 'int', 'Number of test iterations', min_value=1, max_value=10000)
+connector.register_parameter('enable_benchmarks', True, 'bool', 'Enable performance benchmarks')
+connector.register_parameter('parallel_tests', 4, 'int', 'Number of parallel test workers', min_value=1, max_value=16)
 
 
 # Test data generators

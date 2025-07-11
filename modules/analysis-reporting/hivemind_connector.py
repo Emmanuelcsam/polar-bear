@@ -14,6 +14,14 @@ import sys
 import subprocess
 from pathlib import Path
 import logging
+from typing import Dict, Any, List, Optional
+
+# Import the script interface for enhanced control
+try:
+    from script_interface import get_script_manager, get_connector_interface
+except ImportError:
+    get_script_manager = None
+    get_connector_interface = None
 
 class HivemindConnector:
     def __init__(self):
@@ -27,6 +35,10 @@ class HivemindConnector:
         self.parent_socket = None
         self.child_connectors = {}
         self.scripts_in_directory = {}
+        self.script_manager = None
+        self.connector_interface = None
+        self.execution_history = []  # Track execution history
+        self.parameter_overrides = {}  # Store parameter overrides
         
         # Setup logging
         self.logger = logging.getLogger(f"Connector_{self.connector_id}")
@@ -34,6 +46,12 @@ class HivemindConnector:
         handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(message)s'))
         self.logger.addHandler(handler)
         self.logger.setLevel(logging.INFO)
+        
+        # Initialize script interface if available
+        if get_script_manager:
+            self.script_manager = get_script_manager()
+            self.connector_interface = get_connector_interface()
+            self.logger.info("Enhanced script control enabled")
         
     def start(self):
         """Start the connector"""
@@ -81,28 +99,68 @@ class HivemindConnector:
             conn.close()
             
     def process_message(self, message):
-        """Process incoming message"""
+        """Process incoming message with enhanced capabilities"""
         cmd = message.get('command')
         
+        # Enhanced status with script management info
         if cmd == 'status':
-            return {
+            status = {
                 'status': 'active',
                 'connector_id': self.connector_id,
                 'directory': str(self.directory),
                 'depth': self.depth,
                 'scripts': len(self.scripts_in_directory),
-                'children': len(self.child_connectors)
+                'children': len(self.child_connectors),
+                'enhanced_control': self.script_manager is not None,
+                'execution_history': len(self.execution_history)
             }
+            
+            # Add script statuses if available
+            if self.script_manager:
+                scripts = self.script_manager.get_all_scripts()
+                status['script_statuses'] = {
+                    s.name: s.status for s in scripts
+                }
+            
+            return status
+            
         elif cmd == 'scan':
             self.scan_directory()
             return {'status': 'scan_complete', 'scripts': list(self.scripts_in_directory.keys())}
+            
         elif cmd == 'execute':
             script = message.get('script')
-            if script in self.scripts_in_directory:
-                return self.execute_script(script)
-            return {'error': 'Script not found'}
+            parameters = message.get('parameters', {})
+            return self.execute_script_enhanced(script, parameters)
+            
         elif cmd == 'troubleshoot':
             return self.troubleshoot_connections()
+            
+        # New enhanced commands
+        elif cmd == 'list_parameters':
+            script = message.get('script')
+            return self.list_script_parameters(script)
+            
+        elif cmd == 'update_parameter':
+            script = message.get('script')
+            param = message.get('parameter')
+            value = message.get('value')
+            return self.update_script_parameter(script, param, value)
+            
+        elif cmd == 'get_history':
+            limit = message.get('limit', 10)
+            return self.get_execution_history(limit)
+            
+        elif cmd == 'monitor':
+            return self.get_monitoring_data()
+            
+        # Delegate to script interface if available
+        elif self.connector_interface and cmd in [
+            'list_scripts', 'get_script_info', 'get_parameter', 
+            'get_results', 'reload_config'
+        ]:
+            return self.connector_interface.handle_command(message)
+            
         else:
             return {'error': 'Unknown command'}
             
@@ -151,27 +209,147 @@ class HivemindConnector:
         }
         return path.name.startswith('.') or path.name.lower() in skip_dirs
         
-    def execute_script(self, script_name):
-        """Execute a script in the directory"""
+    def execute_script_enhanced(self, script_name: str, parameters: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Execute a script with enhanced control and parameter support"""
         if script_name not in self.scripts_in_directory:
             return {'error': 'Script not found'}
-            
+        
+        execution_record = {
+            'script': script_name,
+            'parameters': parameters or {},
+            'timestamp': time.time(),
+            'status': 'started'
+        }
+        
         try:
-            result = subprocess.run(
-                [sys.executable, self.scripts_in_directory[script_name]],
-                capture_output=True,
-                text=True,
-                timeout=30
-            )
+            # Use script manager if available for better control
+            if self.script_manager and script_name in [s.name for s in self.script_manager.get_all_scripts()]:
+                # Merge with any stored parameter overrides
+                merged_params = {}
+                if script_name in self.parameter_overrides:
+                    merged_params.update(self.parameter_overrides[script_name])
+                if parameters:
+                    merged_params.update(parameters)
+                
+                # Execute through script manager
+                result = self.script_manager.execute_script(
+                    script_name, 
+                    merged_params, 
+                    async_mode=False
+                )
+                
+                execution_record['status'] = 'completed'
+                execution_record['result'] = result
+                
+            else:
+                # Fallback to subprocess execution
+                cmd = [sys.executable, self.scripts_in_directory[script_name]]
+                
+                # Add parameters as command line arguments if provided
+                if parameters:
+                    for key, value in parameters.items():
+                        cmd.extend([f'--{key}', str(value)])
+                
+                result = subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                    cwd=self.directory
+                )
+                
+                execution_record['status'] = 'completed'
+                execution_record['result'] = {
+                    'returncode': result.returncode,
+                    'stdout': result.stdout[-1000:],
+                    'stderr': result.stderr[-1000:]
+                }
+            
+            # Store in history
+            self.execution_history.append(execution_record)
+            if len(self.execution_history) > 100:  # Keep last 100 executions
+                self.execution_history.pop(0)
+            
             return {
                 'status': 'executed',
-                'script': script_name,
-                'returncode': result.returncode,
-                'stdout': result.stdout[-1000:],  # Last 1000 chars
-                'stderr': result.stderr[-1000:]
+                'execution_id': len(self.execution_history),
+                **execution_record
             }
+            
         except Exception as e:
+            execution_record['status'] = 'failed'
+            execution_record['error'] = str(e)
+            self.execution_history.append(execution_record)
             return {'error': f'Execution failed: {str(e)}'}
+    
+    def list_script_parameters(self, script_name: str) -> Dict[str, Any]:
+        """List available parameters for a script"""
+        if self.script_manager and script_name in [s.name for s in self.script_manager.get_all_scripts()]:
+            script_info = self.script_manager.get_script_info(script_name)
+            if script_info and script_info.parameters:
+                return {
+                    'script': script_name,
+                    'parameters': script_info.parameters,
+                    'overrides': self.parameter_overrides.get(script_name, {})
+                }
+        
+        return {
+            'script': script_name,
+            'parameters': {},
+            'note': 'Parameter information not available for this script'
+        }
+    
+    def update_script_parameter(self, script_name: str, param_name: str, value: Any) -> Dict[str, Any]:
+        """Update a script parameter override"""
+        if script_name not in self.parameter_overrides:
+            self.parameter_overrides[script_name] = {}
+        
+        self.parameter_overrides[script_name][param_name] = value
+        
+        # Also update in script manager if available
+        if self.script_manager:
+            self.script_manager.update_parameter(script_name, param_name, value)
+        
+        return {
+            'status': 'updated',
+            'script': script_name,
+            'parameter': param_name,
+            'value': value
+        }
+    
+    def get_execution_history(self, limit: int = 10) -> Dict[str, Any]:
+        """Get recent execution history"""
+        history = self.execution_history[-limit:] if limit > 0 else self.execution_history
+        return {
+            'history': history,
+            'total_executions': len(self.execution_history)
+        }
+    
+    def get_monitoring_data(self) -> Dict[str, Any]:
+        """Get comprehensive monitoring data"""
+        monitoring_data = {
+            'connector_id': self.connector_id,
+            'uptime': time.time() - getattr(self, 'start_time', time.time()),
+            'scripts_available': len(self.scripts_in_directory),
+            'child_connectors': len(self.child_connectors),
+            'execution_stats': {
+                'total': len(self.execution_history),
+                'successful': sum(1 for e in self.execution_history if e.get('status') == 'completed'),
+                'failed': sum(1 for e in self.execution_history if e.get('status') == 'failed')
+            }
+        }
+        
+        # Add script manager stats if available
+        if self.script_manager:
+            scripts = self.script_manager.get_all_scripts()
+            monitoring_data['script_states'] = {
+                'idle': sum(1 for s in scripts if s.status == 'idle'),
+                'running': sum(1 for s in scripts if s.status == 'running'),
+                'completed': sum(1 for s in scripts if s.status == 'completed'),
+                'failed': sum(1 for s in scripts if s.status == 'failed')
+            }
+        
+        return monitoring_data
             
     def troubleshoot_connections(self):
         """Troubleshoot connector connections"""
@@ -215,8 +393,12 @@ class HivemindConnector:
 
 if __name__ == "__main__":
     connector = HivemindConnector()
+    connector.start_time = time.time()  # Track start time for monitoring
+    
     try:
         connector.start()
     except KeyboardInterrupt:
         connector.running = False
+        if connector.script_manager:
+            connector.script_manager.stop()
         print("\nConnector stopped")

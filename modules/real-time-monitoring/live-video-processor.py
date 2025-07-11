@@ -13,10 +13,10 @@ import argparse
 import threading
 import queue
 import time
-from pathlib import Path
-from typing import Dict, Any, Optional, Callable
+from pathlib import Pathrom typing import Dict, Any, Optional, Callable
 from collections import deque
 from dataclasses import dataclass
+import shared_config # Import the shared configuration module
 
 
 @dataclass
@@ -221,10 +221,13 @@ class SimpleFrameProcessor:
 class RealTimeProcessor:
     """Main real-time video processor"""
     
-    def __init__(self, camera_source: int = 0, max_fps: int = 30):
-        self.camera_source = camera_source
-        self.max_fps = max_fps
-        self.frame_interval = 1.0 / max_fps
+    def __init__(self, camera_source: int = None, max_fps: int = None):
+        # Load configuration from shared_config.py
+        self.current_config = shared_config.get_config()
+        self.camera_source = self.current_config.get("camera_source", camera_source if camera_source is not None else 0)
+        self.max_fps = self.current_config.get("max_fps", max_fps if max_fps is not None else 30)
+        
+        self.frame_interval = 1.0 / self.max_fps
         
         # Components
         self.camera = None
@@ -250,6 +253,45 @@ class RealTimeProcessor:
         self.recording = False
         self.video_writer = None
         self.recording_path = None
+        self.status = "initialized" # Add a status variable
+
+    def get_script_info(self):
+        """Returns information about the script, its status, and exposed parameters."""
+        return {
+            "name": "Live Video Processor",
+            "status": self.status,
+            "parameters": {
+                "camera_source": self.camera_source,
+                "max_fps": self.max_fps,
+                "log_level": self.current_config.get("log_level"),
+                "data_source": self.current_config.get("data_source"),
+                "processing_enabled": self.current_config.get("processing_enabled"),
+                "threshold_value": self.current_config.get("threshold_value")
+            },
+            "processing_stats": self.processor.processing_stats # Expose processor stats
+        }
+
+    def set_script_parameter(self, key, value):
+        """Sets a specific parameter for the script and updates shared_config."""
+        if key in self.current_config:
+            self.current_config[key] = value
+            shared_config.set_config_value(key, value) # Update shared config
+            
+            # Apply changes if they affect the running script
+            if key == "camera_source":
+                self.camera_source = value
+                # Re-initialize camera if running, or mark for re-init on next start
+                if self.running and self.camera:
+                    self.camera.release()
+                    self.camera = VideoCapture(self.camera_source)
+            elif key == "max_fps":
+                self.max_fps = value
+                self.frame_interval = 1.0 / self.max_fps
+            # Add more conditions here for other parameters that need immediate effect
+            
+            self.status = f"parameter '{key}' updated"
+            return True
+        return False
     
     def start(self):
         """Start the real-time processing"""
@@ -493,13 +535,29 @@ class RealTimeProcessor:
             print(f"Recording stopped: {self.recording_path}")
 
 
+processor_instance = None
+
+def get_script_info():
+    """Returns information about the script, its status, and exposed parameters."""
+    if processor_instance:
+        return processor_instance.get_script_info()
+    return {"name": "Live Video Processor", "status": "not_initialized", "parameters": {}}
+
+def set_script_parameter(key, value):
+    """Sets a specific parameter for the script and updates shared_config."""
+    if processor_instance:
+        return processor_instance.set_script_parameter(key, value)
+    return False
+
 def main():
     """Command line interface for real-time processing"""
+    global processor_instance
+
     parser = argparse.ArgumentParser(description='Real-time Fiber Optic Analysis')
-    parser.add_argument('--camera', type=int, default=0,
-                       help='Camera source index (default: 0)')
-    parser.add_argument('--max-fps', type=int, default=30,
-                       help='Maximum FPS for processing (default: 30)')
+    parser.add_argument('--camera', type=int, default=None,
+                       help='Camera source index (default: 0, can be overridden by shared_config)')
+    parser.add_argument('--max-fps', type=int, default=None,
+                       help='Maximum FPS for processing (default: 30, can be overridden by shared_config)')
     parser.add_argument('--no-display', action='store_true',
                        help='Run without display (headless mode)')
     
@@ -507,30 +565,31 @@ def main():
     
     try:
         # Create and start processor
-        processor = RealTimeProcessor(
+        # Parameters from shared_config will take precedence if set
+        processor_instance = RealTimeProcessor(
             camera_source=args.camera,
             max_fps=args.max_fps
         )
         
-        processor.start()
+        processor_instance.start()
         
         if not args.no_display:
             # Run display loop
-            processor.display_loop()
+            processor_instance.display_loop()
         else:
             # Headless mode - just run for a while
             print("Running in headless mode. Press Ctrl+C to stop.")
             try:
                 while True:
                     time.sleep(1)
-                    if processor.latest_result:
-                        stats = processor.latest_result.analysis_results.get('frame_stats', {})
-                        print(f"FPS: {processor.current_fps:.1f}, "
+                    if processor_instance.latest_result:
+                        stats = processor_instance.latest_result.analysis_results.get('frame_stats', {})
+                        print(f"FPS: {processor_instance.current_fps:.1f}, "
                               f"Mean: {stats.get('mean_intensity', 0):.1f}, "
-                              f"Circles: {processor.latest_result.analysis_results.get('shape_analysis', {}).get('num_circles', 0)}")
+                              f"Circles: {processor_instance.latest_result.analysis_results.get('shape_analysis', {}).get('num_circles', 0)}")
             except KeyboardInterrupt:
                 print("\nStopping...")
-                processor.stop()
+                processor_instance.stop()
     
     except Exception as e:
         print(f"Error: {e}")

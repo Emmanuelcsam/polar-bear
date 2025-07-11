@@ -11,69 +11,54 @@ import subprocess
 import importlib.util
 import time
 from datetime import datetime
+import json
 
-# Color codes for terminal output
-class Colors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKCYAN = '\033[96m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
+# --- Start of Connector Integration ---
+try:
+    import connector
+    logger = connector.logger
+except ImportError:
+    print("Connector not found, using basic logging.")
+    import logging
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] - %(message)s')
+    logger = logging.getLogger(__name__)
 
-def log(message, level="INFO"):
-    """Log messages with timestamp and color coding"""
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
-    if level == "INFO":
-        color = Colors.OKBLUE
-    elif level == "SUCCESS":
-        color = Colors.OKGREEN
-    elif level == "WARNING":
-        color = Colors.WARNING
-    elif level == "ERROR":
-        color = Colors.FAIL
-    elif level == "HEADER":
-        color = Colors.HEADER + Colors.BOLD
-    else:
-        color = ""
-    
-    print(f"{color}[{timestamp}] {level}: {message}{Colors.ENDC}")
+CONFIG_FILE = "shared_config.json"
+SCRIPT_NAME = "pytorch-basics-tutorial"
+
+# --- End of Connector Integration ---
 
 def check_and_install_package(package_name, import_name=None):
     """Check if a package is installed, if not, install it"""
     if import_name is None:
         import_name = package_name
     
-    log(f"Checking if {package_name} is installed...", "INFO")
+    logger.info(f"Checking if {package_name} is installed...")
     
     spec = importlib.util.find_spec(import_name)
     if spec is None:
-        log(f"{package_name} not found. Installing latest version...", "WARNING")
+        logger.warning(f"{package_name} not found. Installing latest version...")
         try:
             subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", package_name])
-            log(f"Successfully installed {package_name}", "SUCCESS")
+            logger.info(f"Successfully installed {package_name}")
             return True
         except subprocess.CalledProcessError as e:
-            log(f"Failed to install {package_name}: {e}", "ERROR")
+            logger.error(f"Failed to install {package_name}: {e}")
             return False
     else:
-        log(f"{package_name} is already installed", "SUCCESS")
+        logger.info(f"{package_name} is already installed")
         # Upgrade to latest version
-        log(f"Upgrading {package_name} to latest version...", "INFO")
+        logger.info(f"Upgrading {package_name} to latest version...")
         try:
             subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", package_name])
-            log(f"Successfully upgraded {package_name}", "SUCCESS")
+            logger.info(f"Successfully upgraded {package_name}")
         except:
-            log(f"Could not upgrade {package_name}, using existing version", "WARNING")
+            logger.warning(f"Could not upgrade {package_name}, using existing version")
         return True
 
 def setup_environment():
     """Set up the environment by installing all required packages"""
-    log("SETTING UP PYTORCH TUTORIAL ENVIRONMENT", "HEADER")
+    logger.info("SETTING UP PYTORCH TUTORIAL ENVIRONMENT")
     
     required_packages = {
         "numpy": "numpy",
@@ -86,199 +71,240 @@ def setup_environment():
         "tqdm": "tqdm"
     }
     
-    log("Installing/Updating required packages...", "INFO")
+    logger.info("Installing/Updating required packages...")
     
     for package, import_name in required_packages.items():
         if not check_and_install_package(package, import_name):
-            log(f"Failed to set up {package}. Exiting.", "ERROR")
+            logger.error(f"Failed to set up {package}. Exiting.")
             sys.exit(1)
         time.sleep(0.5)  # Small delay to avoid overwhelming pip
     
-    log("All required packages are installed!", "SUCCESS")
+    logger.info("All required packages are installed!")
     return True
 
 # Now import all required packages after installation
 def import_packages():
     """Import all required packages"""
-    log("Importing required packages...", "INFO")
+    logger.info("Importing required packages...")
     
-    global torch, nn, optim, F, transforms, datasets, DataLoader
-    global np, plt, make_classification, train_test_split, StandardScaler
-    global SummaryWriter, tqdm
-    
+    packages = {}
     try:
         import torch
+        packages['torch'] = torch
         import torch.nn as nn
+        packages['nn'] = nn
         import torch.optim as optim
+        packages['optim'] = optim
         import torch.nn.functional as F
+        packages['F'] = F
         from torch.utils.data import DataLoader, Dataset
+        packages['DataLoader'] = DataLoader
+        packages['Dataset'] = Dataset
         import torchvision
+        packages['torchvision'] = torchvision
         import torchvision.transforms as transforms
+        packages['transforms'] = transforms
         import torchvision.datasets as datasets
+        packages['datasets'] = datasets
         import torchvision.models as models
+        packages['models'] = models
         
         import numpy as np
+        packages['np'] = np
         import matplotlib.pyplot as plt
+        packages['plt'] = plt
         from sklearn.datasets import make_classification, make_regression
+        packages['make_classification'] = make_classification
+        packages['make_regression'] = make_regression
         from sklearn.model_selection import train_test_split
+        packages['train_test_split'] = train_test_split
         from sklearn.preprocessing import StandardScaler
+        packages['StandardScaler'] = StandardScaler
         
         from torch.utils.tensorboard import SummaryWriter
+        packages['SummaryWriter'] = SummaryWriter
         from tqdm import tqdm
+        packages['tqdm'] = tqdm
         
-        log("All packages imported successfully!", "SUCCESS")
-        return True
+        logger.info("All packages imported successfully!")
+        return packages
     except ImportError as e:
-        log(f"Failed to import packages: {e}", "ERROR")
-        return False
+        logger.error(f"Failed to import packages: {e}")
+        return None
+
+setup_environment()
+packages = import_packages()
+if not packages:
+    sys.exit(1)
+
+# Make modules available globally for the tutorial functions
+torch = packages['torch']
+nn = packages['nn']
+optim = packages['optim']
+F = packages['F']
+transforms = packages['transforms']
+datasets = packages['datasets']
+DataLoader = packages['DataLoader']
+Dataset = packages['Dataset']
+models = packages['models']
+np = packages['np']
+plt = packages['plt']
+make_classification = packages['make_classification']
+make_regression = packages['make_regression']
+train_test_split = packages['train_test_split']
+StandardScaler = packages['StandardScaler']
+SummaryWriter = packages['SummaryWriter']
+tqdm = packages['tqdm']
+torchvision = packages['torchvision']
+
 
 # Tutorial 1: Installation and Setup
 def tutorial_1_installation():
     """Tutorial 1: Installation and PyTorch Basics"""
-    log("\n=== TUTORIAL 1: INSTALLATION AND SETUP ===", "HEADER")
+    logger.info("\n=== TUTORIAL 1: INSTALLATION AND SETUP ===")
     
-    log("Checking PyTorch installation...", "INFO")
-    log(f"PyTorch version: {torch.__version__}", "SUCCESS")
+    logger.info("Checking PyTorch installation...")
+    logger.info(f"PyTorch version: {torch.__version__}")
     
     # Check CUDA availability
     cuda_available = torch.cuda.is_available()
     device = torch.device("cuda" if cuda_available else "cpu")
-    log(f"CUDA available: {cuda_available}", "INFO")
-    log(f"Using device: {device}", "INFO")
+    logger.info(f"CUDA available: {cuda_available}")
+    logger.info(f"Using device: {device}")
     
     if cuda_available:
-        log(f"CUDA device count: {torch.cuda.device_count()}", "INFO")
-        log(f"CUDA device name: {torch.cuda.get_device_name(0)}", "INFO")
+        logger.info(f"CUDA device count: {torch.cuda.device_count()}")
+        logger.info(f"CUDA device name: {torch.cuda.get_device_name(0)}")
     
     return device
 
 # Tutorial 2: Tensor Basics
 def tutorial_2_tensor_basics(device):
     """Tutorial 2: Tensor Basics"""
-    log("\n=== TUTORIAL 2: TENSOR BASICS ===", "HEADER")
+    logger.info("\n=== TUTORIAL 2: TENSOR BASICS ===")
     
     # Creating tensors
-    log("Creating empty tensor...", "INFO")
+    logger.info("Creating empty tensor...")
     x = torch.empty(3)
-    log(f"Empty tensor: {x}", "SUCCESS")
+    logger.info(f"Empty tensor: {x}")
     
-    log("Creating random tensor...", "INFO")
+    logger.info("Creating random tensor...")
     x = torch.rand(2, 3)
-    log(f"Random tensor shape {x.shape}: \n{x}", "SUCCESS")
+    logger.info(f"Random tensor shape {x.shape}: \n{x}")
     
-    log("Creating zeros tensor...", "INFO")
+    logger.info("Creating zeros tensor...")
     x = torch.zeros(2, 3, dtype=torch.int)
-    log(f"Zeros tensor: \n{x}", "SUCCESS")
+    logger.info(f"Zeros tensor: \n{x}")
     
-    log("Creating ones tensor...", "INFO")
+    logger.info("Creating ones tensor...")
     x = torch.ones(2, 3)
-    log(f"Ones tensor: \n{x}", "SUCCESS")
+    logger.info(f"Ones tensor: \n{x}")
     
-    log("Creating tensor from list...", "INFO")
+    logger.info("Creating tensor from list...")
     x = torch.tensor([2.5, 0.1, 3.0])
-    log(f"Tensor from list: {x}", "SUCCESS")
+    logger.info(f"Tensor from list: {x}")
     
     # Basic operations
-    log("\nDemonstrating basic tensor operations...", "INFO")
+    logger.info("\nDemonstrating basic tensor operations...")
     x = torch.rand(2, 2)
     y = torch.rand(2, 2)
     
-    log(f"Tensor x: \n{x}", "INFO")
-    log(f"Tensor y: \n{y}", "INFO")
+    logger.info(f"Tensor x: \n{x}")
+    logger.info(f"Tensor y: \n{y}")
     
-    log("Addition:", "INFO")
+    logger.info("Addition:")
     z = x + y
-    log(f"x + y = \n{z}", "SUCCESS")
+    logger.info(f"x + y = \n{z}")
     
-    log("In-place addition:", "INFO")
+    logger.info("In-place addition:")
     y.add_(x)
-    log(f"y after in-place addition: \n{y}", "SUCCESS")
+    logger.info(f"y after in-place addition: \n{y}")
     
-    log("Multiplication:", "INFO")
+    logger.info("Multiplication:")
     z = torch.mul(x, y)
-    log(f"x * y = \n{z}", "SUCCESS")
+    logger.info(f"x * y = \n{z}")
     
     # Slicing
-    log("\nDemonstrating tensor slicing...", "INFO")
+    logger.info("\nDemonstrating tensor slicing...")
     x = torch.rand(5, 3)
-    log(f"Original tensor: \n{x}", "INFO")
-    log(f"First column: {x[:, 0]}", "SUCCESS")
-    log(f"Second row: {x[1, :]}", "SUCCESS")
-    log(f"Element at position [1, 1]: {x[1, 1].item()}", "SUCCESS")
+    logger.info(f"Original tensor: \n{x}")
+    logger.info(f"First column: {x[:, 0]}")
+    logger.info(f"Second row: {x[1, :]}")
+    logger.info(f"Element at position [1, 1]: {x[1, 1].item()}")
     
     # Reshaping
-    log("\nDemonstrating tensor reshaping...", "INFO")
+    logger.info("\nDemonstrating tensor reshaping...")
     x = torch.rand(4, 4)
-    log(f"Original shape: {x.shape}", "INFO")
+    logger.info(f"Original shape: {x.shape}")
     y = x.view(16)
-    log(f"Reshaped to 1D: {y.shape}", "SUCCESS")
+    logger.info(f"Reshaped to 1D: {y.shape}")
     y = x.view(-1, 8)
-    log(f"Reshaped with -1: {y.shape}", "SUCCESS")
+    logger.info(f"Reshaped with -1: {y.shape}")
     
     # NumPy conversion
-    log("\nDemonstrating NumPy conversion...", "INFO")
+    logger.info("\nDemonstrating NumPy conversion...")
     a = torch.ones(5)
-    log(f"Torch tensor: {a}", "INFO")
+    logger.info(f"Torch tensor: {a}")
     b = a.numpy()
-    log(f"NumPy array: {b}", "SUCCESS")
-    log(f"Type: {type(b)}", "INFO")
+    logger.info(f"NumPy array: {b}")
+    logger.info(f"Type: {type(b)}")
     
     # Move to GPU if available
     if device.type == "cuda":
-        log("\nMoving tensors to GPU...", "INFO")
+        logger.info("\nMoving tensors to GPU...")
         x = torch.ones(5, device=device)
-        log(f"Tensor on GPU: {x}", "SUCCESS")
-        log(f"Device: {x.device}", "INFO")
+        logger.info(f"Tensor on GPU: {x}")
+        logger.info(f"Device: {x.device}")
 
 # Tutorial 3: Autograd
 def tutorial_3_autograd():
     """Tutorial 3: Automatic Gradient Computation"""
-    log("\n=== TUTORIAL 3: AUTOGRAD ===", "HEADER")
+    logger.info("\n=== TUTORIAL 3: AUTOGRAD ===")
     
-    log("Creating tensor with gradient tracking...", "INFO")
+    logger.info("Creating tensor with gradient tracking...")
     x = torch.tensor([1.0, 2.0, 3.0], requires_grad=True)
-    log(f"Tensor x: {x}", "SUCCESS")
-    log(f"Requires grad: {x.requires_grad}", "INFO")
+    logger.info(f"Tensor x: {x}")
+    logger.info(f"Requires grad: {x.requires_grad}")
     
-    log("\nPerforming operations...", "INFO")
+    logger.info("\nPerforming operations...")
     y = x + 2
-    log(f"y = x + 2: {y}", "SUCCESS")
-    log(f"y.grad_fn: {y.grad_fn}", "INFO")
+    logger.info(f"y = x + 2: {y}")
+    logger.info(f"y.grad_fn: {y.grad_fn}")
     
     z = y * y * 2
-    log(f"z = y * y * 2: {z}", "SUCCESS")
+    logger.info(f"z = y * y * 2: {z}")
     
     out = z.mean()
-    log(f"out = z.mean(): {out}", "SUCCESS")
+    logger.info(f"out = z.mean(): {out}")
     
-    log("\nComputing gradients...", "INFO")
+    logger.info("\nComputing gradients...")
     out.backward()
-    log(f"Gradients of x: {x.grad}", "SUCCESS")
+    logger.info(f"Gradients of x: {x.grad}")
     
     # Gradient accumulation example
-    log("\nDemonstrating gradient accumulation...", "WARNING")
+    logger.warning("\nDemonstrating gradient accumulation...")
     x = torch.ones(4, requires_grad=True)
     
     for epoch in range(3):
-        log(f"\nEpoch {epoch + 1}", "INFO")
+        logger.info(f"\nEpoch {epoch + 1}")
         model_output = (x * 3).sum()
-        log(f"Model output: {model_output}", "INFO")
+        logger.info(f"Model output: {model_output}")
         
         model_output.backward()
-        log(f"Gradient after backward: {x.grad}", "SUCCESS")
+        logger.info(f"Gradient after backward: {x.grad}")
         
         if epoch < 2:
-            log("WARNING: Gradients accumulate! Need to zero them.", "WARNING")
+            logger.warning("WARNING: Gradients accumulate! Need to zero them.")
         else:
-            log("Zeroing gradients...", "INFO")
+            logger.info("Zeroing gradients...")
             x.grad.zero_()
 
 # Tutorial 4: Backpropagation Example
-def tutorial_4_backpropagation():
+def tutorial_4_backpropagation(config):
     """Tutorial 4: Backpropagation Example"""
-    log("\n=== TUTORIAL 4: BACKPROPAGATION ===", "HEADER")
+    logger.info("\n=== TUTORIAL 4: BACKPROPAGATION ===")
     
-    log("Implementing linear regression example...", "INFO")
+    logger.info("Implementing linear regression example...")
     
     # Training data
     x = torch.tensor(1.0)
@@ -287,63 +313,63 @@ def tutorial_4_backpropagation():
     # Initialize weight
     w = torch.tensor(1.0, requires_grad=True)
     
-    log(f"Input x: {x}", "INFO")
-    log(f"Target y: {y}", "INFO")
-    log(f"Initial weight w: {w}", "INFO")
+    logger.info(f"Input x: {x}")
+    logger.info(f"Target y: {y}")
+    logger.info(f"Initial weight w: {w}")
     
     # Forward pass
-    log("\nForward pass:", "INFO")
+    logger.info("\nForward pass:")
     y_hat = w * x
-    log(f"Prediction y_hat = w * x = {y_hat}", "SUCCESS")
+    logger.info(f"Prediction y_hat = w * x = {y_hat}")
     
     # Compute loss
     loss = (y_hat - y)**2
-    log(f"Loss = (y_hat - y)^2 = {loss}", "SUCCESS")
+    logger.info(f"Loss = (y_hat - y)^2 = {loss}")
     
     # Backward pass
-    log("\nBackward pass:", "INFO")
+    logger.info("\nBackward pass:")
     loss.backward()
-    log(f"Gradient dL/dw = {w.grad}", "SUCCESS")
-    log("Expected gradient: -2.0 (manually calculated)", "INFO")
+    logger.info(f"Gradient dL/dw = {w.grad}")
+    logger.info("Expected gradient: -2.0 (manually calculated)")
     
     # Update weights
-    log("\nWeight update:", "INFO")
-    learning_rate = 0.01
+    logger.info("\nWeight update:")
+    learning_rate = config.get('learning_rate', 0.01)
     with torch.no_grad():
         w -= learning_rate * w.grad
-    log(f"Updated weight: {w}", "SUCCESS")
+    logger.info(f"Updated weight: {w}")
 
 # Tutorial 5: Training Pipeline
-def tutorial_5_training_pipeline():
+def tutorial_5_training_pipeline(config):
     """Tutorial 5: Complete Training Pipeline"""
-    log("\n=== TUTORIAL 5: TRAINING PIPELINE ===", "HEADER")
+    logger.info("\n=== TUTORIAL 5: TRAINING PIPELINE ===")
     
     # Generate synthetic data
-    log("Generating synthetic regression data...", "INFO")
+    logger.info("Generating synthetic regression data...")
     X_numpy, y_numpy = make_regression(n_samples=100, n_features=1, noise=20, random_state=1)
     
     X = torch.from_numpy(X_numpy.astype(np.float32))
     y = torch.from_numpy(y_numpy.astype(np.float32))
     y = y.view(y.shape[0], 1)
     
-    log(f"Data shape - X: {X.shape}, y: {y.shape}", "SUCCESS")
+    logger.info(f"Data shape - X: {X.shape}, y: {y.shape}")
     
     # Model
-    log("\nCreating linear regression model...", "INFO")
+    logger.info("\nCreating linear regression model...")
     input_size = 1
     output_size = 1
     model = nn.Linear(input_size, output_size)
-    log(f"Model: {model}", "SUCCESS")
+    logger.info(f"Model: {model}")
     
     # Loss and optimizer
-    log("\nSetting up loss and optimizer...", "INFO")
+    logger.info("\nSetting up loss and optimizer...")
     criterion = nn.MSELoss()
-    optimizer = optim.SGD(model.parameters(), lr=0.01)
-    log("Loss: MSE, Optimizer: SGD", "SUCCESS")
+    optimizer = optim.SGD(model.parameters(), lr=config.get('learning_rate', 0.01))
+    logger.info("Loss: MSE, Optimizer: SGD")
     
     # Training loop
-    log("\nStarting training...", "INFO")
-    num_epochs = 100
+    logger.info("\nStarting training...")
+    num_epochs = config.get('num_epochs', 100)
     
     for epoch in range(num_epochs):
         # Forward pass
@@ -356,16 +382,16 @@ def tutorial_5_training_pipeline():
         optimizer.step()
         
         if (epoch + 1) % 20 == 0:
-            log(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}", "INFO")
+            logger.info(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}")
     
-    log("Training completed!", "SUCCESS")
+    logger.info("Training completed!")
     
     # Test the model
-    log("\nTesting the model...", "INFO")
+    logger.info("\nTesting the model...")
     with torch.no_grad():
         test_input = torch.tensor([[5.0]])
         prediction = model(test_input)
-        log(f"Input: {test_input.item()}, Prediction: {prediction.item():.2f}", "SUCCESS")
+        logger.info(f"Input: {test_input.item()}, Prediction: {prediction.item():.2f}")
 
 # Tutorial 6: Custom Dataset
 class WineDataset(Dataset):
@@ -388,58 +414,58 @@ class WineDataset(Dataset):
     def __len__(self):
         return self.n_samples
 
-def tutorial_6_datasets_dataloaders():
+def tutorial_6_datasets_dataloaders(config):
     """Tutorial 6: Datasets and DataLoaders"""
-    log("\n=== TUTORIAL 6: DATASETS AND DATALOADERS ===", "HEADER")
+    logger.info("\n=== TUTORIAL 6: DATASETS AND DATALOADERS ===")
     
-    log("Creating custom Wine dataset...", "INFO")
+    logger.info("Creating custom Wine dataset...")
     dataset = WineDataset()
-    log(f"Dataset size: {len(dataset)}", "SUCCESS")
+    logger.info(f"Dataset size: {len(dataset)}")
     
     # Get first sample
     first_data = dataset[0]
     features, labels = first_data
-    log(f"First sample - Features shape: {features.shape}, Label: {labels}", "INFO")
+    logger.info(f"First sample - Features shape: {features.shape}, Label: {labels}")
     
     # Create DataLoader
-    log("\nCreating DataLoader...", "INFO")
-    batch_size = 4
+    logger.info("\nCreating DataLoader...")
+    batch_size = config.get('batch_size', 4)
     dataloader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True)
-    log(f"DataLoader created with batch size: {batch_size}", "SUCCESS")
+    logger.info(f"DataLoader created with batch size: {batch_size}")
     
     # Iterate through DataLoader
-    log("\nIterating through DataLoader...", "INFO")
+    logger.info("\nIterating through DataLoader...")
     dataiter = iter(dataloader)
     data = next(dataiter)
     features, labels = data
-    log(f"Batch features shape: {features.shape}", "SUCCESS")
-    log(f"Batch labels shape: {labels.shape}", "SUCCESS")
+    logger.info(f"Batch features shape: {features.shape}")
+    logger.info(f"Batch labels shape: {labels.shape}")
     
     # Training loop simulation
-    log("\nSimulating training loop with DataLoader...", "INFO")
-    num_epochs = 2
+    logger.info("\nSimulating training loop with DataLoader...")
+    num_epochs = config.get('num_epochs', 2)
     total_samples = len(dataset)
     n_iterations = int(np.ceil(total_samples / batch_size))
     
     for epoch in range(num_epochs):
         for i, (inputs, labels) in enumerate(dataloader):
             if i % 20 == 0:
-                log(f"Epoch [{epoch+1}/{num_epochs}], Step [{i+1}/{n_iterations}], "
-                    f"Batch shape: {inputs.shape}", "INFO")
+                logger.info(f"Epoch [{epoch+1}/{num_epochs}], Step [{i+1}/{n_iterations}], "
+                    f"Batch shape: {inputs.shape}")
                 
         if epoch == 0:
-            log(f"Completed epoch {epoch+1}", "SUCCESS")
+            logger.info(f"Completed epoch {epoch+1}")
 
 # Tutorial 7: Neural Network
 class NeuralNet(nn.Module):
     """Simple Feed-Forward Neural Network"""
     def __init__(self, input_size, hidden_size, num_classes):
         super(NeuralNet, self).__init__()
-        log("Initializing Neural Network...", "INFO")
+        logger.info("Initializing Neural Network...")
         self.l1 = nn.Linear(input_size, hidden_size)
         self.relu = nn.ReLU()
         self.l2 = nn.Linear(hidden_size, num_classes)
-        log(f"Network architecture: {input_size} -> {hidden_size} -> {num_classes}", "SUCCESS")
+        logger.info(f"Network architecture: {input_size} -> {hidden_size} -> {num_classes}")
         
     def forward(self, x):
         out = self.l1(x)
@@ -447,19 +473,19 @@ class NeuralNet(nn.Module):
         out = self.l2(out)
         return out
 
-def tutorial_7_neural_network(device):
+def tutorial_7_neural_network(device, config):
     """Tutorial 7: Feed-Forward Neural Network"""
-    log("\n=== TUTORIAL 7: FEED-FORWARD NEURAL NETWORK ===", "HEADER")
+    logger.info("\n=== TUTORIAL 7: FEED-FORWARD NEURAL NETWORK ===")
     
     # Hyperparameters
     input_size = 784  # 28x28
-    hidden_size = 100
+    hidden_size = config.get('hidden_size', 100)
     num_classes = 10
-    num_epochs = 2
-    batch_size = 100
-    learning_rate = 0.001
+    num_epochs = config.get('num_epochs', 2)
+    batch_size = config.get('batch_size', 100)
+    learning_rate = config.get('learning_rate', 0.001)
     
-    log("Loading MNIST dataset...", "INFO")
+    logger.info("Loading MNIST dataset...")
     
     # MNIST dataset
     train_dataset = datasets.MNIST(root='./data', train=True,
@@ -468,24 +494,24 @@ def tutorial_7_neural_network(device):
     test_dataset = datasets.MNIST(root='./data', train=False,
                                 transform=transforms.ToTensor())
     
-    log(f"Training samples: {len(train_dataset)}", "SUCCESS")
-    log(f"Test samples: {len(test_dataset)}", "SUCCESS")
+    logger.info(f"Training samples: {len(train_dataset)}")
+    logger.info(f"Test samples: {len(test_dataset)}")
     
     # Data loaders
     train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=False)
     
     # Model
-    log("\nCreating neural network model...", "INFO")
+    logger.info("\nCreating neural network model...")
     model = NeuralNet(input_size, hidden_size, num_classes).to(device)
     
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    log("Loss: CrossEntropy, Optimizer: Adam", "SUCCESS")
+    logger.info("Loss: CrossEntropy, Optimizer: Adam")
     
     # Training loop
-    log("\nStarting training...", "INFO")
+    logger.info("\nStarting training...")
     total_step = len(train_loader)
     
     for epoch in range(num_epochs):
@@ -504,13 +530,13 @@ def tutorial_7_neural_network(device):
             optimizer.step()
             
             if (i+1) % 100 == 0:
-                log(f'Epoch [{epoch+1}/{num_epochs}], Step [{i+1}/{total_step}], '
-                    f'Loss: {loss.item():.4f}', "INFO")
+                logger.info(f'Epoch [{epoch+1}/{num_epochs}], Step [{i+1}/{total_step}], '
+                    f'Loss: {loss.item():.4f}')
     
-    log("Training completed!", "SUCCESS")
+    logger.info("Training completed!")
     
     # Test the model
-    log("\nEvaluating model...", "INFO")
+    logger.info("\nEvaluating model...")
     model.eval()
     with torch.no_grad():
         correct = 0
@@ -524,14 +550,14 @@ def tutorial_7_neural_network(device):
             correct += (predicted == labels).sum().item()
         
         accuracy = 100 * correct / total
-        log(f'Test Accuracy: {accuracy:.2f}%', "SUCCESS")
+        logger.info(f'Test Accuracy: {accuracy:.2f}%')
 
 # Tutorial 8: Convolutional Neural Network
 class ConvNet(nn.Module):
     """Convolutional Neural Network"""
     def __init__(self, num_classes=10):
         super(ConvNet, self).__init__()
-        log("Initializing Convolutional Neural Network...", "INFO")
+        logger.info("Initializing Convolutional Neural Network...")
         
         # Convolutional layers
         self.conv1 = nn.Conv2d(3, 6, 5)  # 3 input channels, 6 output channels, 5x5 kernel
@@ -543,7 +569,7 @@ class ConvNet(nn.Module):
         self.fc2 = nn.Linear(120, 84)
         self.fc3 = nn.Linear(84, num_classes)
         
-        log("CNN architecture created successfully", "SUCCESS")
+        logger.info("CNN architecture created successfully")
         
     def forward(self, x):
         # Conv layer 1
@@ -558,14 +584,14 @@ class ConvNet(nn.Module):
         x = self.fc3(x)
         return x
 
-def tutorial_8_cnn(device):
+def tutorial_8_cnn(device, config):
     """Tutorial 8: Convolutional Neural Network"""
-    log("\n=== TUTORIAL 8: CONVOLUTIONAL NEURAL NETWORK ===", "HEADER")
+    logger.info("\n=== TUTORIAL 8: CONVOLUTIONAL NEURAL NETWORK ===")
     
     # Hyperparameters
-    num_epochs = 2
-    batch_size = 4
-    learning_rate = 0.001
+    num_epochs = config.get('num_epochs', 2)
+    batch_size = config.get('batch_size', 4)
+    learning_rate = config.get('learning_rate', 0.001)
     
     # Data transformations
     transform = transforms.Compose([
@@ -573,7 +599,7 @@ def tutorial_8_cnn(device):
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ])
     
-    log("Loading CIFAR-10 dataset...", "INFO")
+    logger.info("Loading CIFAR-10 dataset...")
     
     # CIFAR-10 dataset
     train_dataset = datasets.CIFAR10(root='./data', train=True,
@@ -588,11 +614,11 @@ def tutorial_8_cnn(device):
     classes = ('plane', 'car', 'bird', 'cat', 'deer',
                'dog', 'frog', 'horse', 'ship', 'truck')
     
-    log(f"Classes: {classes}", "INFO")
-    log(f"Training samples: {len(train_dataset)}", "SUCCESS")
+    logger.info(f"Classes: {classes}")
+    logger.info(f"Training samples: {len(train_dataset)}")
     
     # Model
-    log("\nCreating CNN model...", "INFO")
+    logger.info("\nCreating CNN model...")
     model = ConvNet(num_classes=10).to(device)
     
     # Loss and optimizer
@@ -600,7 +626,7 @@ def tutorial_8_cnn(device):
     optimizer = optim.SGD(model.parameters(), lr=learning_rate)
     
     # Training (abbreviated for demo)
-    log("\nStarting CNN training (abbreviated)...", "INFO")
+    logger.info("\nStarting CNN training (abbreviated)...")
     model.train()
     
     for epoch in range(1):  # Just 1 epoch for demo
@@ -621,43 +647,44 @@ def tutorial_8_cnn(device):
             running_loss += loss.item()
             
             if i % 50 == 49:
-                log(f'[Epoch {epoch + 1}, Batch {i + 1}] Loss: {running_loss / 50:.3f}', "INFO")
+                logger.info(f'[Epoch {epoch + 1}, Batch {i + 1}] Loss: {running_loss / 50:.3f}')
                 running_loss = 0.0
     
-    log("CNN training completed!", "SUCCESS")
+    logger.info("CNN training completed!")
 
 # Tutorial 9: Save and Load Models
 def tutorial_9_save_load_models(device):
     """Tutorial 9: Saving and Loading Models"""
-    log("\n=== TUTORIAL 9: SAVE AND LOAD MODELS ===", "HEADER")
+    logger.info("\n=== TUTORIAL 9: SAVE AND LOAD MODELS ===")
     
     # Create a simple model
-    log("Creating a simple model...", "INFO")
+    logger.info("Creating a simple model...")
     model = nn.Sequential(
         nn.Linear(10, 50),
         nn.ReLU(),
         nn.Linear(50, 1)
     )
-    log(f"Model created: {model}", "SUCCESS")
+    logger.info(f"Model created: {model}")
     
     # Method 1: Save entire model (lazy way)
-    log("\nMethod 1: Saving entire model...", "INFO")
+    logger.info("\nMethod 1: Saving entire model...")
     torch.save(model, 'model_complete.pth')
-    log("Model saved to 'model_complete.pth'", "SUCCESS")
+    logger.info("Model saved to 'model_complete.pth'")
     
     # Load entire model
-    log("Loading entire model...", "INFO")
-    loaded_model = torch.load('model_complete.pth')
+    # Load entire model
+    logger.info("Loading entire model...")
+    loaded_model = torch.load('model_complete.pth', weights_only=False)
     loaded_model.eval()
-    log("Model loaded successfully", "SUCCESS")
+    logger.info("Model loaded successfully")
     
     # Method 2: Save state dict (recommended)
-    log("\nMethod 2: Saving state dict (recommended)...", "INFO")
+    logger.info("\nMethod 2: Saving state dict (recommended)...")
     torch.save(model.state_dict(), 'model_state_dict.pth')
-    log("State dict saved to 'model_state_dict.pth'", "SUCCESS")
+    logger.info("State dict saved to 'model_state_dict.pth'")
     
     # Load state dict
-    log("Loading state dict...", "INFO")
+    logger.info("Loading state dict...")
     new_model = nn.Sequential(
         nn.Linear(10, 50),
         nn.ReLU(),
@@ -665,10 +692,10 @@ def tutorial_9_save_load_models(device):
     )
     new_model.load_state_dict(torch.load('model_state_dict.pth'))
     new_model.eval()
-    log("State dict loaded successfully", "SUCCESS")
+    logger.info("State dict loaded successfully")
     
     # Save checkpoint with additional info
-    log("\nSaving checkpoint with optimizer state...", "INFO")
+    logger.info("\nSaving checkpoint with optimizer state...")
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     checkpoint = {
         'epoch': 10,
@@ -677,98 +704,98 @@ def tutorial_9_save_load_models(device):
         'loss': 0.4
     }
     torch.save(checkpoint, 'checkpoint.pth')
-    log("Checkpoint saved to 'checkpoint.pth'", "SUCCESS")
+    logger.info("Checkpoint saved to 'checkpoint.pth'")
     
     # Load checkpoint
-    log("Loading checkpoint...", "INFO")
+    logger.info("Loading checkpoint...")
     checkpoint = torch.load('checkpoint.pth')
     model.load_state_dict(checkpoint['model_state_dict'])
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     epoch = checkpoint['epoch']
     loss = checkpoint['loss']
-    log(f"Checkpoint loaded - Epoch: {epoch}, Loss: {loss}", "SUCCESS")
+    logger.info(f"Checkpoint loaded - Epoch: {epoch}, Loss: {loss}")
     
     # Clean up
     import os
     for file in ['model_complete.pth', 'model_state_dict.pth', 'checkpoint.pth']:
         if os.path.exists(file):
             os.remove(file)
-            log(f"Cleaned up {file}", "INFO")
+            logger.info(f"Cleaned up {file}")
 
 # Tutorial 10: Transfer Learning
 def tutorial_10_transfer_learning(device):
     """Tutorial 10: Transfer Learning with ResNet"""
-    log("\n=== TUTORIAL 10: TRANSFER LEARNING ===", "HEADER")
+    logger.info("\n=== TUTORIAL 10: TRANSFER LEARNING ===")
     
-    log("Loading pre-trained ResNet18...", "INFO")
+    logger.info("Loading pre-trained ResNet18...")
     model = models.resnet18(pretrained=True)
-    log("ResNet18 loaded successfully", "SUCCESS")
+    logger.info("ResNet18 loaded successfully")
     
     # Freeze all layers
-    log("\nFreezing all layers except the last one...", "INFO")
+    logger.info("\nFreezing all layers except the last one...")
     for param in model.parameters():
         param.requires_grad = False
     
     # Replace the last fully connected layer
     num_features = model.fc.in_features
-    log(f"Number of features in last layer: {num_features}", "INFO")
+    logger.info(f"Number of features in last layer: {num_features}")
     
     # New layer for binary classification (e.g., cats vs dogs)
     model.fc = nn.Linear(num_features, 2)
-    log("Replaced final layer for binary classification", "SUCCESS")
+    logger.info("Replaced final layer for binary classification")
     
     # Move to device
     model = model.to(device)
     
     # Only parameters of final layer are being optimized
     optimizer = optim.SGD(model.fc.parameters(), lr=0.001, momentum=0.9)
-    log("Optimizer set up for final layer only", "SUCCESS")
+    logger.info("Optimizer set up for final layer only")
     
     # Create dummy data for demonstration
-    log("\nCreating dummy data for demonstration...", "INFO")
+    logger.info("\nCreating dummy data for demonstration...")
     dummy_inputs = torch.randn(4, 3, 224, 224).to(device)
     dummy_labels = torch.tensor([0, 1, 1, 0]).to(device)
     
     # Forward pass
-    log("Performing forward pass...", "INFO")
+    logger.info("Performing forward pass...")
     outputs = model(dummy_inputs)
-    log(f"Output shape: {outputs.shape}", "SUCCESS")
+    logger.info(f"Output shape: {outputs.shape}")
     
     # Compute loss
     criterion = nn.CrossEntropyLoss()
     loss = criterion(outputs, dummy_labels)
-    log(f"Loss: {loss.item():.4f}", "INFO")
+    logger.info(f"Loss: {loss.item():.4f}")
     
-    log("Transfer learning setup completed!", "SUCCESS")
+    logger.info("Transfer learning setup completed!")
 
 # Tutorial 11: TensorBoard Integration
 def tutorial_11_tensorboard():
     """Tutorial 11: TensorBoard Integration"""
-    log("\n=== TUTORIAL 11: TENSORBOARD INTEGRATION ===", "HEADER")
+    logger.info("\n=== TUTORIAL 11: TENSORBOARD INTEGRATION ===")
     
-    log("Creating TensorBoard writer...", "INFO")
+    logger.info("Creating TensorBoard writer...")
     writer = SummaryWriter('runs/pytorch_tutorial')
-    log("TensorBoard writer created at 'runs/pytorch_tutorial'", "SUCCESS")
+    logger.info("TensorBoard writer created at 'runs/pytorch_tutorial'")
     
     # Add scalar values
-    log("\nAdding scalar values to TensorBoard...", "INFO")
+    logger.info("\nAdding scalar values to TensorBoard...")
     for n_iter in range(100):
         writer.add_scalar('Loss/train', np.random.random(), n_iter)
         writer.add_scalar('Loss/test', np.random.random(), n_iter)
         writer.add_scalar('Accuracy/train', np.random.random(), n_iter)
         writer.add_scalar('Accuracy/test', np.random.random(), n_iter)
     
-    log("Scalar values added", "SUCCESS")
+    logger.info("Scalar values added")
     
     # Add images
-    log("\nAdding sample images...", "INFO")
+    logger.info("\nAdding sample images...")
     img_batch = torch.rand(16, 3, 28, 28)
     img_grid = torchvision.utils.make_grid(img_batch)
     writer.add_image('sample_images', img_grid)
-    log("Images added", "SUCCESS")
+    logger.info("Images added")
     
     # Add model graph
-    log("\nAdding model graph...", "INFO")
+    logger.info("\nAdding model graph...")
     model = nn.Sequential(
         nn.Linear(10, 20),
         nn.ReLU(),
@@ -776,66 +803,73 @@ def tutorial_11_tensorboard():
     )
     dummy_input = torch.rand(1, 10)
     writer.add_graph(model, dummy_input)
-    log("Model graph added", "SUCCESS")
+    logger.info("Model graph added")
     
     # Add histogram
-    log("\nAdding weight histograms...", "INFO")
+    logger.info("\nAdding weight histograms...")
     for n_iter in range(10):
         weights = torch.randn(100, 50)
         writer.add_histogram('weights', weights, n_iter)
-    log("Histograms added", "SUCCESS")
+    logger.info("Histograms added")
     
     writer.close()
-    log("TensorBoard writer closed", "SUCCESS")
-    log("\nTo view TensorBoard, run: tensorboard --logdir=runs", "INFO")
+    logger.info("TensorBoard writer closed")
+    logger.info("\nTo view TensorBoard, run: tensorboard --logdir=runs")
 
 # Main execution
 def main():
     """Main function to run all tutorials"""
-    print(f"\n{Colors.HEADER}{Colors.BOLD}")
-    print("="*60)
+    logger.info(f"--- Starting {SCRIPT_NAME} ---")
+    
+    print("\n" + "="*60)
     print("COMPREHENSIVE PYTORCH TUTORIAL")
     print("From Basics to Advanced Topics")
     print("="*60)
-    print(f"{Colors.ENDC}\n")
+    print("\n")
     
     # Setup environment
-    if not setup_environment():
-        log("Failed to setup environment. Exiting.", "ERROR")
-        return
+    # setup_environment() is called at the beginning of the script.
     
     # Import packages
-    if not import_packages():
-        log("Failed to import packages. Exiting.", "ERROR")
-        return
+    # import_packages() is called at the beginning of the script.
     
     # Create data directory
     os.makedirs('data', exist_ok=True)
-    log("Created data directory", "SUCCESS")
+    logger.info("Created data directory")
     
+    # Load config
+    config = {}
+    try:
+        with open(CONFIG_FILE, 'r') as f:
+            shared_config = json.load(f)
+        if SCRIPT_NAME in shared_config:
+            config = shared_config[SCRIPT_NAME]
+            logger.info(f"Loaded configuration for {SCRIPT_NAME} from {CONFIG_FILE}")
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        logger.warning(f"Could not load or parse {CONFIG_FILE}, using default parameters. Error: {e}")
+
     try:
         # Run tutorials
         device = tutorial_1_installation()
         tutorial_2_tensor_basics(device)
         tutorial_3_autograd()
-        tutorial_4_backpropagation()
-        tutorial_5_training_pipeline()
-        tutorial_6_datasets_dataloaders()
-        tutorial_7_neural_network(device)
-        tutorial_8_cnn(device)
+        tutorial_4_backpropagation(config.get('tutorial_4', {}))
+        tutorial_5_training_pipeline(config.get('tutorial_5', {}))
+        tutorial_6_datasets_dataloaders(config.get('tutorial_6', {}))
+        tutorial_7_neural_network(device, config.get('tutorial_7', {}))
+        tutorial_8_cnn(device, config.get('tutorial_8', {}))
         tutorial_9_save_load_models(device)
         tutorial_10_transfer_learning(device)
         tutorial_11_tensorboard()
         
         # Summary
-        print(f"\n{Colors.HEADER}{Colors.BOLD}")
-        print("="*60)
+        print("\n" + "="*60)
         print("TUTORIAL COMPLETED SUCCESSFULLY!")
         print("="*60)
-        print(f"{Colors.ENDC}\n")
+        print("\n")
         
-        log("All tutorials completed successfully!", "SUCCESS")
-        log("You've covered:", "INFO")
+        logger.info("All tutorials completed successfully!")
+        logger.info("You've covered:")
         tutorials = [
             "1. PyTorch Installation and Setup",
             "2. Tensor Basics and Operations",
@@ -850,24 +884,25 @@ def main():
             "11. TensorBoard Integration"
         ]
         for tutorial in tutorials:
-            log(f"  ✓ {tutorial}", "SUCCESS")
+            logger.info(f"  ✓ {tutorial}")
             
     except Exception as e:
-        log(f"An error occurred: {e}", "ERROR")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"An error occurred: {e}", exc_info=True)
     
     finally:
         # Cleanup
-        log("\nCleaning up temporary files...", "INFO")
+        logger.info("\nCleaning up temporary files...")
         # Remove data folder if you want
         # import shutil
         # if os.path.exists('data'):
         #     shutil.rmtree('data')
-        #     log("Removed data directory", "INFO")
+        #     logger.info("Removed data directory")
         
         if os.path.exists('runs'):
-            log("TensorBoard logs saved in 'runs' directory", "INFO")
+            logger.info("TensorBoard logs saved in 'runs' directory")
+        
+        logger.info(f"--- Finished {SCRIPT_NAME} ---")
+
 
 if __name__ == "__main__":
     main()

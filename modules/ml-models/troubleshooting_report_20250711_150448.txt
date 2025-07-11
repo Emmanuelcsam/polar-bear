@@ -1,0 +1,63 @@
+ML MODELS CONNECTOR SYSTEM - TROUBLESHOOTING REPORT
+Generated: 2025-07-11 15:04:48
+============================================================
+
+SUMMARY: 12/15 tests passed
+
+
+Basic Requirements
+------------------
+Python version >= 3.6                    [PASS]
+  Details: 3.12.3
+File: connector.py                       [PASS]
+File: hivemind_connector.py              [PASS]
+File: script_interface.py                [PASS]
+File: script_wrappers.py                 [PASS]
+File: anomaly_detection_script.py        [PASS]
+
+
+Port Availability
+-----------------
+Port 10117 (Hivemind Connector)          [PASS]
+  Details: Available
+Port 10118 (Script Control Server)       [PASS]
+  Details: Available
+Port 10004 (Parent Connector)            [PASS]
+  Details: Available
+
+
+Module Functionality
+--------------------
+Script Interface Module                  [PASS]
+  Details: {'ScriptInterface': True, 'ConnectorClient': True, 'create_standalone_wrapper': True}
+Script Wrappers Module                   [PASS]
+  Details: {'GenericScriptWrapper': True, 'AnomalyDetectionWrapper': True, 'CNNScriptWrapper': True, 'CollaborativeWrapper': True}
+Enhanced Anomaly Script                  [PASS]
+  Details: {'AnomalyDetectionSystem class': True, 'ScriptInterface integration': True, 'Connector availability check': True}
+
+
+Script Execution
+----------------
+Anomaly Script (standalone)              [FAIL]
+  Details: Exit code 1: error: externally-managed-environment
+
+× This environment is externally managed
+╰─> To install Pytho
+
+
+Connector Communication
+-----------------------
+Hivemind Connector (10117)               [FAIL]
+  Details: Not running or not responding
+Script Control Server (10118)            [FAIL]
+  Details: Not running or not responding
+
+
+RECOMMENDATIONS:
+---------------
+
+For full integration:
+1. Ensure all connectors are running (hivemind_connector.py)
+2. Update scripts to use ScriptInterface base class
+3. Run scripts with --with-connector flag
+4. Use connector.py menu to control and monitor scripts

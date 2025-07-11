@@ -23,16 +23,55 @@ import numpy as np
 from src.core.integrated_geometry_system import GeometryDetectionSystem, GeometryDetector, Config, setup_logging
 from datetime import datetime
 import logging
+import shared_config # Import the shared configuration module
 
 class SimpleGeometryDemo:
     """Simplified geometry demo without matplotlib dashboard"""
     
-    def __init__(self):
+    def __init__(self, camera_source=None):
         self.logger = logging.getLogger("SimpleGeometryDemo")
+        
+        # Load initial configuration from shared_config
+        self.current_config = shared_config.get_config()
+        self.camera_source = self.current_config.get("camera_source", camera_source if camera_source is not None else 0)
+        self.show_info = self.current_config.get("show_info_overlay", True)
+        
         self.detector = GeometryDetector()
         self.frame_count = 0
-        self.show_info = True
-        
+        self.running = False
+        self.paused = False
+        self.status = "initialized"
+
+    def get_script_info(self):
+        return {
+            "name": "Simple Geometry Demo (Fixed)",
+            "status": self.status,
+            "parameters": {
+                "camera_source": self.camera_source,
+                "show_info_overlay": self.show_info,
+                "log_level": self.current_config.get("log_level"),
+                "data_source": self.current_config.get("data_source"),
+                "processing_enabled": self.current_config.get("processing_enabled"),
+                "threshold_value": self.current_config.get("threshold_value")
+            },
+            "frame_count": self.frame_count
+        }
+
+    def set_script_parameter(self, key, value):
+        if key in self.current_config:
+            self.current_config[key] = value
+            shared_config.set_config_value(key, value)
+            
+            if key == "camera_source":
+                self.camera_source = value
+                # Note: Re-initializing camera mid-run is complex, might require restart
+            elif key == "show_info_overlay":
+                self.show_info = value
+            
+            self.status = f"parameter '{key}' updated"
+            return True
+        return False
+
     def process_frame(self, frame):
         """Process frame and draw results"""
         # Detect shapes
@@ -104,7 +143,7 @@ class SimpleGeometryDemo:
         cv2.putText(image, "Press 'q' to quit, 'i' to toggle info", 
                    (10, h-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
     
-    def run(self, camera_source=0):
+    def run(self):
         """Run the demo"""
         print("Starting Simple Geometry Demo...")
         print("Controls:")
@@ -114,12 +153,13 @@ class SimpleGeometryDemo:
         print("-" * 50)
         
         # Try V4L2 backend first for Linux
-        cap = cv2.VideoCapture(camera_source, cv2.CAP_V4L2)
+        cap = cv2.VideoCapture(self.camera_source, cv2.CAP_V4L2)
         if not cap.isOpened():
-            cap = cv2.VideoCapture(camera_source)
+            cap = cv2.VideoCapture(self.camera_source)
             
         if not cap.isOpened():
             print("ERROR: Failed to open camera!")
+            self.status = "camera_error"
             return
             
         # Get camera info
@@ -128,8 +168,15 @@ class SimpleGeometryDemo:
         fps = cap.get(cv2.CAP_PROP_FPS)
         print(f"Camera opened: {width}x{height} @ {fps} FPS")
         
+        self.running = True
+        self.status = "running"
+
         try:
-            while True:
+            while self.running:
+                if self.paused:
+                    cv2.waitKey(50)
+                    continue
+
                 ret, frame = cap.read()
                 if not ret:
                     print("Failed to read frame!")
@@ -137,13 +184,18 @@ class SimpleGeometryDemo:
                     
                 self.frame_count += 1
                 
-                # Process and display
-                output = self.process_frame(frame)
+                # Process and display only if processing is enabled
+                if self.current_config.get("processing_enabled", True):
+                    output = self.process_frame(frame)
+                else:
+                    output = frame.copy() # Display original frame if processing is disabled
+
                 cv2.imshow('Geometry Detection Demo', output)
                 
                 # Handle keyboard
                 key = cv2.waitKey(1) & 0xFF
                 if key == ord('q'):
+                    self.running = False
                     break
                 elif key == ord('i'):
                     self.show_info = not self.show_info
@@ -151,22 +203,43 @@ class SimpleGeometryDemo:
                     filename = f"geometry_demo_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
                     cv2.imwrite(filename, output)
                     print(f"Screenshot saved: {filename}")
+                elif key == ord('p'): # Add pause functionality
+                    self.paused = not self.paused
+                    self.status = "paused" if self.paused else "running"
+                    print(f"Demo {'paused' if self.paused else 'resumed'}")
                     
         except KeyboardInterrupt:
             print("\nInterrupted by user")
         finally:
             cap.release()
             cv2.destroyAllWindows()
+            self.status = "stopped"
             print("Demo finished")
+
+demo_instance = None
+
+def get_script_info():
+    """Returns information about the script, its status, and exposed parameters."""
+    if demo_instance:
+        return demo_instance.get_script_info()
+    return {"name": "Simple Geometry Demo (Fixed)", "status": "not_initialized", "parameters": {}}
+
+def set_script_parameter(key, value):
+    """Sets a specific parameter for the script and updates shared_config."""
+    if demo_instance:
+        return demo_instance.set_script_parameter(key, value)
+    return False
 
 def main():
     """Main entry point"""
+    global demo_instance
+
     # Setup logging
     setup_logging(level=logging.INFO)
     
     # Create and run demo
-    demo = SimpleGeometryDemo()
-    demo.run()
+    demo_instance = SimpleGeometryDemo()
+    demo_instance.run()
 
 if __name__ == "__main__":
     main()

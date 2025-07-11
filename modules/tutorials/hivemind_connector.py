@@ -27,6 +27,7 @@ class HivemindConnector:
         self.parent_socket = None
         self.child_connectors = {}
         self.scripts_in_directory = {}
+        self.config_file = self.directory / "shared_config.json"
         
         # Setup logging
         self.logger = logging.getLogger(f"Connector_{self.connector_id}")
@@ -103,6 +104,10 @@ class HivemindConnector:
             return {'error': 'Script not found'}
         elif cmd == 'troubleshoot':
             return self.troubleshoot_connections()
+        elif cmd == 'get_config':
+            return self.get_config()
+        elif cmd == 'update_config':
+            return self.update_config(message.get('data'))
         else:
             return {'error': 'Unknown command'}
             
@@ -212,6 +217,35 @@ class HivemindConnector:
                 self.connect_to_parent()
                 
             time.sleep(30)  # Heartbeat every 30 seconds
+
+    def get_config(self):
+        """Return the content of the shared config file"""
+        try:
+            with open(self.config_file, 'r') as f:
+                return json.load(f)
+        except FileNotFoundError:
+            return {}
+        except Exception as e:
+            return {'error': f'Could not read config file: {e}'}
+
+    def update_config(self, data):
+        """Update the shared config file"""
+        if not isinstance(data, dict):
+            return {'error': 'Invalid data format, must be a dictionary'}
+        
+        try:
+            current_config = self.get_config()
+            if 'error' in current_config:
+                current_config = {}
+            
+            current_config.update(data)
+            
+            with open(self.config_file, 'w') as f:
+                json.dump(current_config, f, indent=4)
+            
+            return {'status': 'config_updated'}
+        except Exception as e:
+            return {'error': f'Could not write to config file: {e}'}
 
 if __name__ == "__main__":
     connector = HivemindConnector()

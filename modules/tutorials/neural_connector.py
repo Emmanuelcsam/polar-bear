@@ -7,113 +7,21 @@ import importlib
 import inspect
 from datetime import datetime
 import importlib.util
+import json
 
-class ColoredFormatter(logging.Formatter):
-    """A custom log formatter with colors."""
-    
-    GREY = "\x1b[38;20m"
-    YELLOW = "\x1b[33;20m"
-    RED = "\x1b[31;20m"
-    BOLD_RED = "\x1b[31;1m"
-    GREEN = "\x1b[32;20m"
-    RESET = "\x1b[0m"
-    
-    def __init__(self, fmt):
-        super().__init__(fmt)
-        self.FORMATS = {
-            logging.DEBUG: self.GREY + fmt + self.RESET,
-            logging.INFO: self.GREEN + fmt + self.RESET,
-            logging.WARNING: self.YELLOW + fmt + self.RESET,
-            logging.ERROR: self.RED + fmt + self.RESET,
-            logging.CRITICAL: self.BOLD_RED + fmt + self.RESET
-        }
+# --- Start of Connector Integration ---
+try:
+    import connector
+    logger = connector.logger
+except ImportError:
+    print("Connector not found, using basic logging.")
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] - %(message)s')
+    logger = logging.getLogger(__name__)
 
-    def format(self, record):
-        log_fmt = self.FORMATS.get(record.levelno)
-        formatter = logging.Formatter(log_fmt)
-        return formatter.format(record)
+CONFIG_FILE = "shared_config.json"
+SCRIPT_NAME = "neural_connector"
+# --- End of Connector Integration ---
 
-def setup_logger():
-    """Sets up the logger for the connector."""
-    logger = logging.getLogger("NeuralConnector")
-    logger.setLevel(logging.INFO)
-    
-    # Avoid adding handlers multiple times
-    if logger.hasHandlers():
-        logger.handlers.clear()
-
-    # File handler
-    log_file = "neural_connector.log"
-    file_handler = logging.FileHandler(log_file)
-    file_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    file_handler.setFormatter(file_formatter)
-    logger.addHandler(file_handler)
-
-    # Console handler
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_formatter = ColoredFormatter('%(asctime)s - [%(levelname)s] - %(message)s')
-    console_handler.setFormatter(console_formatter)
-    logger.addHandler(console_handler)
-    
-    return logger
-
-class DependencyManager:
-    """Manages detection and installation of dependencies."""
-    
-    def __init__(self, logger):
-        self.logger = logger
-        self.dependencies = {
-            # From computer-vision-tutorial.py
-            "json": ("json", None),
-            "os": ("os", None),
-            "cv2": ("opencv-python", "cv2"),
-            "matplotlib": ("matplotlib", "matplotlib"),
-            "numpy": ("numpy", "numpy"),
-            "torch": ("torch", "torch"),
-            "torchvision": ("torchvision", "torchvision"),
-            "tqdm": ("tqdm", "tqdm"),
-            "pandas": ("pandas", "pandas"),
-            "sklearn": ("scikit-learn", "sklearn"),
-            # From cv-training-guide.py
-            "requests": ("requests", "requests"),
-            "torchmetrics": ("torchmetrics", "torchmetrics"),
-            "mlxtend": ("mlxtend", "mlxtend"),
-            # From detection-tutorial.py
-            "tensorboard": ("tensorboard", "tensorboard"),
-        }
-
-    def check_and_install(self):
-        """Checks all dependencies and installs them if they are missing."""
-        self.logger.info("Starting dependency check...")
-        all_good = True
-        for package, (package_name, import_name) in self.dependencies.items():
-            if import_name: # Skip standard libraries like os, json
-                if not self._check_single_package(package_name, import_name):
-                    all_good = False
-        
-        if all_good:
-            self.logger.info("All dependencies are satisfied.")
-        else:
-            self.logger.warning("Some dependencies were installed. It's recommended to restart the script.")
-        return all_good
-            
-    def _check_single_package(self, package_name, import_name):
-        """Checks and installs a single package."""
-        try:
-            importlib.import_module(import_name)
-            self.logger.info(f"Dependency '{package_name}' is already installed.")
-            return True
-        except ImportError:
-            self.logger.warning(f"Dependency '{package_name}' not found. Attempting to install...")
-            try:
-                subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", package_name])
-                self.logger.info(f"Successfully installed '{package_name}'.")
-                # Verify installation
-                importlib.import_module(import_name)
-                return True
-            except (subprocess.CalledProcessError, ImportError) as e:
-                self.logger.error(f"Failed to install '{package_name}'. Error: {e}")
-                return False
 
 class ModuleManager:
     """Loads and manages the tutorial modules."""
@@ -127,7 +35,7 @@ class ModuleManager:
         self.logger.info("Discovering and loading modules...")
         current_dir = os.path.dirname(os.path.abspath(__file__))
         for filename in os.listdir(current_dir):
-            if filename.endswith(".py") and filename not in ["neural_connector.py", "setup.py"]:
+            if filename.endswith(".py") and filename not in ["neural_connector.py", "setup.py", "connector.py", "hivemind_connector.py"]:
                 module_name = filename[:-3]
                 try:
                     spec = importlib.util.spec_from_file_location(module_name, os.path.join(current_dir, filename))
@@ -169,15 +77,11 @@ class ModuleManager:
 
 class NeuralConnector:
     def __init__(self):
-        self.logger = setup_logger()
-        self.dependency_manager = DependencyManager(self.logger)
+        self.logger = logger
         self.module_manager = ModuleManager(self.logger)
         
     def initialize(self):
         self.logger.info("Initializing Neural Connector...")
-        if not self.dependency_manager.check_and_install():
-             self.logger.critical("Critical dependencies failed to install. Exiting.")
-             sys.exit(1)
         self.module_manager.discover_and_load_modules()
         
     def run(self):
@@ -208,6 +112,8 @@ class NeuralConnector:
                         self.show_module(parts[1])
                     else:
                         self.logger.warning("Usage: show <module_name>")
+                elif base_cmd == "config":
+                    self.show_config()
                 else:
                     self.logger.warning(f"Unknown command: '{base_cmd}'. Type 'help' for a list of commands.")
 
@@ -223,8 +129,7 @@ class NeuralConnector:
         print("Available Commands:")
         print("  list              - List all loaded modules.")
         print("  show <module_name>  - Show details of a specific module (functions, classes).")
-        print("  run <module.func> - Execute a function from a module (TODO).")
-        print("  test <module>     - Run tests for a specific module (TODO).")
+        print("  config            - Show the content of shared_config.json.")
         print("  help              - Show this help message.")
         print("  exit              - Exit the connector.")
         print("---------------------------------\n")
@@ -269,7 +174,23 @@ class NeuralConnector:
 
         print("---------------------------------------\n")
 
+    def show_config(self):
+        """Displays the content of the shared configuration file."""
+        self.logger.info(f"Reading configuration from {CONFIG_FILE}...")
+        try:
+            with open(CONFIG_FILE, 'r') as f:
+                config_data = json.load(f)
+            
+            print("\n--- Shared Configuration ---")
+            print(json.dumps(config_data, indent=4))
+            print("--------------------------\n")
+
+        except FileNotFoundError:
+            self.logger.error(f"{CONFIG_FILE} not found.")
+        except json.JSONDecodeError:
+            self.logger.error(f"Could not decode JSON from {CONFIG_FILE}.")
+
 
 if __name__ == "__main__":
-    connector = NeuralConnector()
-    connector.run()
+    connector_instance = NeuralConnector()
+    connector_instance.run()

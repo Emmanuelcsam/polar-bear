@@ -1,0 +1,27 @@
+================================================================================
+ANOMALY DETECTION REPORT
+================================================================================
+
+File: test.png
+Date: 2025-07-11 14:26:32
+
+OVERALL VERDICT: ANOMALOUS (Confidence: 85.0%)
+
+-- Global Analysis --
+Mahalanobis Distance: 3.5000
+
+-- Structural Analysis --
+SSIM Index vs Archetype: 0.6500
+
+-- Local Analysis --
+Found 1 anomaly region(s).
+  Region 1: BBox=(10, 10, 20, 20), Confidence=0.900
+
+-- Specific Defects --
+Scratches: 0
+Digs: 1
+Blobs: 0
+
+================================================================================
+END OF REPORT
+================================================================================

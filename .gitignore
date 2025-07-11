@@ -25,3 +25,6 @@ decrepit-versions/version732025/results/fiber_defective/2_separated/recolor_colo
 /training/studio-tools/tests/test_env
 /training/data-gen-cpu/tests/test_env
 /modules/iteration11-auto-pipeline/venv
+/modules/pytorch-img-gen/venv
+/modules/tutorials/data/MNIST/raw
+*.gz

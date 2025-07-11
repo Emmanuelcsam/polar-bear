@@ -3,15 +3,15 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-from typing import Optional
+import argparse
+import json
+from typing import Optional, List
 
-# Import necessary data structures
-from inspector_config import InspectorConfig
-from image_result import ImageResult
-from defect_info import DefectInfo
-from detected_zone_info import DetectedZoneInfo
-from fiber_specifications import FiberSpecifications
-from image_analysis_stats import ImageAnalysisStats
+# Import necessary data structures and utilities from common_data_and_utils
+from common_data_and_utils import (
+    InspectorConfig, ImageResult, DefectInfo, DetectedZoneInfo, FiberSpecifications, 
+    ImageAnalysisStats, log_message, load_json_data
+)
 from datetime import datetime
 from pathlib import Path
 
@@ -60,46 +60,53 @@ def generate_defect_histogram(image_res: ImageResult, config: InspectorConfig) -
     log_message(f"Defect histogram generated for {image_res.filename}.")
     return fig
 
-# Dummy log_message for standalone execution
-def log_message(message, level="INFO"):
-    print(f"[{level}] {message}")
+def main(image_result_path: str, config_path: str, output_path: str):
+    """
+    Main function to generate a defect histogram from provided data paths.
+    
+    Args:
+        image_result_path (str): Path to a JSON file containing ImageResult data.
+        config_path (str): Path to a JSON file containing InspectorConfig data.
+        output_path (str): Path to save the generated histogram image.
+    """
+    log_message(f"Starting defect histogram generation for {image_result_path}")
+
+    # Load ImageResult
+    image_result_data = load_json_data(Path(image_result_path))
+    if image_result_data is None:
+        log_message(f"Failed to load ImageResult from {image_result_path}", level="ERROR")
+        return
+    image_res = ImageResult.from_dict(image_result_data)
+
+    # Load InspectorConfig
+    config_data = load_json_data(Path(config_path))
+    if config_data is None:
+        log_message(f"Failed to load InspectorConfig from {config_path}", level="ERROR")
+        return
+    config = InspectorConfig.from_dict(config_data)
+
+    # Generate histogram
+    histogram_figure = generate_defect_histogram(image_res, config)
+
+    if histogram_figure:
+        try:
+            output_dir = Path(output_path).parent
+            output_dir.mkdir(parents=True, exist_ok=True)
+            histogram_figure.savefig(str(output_path), dpi=150)
+            plt.close(histogram_figure) # Close the plot to free memory
+            log_message(f"Successfully saved defect histogram to {output_path}")
+        except Exception as e:
+            log_message(f"Failed to save defect histogram to {output_path}: {e}", level="ERROR")
+    else:
+        log_message("Histogram generation failed or no defects to plot.", level="WARNING")
 
 if __name__ == '__main__':
-    # Example of how to use generate_defect_histogram
+    parser = argparse.ArgumentParser(description="Generate defect histograms.")
+    parser.add_argument("--image_result_path", required=True, help="Path to a JSON file containing ImageResult data.")
+    parser.add_argument("--config_path", required=True, help="Path to a JSON file containing InspectorConfig data.")
+    parser.add_argument("--output_path", required=True, help="Path to save the generated histogram image.")
     
-    # 1. Setup: Create mock data
-    conf = InspectorConfig()
-    h, w = 400, 400
-    center = (w//2, h//2)
-
-    mock_defects = [
-        DefectInfo(defect_id=1, zone_name='cladding', defect_type='Region', centroid_px=(150, 150), bounding_box_px=(145,145,5,5)),
-        DefectInfo(defect_id=2, zone_name='core', defect_type='Scratch', centroid_px=(210, 190), bounding_box_px=(208,188,4,4))
-    ]
-    mock_zones = {
-        'core': DetectedZoneInfo('core', center, 80),
-        'cladding': DetectedZoneInfo('cladding', center, 150)
-    }
-    mock_image_result = ImageResult(
-        filename="mock_image.jpg",
-        timestamp=datetime.now(),
-        fiber_specs_used=FiberSpecifications(),
-        operating_mode="PIXEL_ONLY",
-        detected_zones=mock_zones,
-        defects=mock_defects,
-        stats=ImageAnalysisStats()
-    )
-
-    # 2. Run the histogram generation function
-    print("\n--- Generating defect histogram from mock data ---")
-    histogram_figure = generate_defect_histogram(mock_image_result, conf)
-
-    # 3. Save the output
-    if histogram_figure:
-        output_filename = "modularized_scripts/z_test_output_defect_histogram.png"
-        histogram_figure.savefig(output_filename, dpi=150)
-        plt.close(histogram_figure) # Close the plot to free memory
-        print(f"Success! Saved defect histogram to '{output_filename}'")
-    else:
-        print("Histogram generation failed.")
+    args = parser.parse_args()
+    
+    main(args.image_result_path, args.config_path, args.output_path)
 

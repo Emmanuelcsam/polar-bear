@@ -19,6 +19,7 @@ from collections import deque
 import unittest
 from unittest.mock import patch, MagicMock
 import sys
+import shared_config # Import the shared configuration module
 
 # -------- configuration ------------------------------------------------------
 MAX_QUEUE = 5           # frames kept for temporal smoothing
@@ -86,87 +87,158 @@ def detect(gray):
             verified.append((x, y, r))
     return verified
 
+class RealtimeCircleDetector:
+    def __init__(self, camera_source=None, display_scale=None, min_accum=None):
+        self.current_config = shared_config.get_config()
+        self.camera_source = self.current_config.get("camera_source", camera_source if camera_source is not None else 0)
+        self.display_scale = self.current_config.get("display_scale", display_scale if display_scale is not None else 0.40)
+        self.min_accum = self.current_config.get("min_accum", min_accum if min_accum is not None else 20)
+        
+        self.cap = None
+        self.kfs = []
+        self.traces = deque(maxlen=MAX_QUEUE)
+        self.frame_count = 0
+        self.running = False
+        self.paused = False
+        self.status = "initialized"
+
+    def get_script_info(self):
+        return {
+            "name": "Real-time Circle Detector",
+            "status": self.status,
+            "parameters": {
+                "camera_source": self.camera_source,
+                "display_scale": self.display_scale,
+                "min_accum": self.min_accum,
+                "log_level": self.current_config.get("log_level"),
+                "data_source": self.current_config.get("data_source"),
+                "processing_enabled": self.current_config.get("processing_enabled"),
+                "threshold_value": self.current_config.get("threshold_value")
+            },
+            "detected_circles": len(self.traces[-1]) if self.traces else 0
+        }
+
+    def set_script_parameter(self, key, value):
+        if key in self.current_config:
+            self.current_config[key] = value
+            shared_config.set_config_value(key, value)
+            
+            if key == "camera_source":
+                self.camera_source = value
+                if self.running:
+                    self.stop()
+                    self.start() # Restart camera with new source
+            elif key == "display_scale":
+                self.display_scale = value
+            elif key == "min_accum":
+                self.min_accum = value
+            
+            self.status = f"parameter '{key}' updated"
+            return True
+        return False
+
+    def start(self):
+        print("Initializing camera...")
+        self.cap = cv2.VideoCapture(self.camera_source, cv2.CAP_V4L2)
+        
+        if not self.cap.isOpened():
+            print("Failed to open camera! Trying default backend...")
+            self.cap = cv2.VideoCapture(self.camera_source)
+        
+        if not self.cap.isOpened():
+            print("ERROR: Cannot open camera!")
+            self.status = "camera_error"
+            return
+        
+        self.running = True
+        self.status = "running"
+        print(f"Camera opened: {int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))}x{int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))} @ {self.cap.get(cv2.CAP_PROP_FPS)} FPS")
+        self.run_loop()
+
+    def stop(self):
+        self.running = False
+        if self.cap:
+            self.cap.release()
+        cv2.destroyAllWindows()
+        self.status = "stopped"
+        print("Exiting...")
+
+    def toggle_pause(self):
+        self.paused = not self.paused
+        self.status = "paused" if self.paused else "running"
+        print(f"Detection {'paused' if self.paused else 'resumed'}")
+
+    def run_loop(self):
+        while self.running and self.cap.isOpened():
+            if self.paused:
+                cv2.waitKey(50)
+                continue
+
+            ret, frame = self.cap.read()
+            if not ret:
+                print("Failed to read frame!")
+                break
+
+            self.frame_count += 1
+            if self.frame_count % 30 == 0:
+                print(f"Processing frame {self.frame_count}...")
+
+            img = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            proc = preprocess(img)
+            found = detect(proc)
+
+            new_kfs = []
+            for (x, y, r) in found:
+                matched = False
+                for kf in self.kfs:
+                    px, py, pr = kf.update((x, y, r))
+                    if np.hypot(px - x, py - y) < 0.5 * r:
+                        matched = True
+                        new_kfs.append(kf)
+                        break
+                if not matched:
+                    new_kfs.append(KF(x, y, r))
+            self.kfs = new_kfs
+            self.traces.append([(int(k.kf.statePost[0]), int(k.kf.statePost[1]), int(k.kf.statePost[2])) for k in self.kfs])
+
+            vis = frame.copy()
+            for tr in self.traces:
+                for (x, y, r) in tr:
+                    cv2.circle(vis, (x, y), r, (0, 255, 0), 2)
+                    cv2.circle(vis, (x, y), 3, (0, 0, 255), -1)
+            
+            cv2.putText(vis, f"Circles: {len(self.traces[-1]) if self.traces else 0}", 
+                        (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            cv2.putText(vis, "Press 'q' to quit, 'p' to pause", 
+                        (10, int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            
+            if self.display_scale != 1.0:
+                vis = cv2.resize(vis, None, fx=self.display_scale, fy=self.display_scale)
+            
+            cv2.imshow("Circle detector", vis)
+            key = cv2.waitKey(1) & 0xFF
+            if key == ord('q') or key == 27:
+                self.stop()
+                break
+            elif key == ord('p'):
+                self.toggle_pause()
+
+detector_instance = None
+
+def get_script_info():
+    if detector_instance:
+        return detector_instance.get_script_info()
+    return {"name": "Real-time Circle Detector", "status": "not_initialized", "parameters": {}}
+
+def set_script_parameter(key, value):
+    if detector_instance:
+        return detector_instance.set_script_parameter(key, value)
+    return False
+
 def main():
-    # ----- VideoCapture initialisation ----------------------------------------------
-    print("Initializing camera...")
-    cap = cv2.VideoCapture(0, cv2.CAP_V4L2) # Use V4L2 backend for better Linux compatibility
-    
-    if not cap.isOpened():
-        print("Failed to open camera! Trying default backend...")
-        cap = cv2.VideoCapture(0)
-    
-    if not cap.isOpened():
-        print("ERROR: Cannot open camera!")
-        return
-    
-    # Get camera properties
-    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    print(f"Camera opened: {width}x{height} @ {fps} FPS")
-
-    kfs = []       # active Kalman filters
-    traces = deque(maxlen=MAX_QUEUE)
-    frame_count = 0
-
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            print("Failed to read frame!")
-            break
-
-        frame_count += 1
-        if frame_count % 30 == 0:
-            print(f"Processing frame {frame_count}...")
-
-        img = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-
-        proc = preprocess(img)
-        found = detect(proc)
-
-        # temporal fusion ------------------------------------------------------
-        new_kfs = []
-        for (x, y, r) in found:
-            matched = False
-            for kf in kfs:
-                px, py, pr = kf.update((x, y, r))
-                if np.hypot(px - x, py - y) < 0.5 * r:
-                    matched = True
-                    new_kfs.append(kf)
-                    break
-            if not matched:
-                new_kfs.append(KF(x, y, r))
-        kfs = new_kfs
-        traces.append([(int(k.kf.statePost[0]), int(k.kf.statePost[1]), int(k.kf.statePost[2])) for k in kfs])
-
-        # draw -----------------------------------------------------------------
-        # Use the original color frame instead of grayscale
-        vis = frame.copy()
-        
-        # Draw detected circles
-        for tr in traces:
-            for (x, y, r) in tr:
-                cv2.circle(vis, (x, y), r, (0, 255, 0), 2)
-                cv2.circle(vis, (x, y), 3, (0, 0, 255), -1)  # Center point
-        
-        # Add info text
-        cv2.putText(vis, f"Circles: {len(traces[-1]) if traces else 0}", 
-                    (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-        cv2.putText(vis, "Press 'q' to quit", 
-                    (10, height - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-        
-        if DISPLAY_SCALE != 1.0:
-            vis = cv2.resize(vis, None, fx=DISPLAY_SCALE, fy=DISPLAY_SCALE)
-        
-        cv2.imshow("Circle detector - Press 'q' to quit", vis)
-        key = cv2.waitKey(1) & 0xFF
-        if key == ord('q') or key == 27:  # 'q' or ESC
-            print("Exiting...")
-            break
-
-    cap.release()
-    cv2.destroyAllWindows()
+    global detector_instance
+    detector_instance = RealtimeCircleDetector()
+    detector_instance.start()
 
 class TestCircleDetector(unittest.TestCase):
 

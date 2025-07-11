@@ -23,6 +23,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 import threading
 import queue
+import shared_config # Import the shared configuration module
 
 # Import from the integrated system
 from src.core.integrated_geometry_system import (
@@ -36,11 +37,15 @@ from src.core.integrated_geometry_system import (
 class ShapeAnalysisDashboard:
     """Custom application for shape analysis with dashboard"""
     
-    def __init__(self):
+    def __init__(self, camera_source=None):
         self.logger = setup_logging("ShapeAnalysisDashboard")
         
+        # Load initial configuration from shared_config
+        self.current_config = shared_config.get_config()
+        self.camera_source = self.current_config.get("camera_source", camera_source if camera_source is not None else 0)
+        
         # Initialize detection system
-        self.detector = GeometryDetector(use_gpu=True)
+        self.detector = GeometryDetector(use_gpu=self.current_config.get("use_gpu", True))
         
         # Data storage
         self.shape_history = defaultdict(lambda: deque(maxlen=300))  # 10 seconds at 30fps
@@ -49,20 +54,22 @@ class ShapeAnalysisDashboard:
         self.start_time = time.time()
         
         # Filtering settings
-        self.min_area_filter = 500
-        self.max_area_filter = 50000
-        self.shape_filter = set(ShapeType)  # All shapes by default
+        self.min_area_filter = self.current_config.get("min_shape_area", 500)
+        self.max_area_filter = self.current_config.get("max_shape_area", 50000)
+        self.shape_filter = set(ShapeType)  # All shapes by default, can be overridden by shared_config
+        if "shape_filter" in self.current_config:
+            self.shape_filter = {ShapeType[s.upper()] for s in self.current_config["shape_filter"]}
         
         # Alert settings
         self.alert_thresholds = {
-            ShapeType.CIRCLE: 5,    # Alert if more than 5 circles
-            ShapeType.TRIANGLE: 3,  # Alert if more than 3 triangles
+            ShapeType.CIRCLE: self.current_config.get("alert_threshold_circle", 5),    # Alert if more than 5 circles
+            ShapeType.TRIANGLE: self.current_config.get("alert_threshold_triangle", 3),  # Alert if more than 3 triangles
         }
         self.alerts = deque(maxlen=10)
         
         # Visualization
-        self.show_dashboard = True
-        self.dashboard_update_interval = 1.0  # seconds
+        self.show_dashboard = self.current_config.get("show_dashboard", True)
+        self.dashboard_update_interval = self.current_config.get("dashboard_update_interval", 1.0)  # seconds
         self.last_dashboard_update = 0
         
         # Export settings
@@ -71,7 +78,59 @@ class ShapeAnalysisDashboard:
         self.export_thread.daemon = True
         self.export_thread.start()
         
+        self.status = "initialized" # Add a status variable
         self.logger.info("Shape Analysis Dashboard initialized")
+
+    def get_script_info(self):
+        return {
+            "name": "Shape Analysis Dashboard",
+            "status": self.status,
+            "parameters": {
+                "camera_source": self.camera_source,
+                "min_area_filter": self.min_area_filter,
+                "max_area_filter": self.max_area_filter,
+                "shape_filter": [s.value for s in self.shape_filter],
+                "alert_threshold_circle": self.alert_thresholds.get(ShapeType.CIRCLE),
+                "alert_threshold_triangle": self.alert_thresholds.get(ShapeType.TRIANGLE),
+                "show_dashboard": self.show_dashboard,
+                "dashboard_update_interval": self.dashboard_update_interval,
+                "log_level": self.current_config.get("log_level"),
+                "data_source": self.current_config.get("data_source"),
+                "processing_enabled": self.current_config.get("processing_enabled"),
+                "threshold_value": self.current_config.get("threshold_value")
+            },
+            "current_shape_counts": dict(self.shape_counts),
+            "total_shapes_detected": self.total_shapes_detected,
+            "active_alerts": list(self.alerts)
+        }
+
+    def set_script_parameter(self, key, value):
+        if key in self.current_config:
+            self.current_config[key] = value
+            shared_config.set_config_value(key, value)
+            
+            # Apply changes if they affect the running script
+            if key == "camera_source":
+                self.camera_source = value
+                # Re-initialization of camera might be needed, or restart
+            elif key == "min_shape_area":
+                self.min_area_filter = value
+            elif key == "max_shape_area":
+                self.max_area_filter = value
+            elif key == "shape_filter" and isinstance(value, list):
+                self.shape_filter = {ShapeType[s.upper()] for s in value}
+            elif key == "alert_threshold_circle":
+                self.alert_thresholds[ShapeType.CIRCLE] = value
+            elif key == "alert_threshold_triangle":
+                self.alert_thresholds[ShapeType.TRIANGLE] = value
+            elif key == "show_dashboard":
+                self.show_dashboard = value
+            elif key == "dashboard_update_interval":
+                self.dashboard_update_interval = value
+            
+            self.status = f"parameter '{key}' updated"
+            return True
+        return False
     
     def process_frame(self, frame: np.ndarray) -> np.ndarray:
         """Process frame and update analytics"""
@@ -111,7 +170,7 @@ class ShapeAnalysisDashboard:
                 continue
             
             # Confidence filter
-            if shape.confidence < 0.7:
+            if shape.confidence < self.current_config.get("confidence_threshold", 0.7):
                 continue
             
             filtered.append(shape)
@@ -390,12 +449,13 @@ class ShapeAnalysisDashboard:
             self.min_area_filter = min(5000, self.min_area_filter + 100)
             self.logger.info(f"Min area filter: {self.min_area_filter}")
     
-    def run(self, camera_source=0):
+    def run(self):
         """Run the dashboard application"""
-        cap = cv2.VideoCapture(camera_source)
+        cap = cv2.VideoCapture(self.camera_source)
         
         if not cap.isOpened():
             self.logger.error("Failed to open camera")
+            self.status = "camera_error"
             return
         
         # Set camera properties
@@ -413,14 +473,20 @@ class ShapeAnalysisDashboard:
         print("  's' - Save screenshot")
         print("="*50)
         
+        self.running = True
+        self.status = "running"
+
         try:
-            while True:
+            while self.running:
                 ret, frame = cap.read()
                 if not ret:
                     break
                 
-                # Process frame
-                output = self.process_frame(frame)
+                # Process frame only if processing is enabled
+                if self.current_config.get("processing_enabled", True):
+                    output = self.process_frame(frame)
+                else:
+                    output = frame.copy() # Display original frame if processing is disabled
                 
                 # Display
                 cv2.imshow('Shape Analysis Dashboard', output)
@@ -428,6 +494,7 @@ class ShapeAnalysisDashboard:
                 # Handle keyboard
                 key = cv2.waitKey(1) & 0xFF
                 if key == ord('q'):
+                    self.running = False
                     break
                 elif key == ord('s'):
                     filename = f"dashboard_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
@@ -441,13 +508,31 @@ class ShapeAnalysisDashboard:
         finally:
             cap.release()
             cv2.destroyAllWindows()
+            self.status = "stopped"
             
             # Final export
             self.logger.info("Performing final export...")
             self._export_worker()
 
+
+dashboard_instance = None
+
+def get_script_info():
+    """Returns information about the script, its status, and exposed parameters."""
+    if dashboard_instance:
+        return dashboard_instance.get_script_info()
+    return {"name": "Shape Analysis Dashboard", "status": "not_initialized", "parameters": {}}
+
+def set_script_parameter(key, value):
+    """Sets a specific parameter for the script and updates shared_config."""
+    if dashboard_instance:
+        return dashboard_instance.set_script_parameter(key, value)
+    return False
+
 def main():
     """Main entry point"""
+    global dashboard_instance
+
     import argparse
     
     parser = argparse.ArgumentParser(description='Shape Analysis Dashboard Example')
@@ -462,8 +547,8 @@ def main():
         source = int(source)
     
     # Create and run dashboard
-    dashboard = ShapeAnalysisDashboard()
-    dashboard.run(source)
+    dashboard_instance = ShapeAnalysisDashboard(source)
+    dashboard_instance.run()
 
 if __name__ == "__main__":
     main()

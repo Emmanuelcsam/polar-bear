@@ -11,6 +11,7 @@ import sys
 import os
 import platform
 import importlib.util
+import shared_config # Import the shared configuration module
 
 # ANSI color codes
 class Colors:
@@ -236,50 +237,130 @@ print("✓ All tests passed!")
     
     print_success("Created test_installation.py")
 
-def main():
-    print_header("UV-Compatible Geometry Detection Setup")
-    
-    # Check Python version
-    python_version = sys.version_info
-    print(f"Python version: {python_version.major}.{python_version.minor}.{python_version.micro}")
-    
-    if python_version.major < 3 or python_version.minor < 8:
-        print_error("Python 3.8+ required!")
-        return
-    
-    # Check if uv is available
-    if not check_uv():
-        print("\nAlternative: Install pip in this environment:")
-        print("  uv pip install pip")
-        print("  Then run the original setup_installer.py")
-        return
-    
-    # Install packages
-    if install_with_uv():
-        # Check installation
-        if check_packages():
-            # Test OpenCV
-            test_opencv()
-            
-            # Create test script
-            create_test_script()
-            
-            print_header("Setup Complete!")
-            print("\nNext steps:")
-            print("1. Test your installation:")
-            print(f"   {Colors.BOLD}uv run python test_installation.py{Colors.ENDC}")
-            print("\n2. Run the main program:")
-            print(f"   {Colors.BOLD}uv run python integrated_geometry_system.py{Colors.ENDC}")
-            print("\n3. Or with the example:")
-            print(f"   {Colors.BOLD}uv run python shape_analysis_dashboard.py{Colors.ENDC}")
+class UVSetupManager:
+    """Manages the UV-compatible setup process."""
+
+    def __init__(self):
+        self.status = "initialized"
+        self.python_version = sys.version_info
+        self.uv_available = False
+        self.packages_installed = False
+        self.opencv_tested = False
+
+    def get_script_info(self):
+        """Returns information about the setup manager's status and capabilities."""
+        return {
+            "name": "UV-Compatible Setup Script",
+            "status": self.status,
+            "python_version": f"{self.python_version.major}.{self.python_version.minor}.{self.python_version.micro}",
+            "uv_available": self.uv_available,
+            "packages_installed": self.packages_installed,
+            "opencv_tested": self.opencv_tested,
+            "required_packages": [
+                "opencv-python", "opencv-contrib-python", "numpy", "psutil",
+                "scipy", "matplotlib", "pandas", "pillow"
+            ],
+            "log_level": shared_config.CONFIG.get("log_level", "INFO")
+        }
+
+    def set_script_parameter(self, key, value):
+        """Allows triggering setup phases or modifying high-level settings."""
+        if key == "run_full_setup" and value:
+            self.run_setup()
+            return True
+        elif key == "log_level":
+            if value in ["DEBUG", "INFO", "WARNING", "ERROR"]:
+                shared_config.set_config_value("log_level", value)
+                print_info(f"Log level set to {value}")
+                return True
+        return False
+
+    def run_setup(self):
+        """Runs the full UV-compatible setup process."""
+        print_header("UV-Compatible Geometry Detection Setup")
+
+        # Check Python version
+        print(f"Python version: {self.python_version.major}.{self.python_version.minor}.{self.python_version.micro}")
+        if self.python_version.major < 3 or self.python_version.minor < 8:
+            print_error("Python 3.8+ required!")
+            self.status = "failed_python_version"
+            return
+
+        # Check if uv is available
+        if not check_uv():
+            print("\nAlternative: Install pip in this environment:")
+            print("  uv pip install pip")
+            print("  Then run the original setup_installer.py")
+            self.status = "failed_uv_check"
+            return
+        self.uv_available = True
+
+        # Install packages
+        self.status = "installing_packages"
+        if install_with_uv():
+            self.packages_installed = True
+            # Check installation
+            if check_packages():
+                # Test OpenCV
+                self.status = "testing_opencv"
+                if test_opencv():
+                    self.opencv_tested = True
+                    # Create test script
+                    create_test_script()
+
+                    print_header("Setup Complete!")
+                    print("\nNext steps:")
+                    print("1. Test your installation:")
+                    print(f"   {Colors.BOLD}uv run python test_installation.py{Colors.ENDC}")
+                    print("\n2. Run the main program:")
+                    print(f"   {Colors.BOLD}uv run python integrated_geometry_system.py{Colors.ENDC}")
+                    print("\n3. Or with the example:")
+                    print(f"   {Colors.BOLD}uv run python shape_analysis_dashboard.py{Colors.ENDC}")
+                    self.status = "completed_successfully"
+                else:
+                    print_warning("OpenCV test failed. Some functionalities may not work.")
+                    self.status = "completed_with_opencv_warning"
+            else:
+                print_warning("Some packages failed to install")
+                print("Try running:")
+                print("  uv pip install opencv-python opencv-contrib-python numpy")
+                self.status = "completed_with_package_warning"
         else:
-            print_warning("Some packages failed to install")
-            print("Try running:")
-            print("  uv pip install opencv-python opencv-contrib-python numpy")
-    else:
-        print_error("Installation failed!")
-        print("\nTry manual installation:")
-        print("  uv pip install opencv-python opencv-contrib-python numpy psutil")
+            print_error("Installation failed!")
+            print("\nTry manual installation:")
+            print("  uv pip install opencv-python opencv-contrib-python numpy psutil")
+            self.status = "failed_installation"
+
+installer_instance = None
+
+def get_script_info():
+    """Global function to get installer information."""
+    global installer_instance
+    if installer_instance is None:
+        installer_instance = UVSetupManager() # Initialize if not already
+    return installer_instance.get_script_info()
+
+def set_script_parameter(key, value):
+    """Global function to set installer parameters."""
+    global installer_instance
+    if installer_instance is None:
+        installer_instance = UVSetupManager() # Initialize if not already
+    return installer_instance.set_script_parameter(key, value)
+
+def main():
+    """Main entry point for the UV-compatible setup installer."""
+    global installer_instance
+    installer_instance = UVSetupManager()
+    try:
+        installer_instance.run_setup()
+    except KeyboardInterrupt:
+        print("\n\nSetup interrupted by user.")
+        installer_instance.status = "interrupted"
+    except Exception as e:
+        print(f"\n{Colors.FAIL}Setup error: {e}{Colors.ENDC}")
+        import traceback
+        traceback.print_exc()
+        installer_instance.status = "error"
 
 if __name__ == "__main__":
     main()

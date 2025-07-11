@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """
-Time Series Anomaly Detection Script
+Enhanced Time Series Anomaly Detection Script with Connector Integration
 Based on Marco's tutorial on anomaly detection in time series
 This script implements three methods:
 1. Robust Z-score using Median Absolute Deviation (MAD)
 2. Isolation Forest
 3. Local Outlier Factor
+
+Now with full connector integration for parameter control and collaboration
 """
 
 import sys
@@ -13,6 +15,18 @@ import subprocess
 import importlib
 import os
 from datetime import datetime
+from pathlib import Path
+
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent))
+
+# Try to import script interface
+try:
+    from script_interface import ScriptInterface, ConnectorClient, create_standalone_wrapper
+    CONNECTOR_AVAILABLE = True
+except ImportError:
+    CONNECTOR_AVAILABLE = False
+    print("Warning: Script interface not available, running in standalone mode")
 
 # Function to install packages
 def install_package(package_name, import_name=None):
@@ -75,363 +89,374 @@ print("✓ All libraries imported successfully!")
 plt.rcParams['figure.figsize'] = (12, 6)
 print("✓ Matplotlib figure size set to (12, 6)")
 
-# Function to download data
-def download_file(url, filename):
-    """Download a file from URL if it doesn't exist"""
-    if os.path.exists(filename):
-        print(f"✓ {filename} already exists, skipping download")
-        return True
+
+class AnomalyDetectionSystem(ScriptInterface if CONNECTOR_AVAILABLE else object):
+    """Enhanced Anomaly Detection System with Connector Integration"""
     
-    print(f"Downloading {filename} from {url}...")
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
-        with open(filename, 'wb') as f:
-            f.write(response.content)
-        print(f"✓ Successfully downloaded {filename}")
-        return True
-    except Exception as e:
-        print(f"✗ Error downloading {filename}: {e}")
-        return False
-
-# Data URLs (from the tutorial)
-print("\n" + "="*60)
-print("DOWNLOADING DATA")
-print("="*60)
-
-# Note: These are example URLs - the actual URLs from Numenta would need to be specified
-data_url = "https://raw.githubusercontent.com/numenta/NAB/master/data/realAWSCloudwatch/ec2_cpu_utilization_24ae8d.csv"
-labels_url = "https://raw.githubusercontent.com/numenta/NAB/master/labels/combined_labels.json"
-
-# Download data
-if not download_file(data_url, "ec2_cpu_utilization.csv"):
-    print("Using sample data instead...")
-    # Create sample data as mentioned in the tutorial
-    dates = pd.date_range(start='2014-02-14 14:30:00', periods=4032, freq='5min')
-    np.random.seed(42)
-    values = np.random.normal(20, 5, 4032)
-    # Add some flat regions as mentioned in the tutorial
-    values[1000:1500] = 10
-    values[2000:2300] = 10
-    values[3000:3200] = 10
-    # Add two anomalies
-    values[1234] = 80  # First anomaly
-    values[2876] = 75  # Second anomaly
+    def __init__(self):
+        if CONNECTOR_AVAILABLE:
+            super().__init__("anomaly_detection", "Time Series Anomaly Detection System")
+            
+            # Register parameters
+            self.register_parameter("method", "zscore", ["zscore", "isolation_forest", "lof", "all"])
+            self.register_parameter("threshold", 3.0, [2.0, 2.5, 3.0, 3.5, 4.0])
+            self.register_parameter("contamination", 0.1, [0.01, 0.05, 0.1, 0.15, 0.2])
+            self.register_parameter("n_neighbors", 20, range(5, 51))
+            self.register_parameter("window_size", 100, range(10, 1001))
+            self.register_parameter("save_plots", True, [True, False])
+            self.register_parameter("data_source", "sample", ["sample", "file", "realtime"])
+            
+            # Register variables
+            self.register_variable("total_anomalies", 0)
+            self.register_variable("data_points_processed", 0)
+            self.register_variable("last_anomaly_timestamp", None)
+            self.register_variable("current_method", "zscore")
+            self.register_variable("detection_rate", 0.0)
+            
+            # Register callback for method changes
+            self.register_callback("method", self._on_method_change)
+            
+            # Initialize connector client
+            self.client = ConnectorClient(self)
+        else:
+            # Standalone mode - use default values
+            self.parameters = {
+                "method": {"value": "zscore"},
+                "threshold": {"value": 3.0},
+                "contamination": {"value": 0.1},
+                "n_neighbors": {"value": 20},
+                "window_size": {"value": 100},
+                "save_plots": {"value": True},
+                "data_source": {"value": "sample"}
+            }
+            self.variables = {}
+            self.results = {}
+            
+        self.data = None
+        self.anomalies = {}
+        
+    def get_parameter(self, name):
+        """Get parameter value (works in both modes)"""
+        if CONNECTOR_AVAILABLE:
+            return super().get_parameter(name)
+        else:
+            return self.parameters.get(name, {}).get("value")
+            
+    def _on_method_change(self, new_method):
+        """Callback when detection method changes"""
+        if CONNECTOR_AVAILABLE:
+            self.logger.info(f"Detection method changed to: {new_method}")
+            self.set_variable("current_method", new_method)
+        
+    def download_file(self, url, filename):
+        """Download a file from URL if it doesn't exist"""
+        if os.path.exists(filename):
+            print(f"✓ {filename} already exists, skipping download")
+            return True
+        
+        print(f"Downloading {filename} from {url}...")
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+            with open(filename, 'wb') as f:
+                f.write(response.content)
+            print(f"✓ Successfully downloaded {filename}")
+            return True
+        except Exception as e:
+            print(f"✗ Error downloading {filename}: {e}")
+            return False
     
-    df = pd.DataFrame({
-        'timestamp': dates,
-        'value': values
-    })
-    df.to_csv('ec2_cpu_utilization.csv', index=False)
-    print("✓ Created sample data file")
+    def load_data(self):
+        """Load or generate data based on data_source parameter"""
+        data_source = self.get_parameter("data_source")
+        
+        if data_source == "sample":
+            # Generate sample data with known anomalies
+            print("\nGenerating sample time series data...")
+            np.random.seed(42)
+            n_samples = 1000
+            
+            # Normal data with trend and seasonality
+            time = np.arange(n_samples)
+            trend = 0.01 * time
+            seasonal = 10 * np.sin(2 * np.pi * time / 100)
+            noise = np.random.normal(0, 1, n_samples)
+            
+            # Base signal
+            signal = trend + seasonal + noise
+            
+            # Add anomalies
+            anomaly_indices = [150, 151, 350, 450, 451, 452, 750, 850, 950]
+            for idx in anomaly_indices:
+                signal[idx] += np.random.uniform(20, 30) * np.random.choice([-1, 1])
+            
+            # Create DataFrame
+            self.data = pd.DataFrame({
+                'time': pd.date_range(start='2023-01-01', periods=n_samples, freq='H'),
+                'value': signal,
+                'is_anomaly': [1 if i in anomaly_indices else 0 for i in range(n_samples)]
+            })
+            
+            print(f"✓ Generated {n_samples} data points with {len(anomaly_indices)} anomalies")
+            
+        elif data_source == "file":
+            # Load from file
+            filename = "anomaly_data.csv"
+            if os.path.exists(filename):
+                self.data = pd.read_csv(filename, parse_dates=['time'])
+                print(f"✓ Loaded data from {filename}")
+            else:
+                print(f"✗ File {filename} not found, generating sample data instead")
+                self.parameters["data_source"]["value"] = "sample"
+                self.load_data()
+                
+        if CONNECTOR_AVAILABLE:
+            self.set_variable("data_points_processed", len(self.data))
+            
+    def detect_anomalies_zscore(self):
+        """Detect anomalies using Robust Z-score with MAD"""
+        print("\n" + "="*60)
+        print("METHOD 1: ROBUST Z-SCORE WITH MAD")
+        print("="*60)
+        
+        threshold = self.get_parameter("threshold")
+        
+        # Calculate median and MAD
+        median = self.data['value'].median()
+        mad = median_abs_deviation(self.data['value'])
+        
+        # Calculate modified Z-score
+        modified_z_scores = 0.6745 * (self.data['value'] - median) / mad
+        
+        # Identify anomalies
+        anomalies = np.abs(modified_z_scores) > threshold
+        self.anomalies['zscore'] = anomalies
+        
+        n_anomalies = anomalies.sum()
+        print(f"✓ Detected {n_anomalies} anomalies using threshold {threshold}")
+        
+        if CONNECTOR_AVAILABLE:
+            self.update_results("zscore_anomalies", int(n_anomalies))
+            
+        return anomalies
+    
+    def detect_anomalies_isolation_forest(self):
+        """Detect anomalies using Isolation Forest"""
+        print("\n" + "="*60)
+        print("METHOD 2: ISOLATION FOREST")
+        print("="*60)
+        
+        contamination = self.get_parameter("contamination")
+        
+        # Prepare data
+        X = self.data['value'].values.reshape(-1, 1)
+        
+        # Train Isolation Forest
+        iso_forest = IsolationForest(
+            contamination=contamination,
+            random_state=42,
+            n_estimators=100
+        )
+        
+        # Predict anomalies (-1 for anomalies, 1 for normal)
+        predictions = iso_forest.fit_predict(X)
+        anomalies = predictions == -1
+        
+        self.anomalies['isolation_forest'] = anomalies
+        
+        n_anomalies = anomalies.sum()
+        print(f"✓ Detected {n_anomalies} anomalies with contamination={contamination}")
+        
+        if CONNECTOR_AVAILABLE:
+            self.update_results("isolation_forest_anomalies", int(n_anomalies))
+            
+        return anomalies
+    
+    def detect_anomalies_lof(self):
+        """Detect anomalies using Local Outlier Factor"""
+        print("\n" + "="*60)
+        print("METHOD 3: LOCAL OUTLIER FACTOR")
+        print("="*60)
+        
+        contamination = self.get_parameter("contamination")
+        n_neighbors = self.get_parameter("n_neighbors")
+        
+        # Prepare data
+        X = self.data['value'].values.reshape(-1, 1)
+        
+        # Train LOF
+        lof = LocalOutlierFactor(
+            n_neighbors=n_neighbors,
+            contamination=contamination
+        )
+        
+        # Predict anomalies (-1 for anomalies, 1 for normal)
+        predictions = lof.fit_predict(X)
+        anomalies = predictions == -1
+        
+        self.anomalies['lof'] = anomalies
+        
+        n_anomalies = anomalies.sum()
+        print(f"✓ Detected {n_anomalies} anomalies with n_neighbors={n_neighbors}")
+        
+        if CONNECTOR_AVAILABLE:
+            self.update_results("lof_anomalies", int(n_anomalies))
+            
+        return anomalies
+    
+    def visualize_results(self):
+        """Visualize the anomaly detection results"""
+        if not self.get_parameter("save_plots"):
+            return
+            
+        print("\n" + "="*60)
+        print("VISUALIZING RESULTS")
+        print("="*60)
+        
+        # Create subplots for each method
+        n_methods = len(self.anomalies)
+        fig, axes = plt.subplots(n_methods, 1, figsize=(15, 5*n_methods))
+        
+        if n_methods == 1:
+            axes = [axes]
+        
+        for idx, (method, anomalies) in enumerate(self.anomalies.items()):
+            ax = axes[idx]
+            
+            # Plot normal points
+            normal_mask = ~anomalies
+            ax.scatter(self.data.loc[normal_mask, 'time'], 
+                      self.data.loc[normal_mask, 'value'],
+                      c='blue', label='Normal', alpha=0.6, s=20)
+            
+            # Plot anomalies
+            ax.scatter(self.data.loc[anomalies, 'time'],
+                      self.data.loc[anomalies, 'value'],
+                      c='red', label='Anomaly', s=50, marker='x')
+            
+            ax.set_title(f'Anomaly Detection - {method.upper()}', fontsize=14)
+            ax.set_xlabel('Time')
+            ax.set_ylabel('Value')
+            ax.legend()
+            ax.grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        
+        # Save plot
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"anomaly_detection_results_{timestamp}.png"
+        plt.savefig(filename, dpi=300, bbox_inches='tight')
+        print(f"✓ Results saved to {filename}")
+        plt.close()
+        
+        if CONNECTOR_AVAILABLE:
+            self.update_results("visualization_saved", filename)
+    
+    def share_results_with_other_scripts(self):
+        """Share detection results with other scripts via connector"""
+        if not CONNECTOR_AVAILABLE or not hasattr(self, 'client'):
+            return
+            
+        # Prepare summary data
+        summary = {
+            "timestamp": datetime.now().isoformat(),
+            "total_data_points": len(self.data),
+            "methods_used": list(self.anomalies.keys()),
+            "anomalies_per_method": {
+                method: int(anomalies.sum()) 
+                for method, anomalies in self.anomalies.items()
+            },
+            "parameters": {
+                "threshold": self.get_parameter("threshold"),
+                "contamination": self.get_parameter("contamination"),
+                "n_neighbors": self.get_parameter("n_neighbors")
+            }
+        }
+        
+        # Broadcast to other scripts
+        self.client.broadcast_data({
+            "type": "anomaly_detection_results",
+            "summary": summary,
+            "detailed_results": self.results
+        })
+        
+        print("\n✓ Results shared with other scripts via connector")
+    
+    def run(self):
+        """Main execution method"""
+        print("\n" + "="*40)
+        print("STARTING ANOMALY DETECTION")
+        print("="*40)
+        
+        # Load data
+        self.load_data()
+        
+        # Run selected detection method(s)
+        method = self.get_parameter("method")
+        
+        if method == "all":
+            # Run all methods
+            self.detect_anomalies_zscore()
+            self.detect_anomalies_isolation_forest()
+            self.detect_anomalies_lof()
+        elif method == "zscore":
+            self.detect_anomalies_zscore()
+        elif method == "isolation_forest":
+            self.detect_anomalies_isolation_forest()
+        elif method == "lof":
+            self.detect_anomalies_lof()
+        
+        # Calculate total unique anomalies
+        if self.anomalies:
+            all_anomalies = np.logical_or.reduce(list(self.anomalies.values()))
+            total_anomalies = int(all_anomalies.sum())
+            
+            if CONNECTOR_AVAILABLE:
+                self.set_variable("total_anomalies", total_anomalies)
+                self.set_variable("detection_rate", total_anomalies / len(self.data))
+                
+                # Find last anomaly
+                anomaly_indices = np.where(all_anomalies)[0]
+                if len(anomaly_indices) > 0:
+                    last_idx = anomaly_indices[-1]
+                    self.set_variable("last_anomaly_timestamp", 
+                                    self.data.iloc[last_idx]['time'].isoformat())
+        
+        # Visualize results
+        self.visualize_results()
+        
+        # Share results if connected
+        if CONNECTOR_AVAILABLE:
+            self.share_results_with_other_scripts()
+        
+        print("\n" + "="*40)
+        print("ANOMALY DETECTION COMPLETE")
+        print("="*40)
+        
+        # Print summary
+        print("\nSUMMARY:")
+        for method, anomalies in self.anomalies.items():
+            print(f"- {method}: {anomalies.sum()} anomalies detected")
+        
+        if CONNECTOR_AVAILABLE:
+            print(f"\nConnector Status: Connected")
+            print(f"Results broadcasted: Yes")
 
-# Load the data
-print("\n" + "="*60)
-print("LOADING AND PREPROCESSING DATA")
-print("="*60)
 
-print("Reading data from CSV file...")
-df = pd.read_csv('ec2_cpu_utilization.csv')
-print(f"✓ Data loaded successfully! Shape: {df.shape}")
+# Main execution
+def main():
+    """Main function to run the anomaly detection system"""
+    detector = AnomalyDetectionSystem()
+    
+    if CONNECTOR_AVAILABLE and "--with-connector" in sys.argv:
+        # Run with connector integration
+        print("\n✓ Running with connector integration")
+        detector.run_with_connector()
+    else:
+        # Run standalone
+        print("\n✓ Running in standalone mode")
+        detector.run()
 
-# Convert timestamp to datetime
-print("Converting timestamp column to datetime format...")
-df['timestamp'] = pd.to_datetime(df['timestamp'])
-print("✓ Timestamp converted successfully")
 
-# Add anomaly labels (as mentioned in the tutorial, default is 1 for inlier, -1 for outlier)
-print("Adding anomaly labels...")
-df['is_anomaly'] = 1  # Default: all points are inliers
-
-# For this example, we'll mark some extreme values as anomalies
-# In the real tutorial, these would come from the labels file
-threshold = df['value'].quantile(0.99)
-anomaly_indices = df[df['value'] > threshold].index[:2]  # Mark top 2 extreme values
-df.loc[anomaly_indices, 'is_anomaly'] = -1
-print(f"✓ Marked {len(anomaly_indices)} points as anomalies")
-
-# Display data info
-print("\nData Information:")
-print(f"- Total data points: {len(df)}")
-print(f"- Date range: {df['timestamp'].min()} to {df['timestamp'].max()}")
-print(f"- Number of anomalies: {(df['is_anomaly'] == -1).sum()}")
-print(f"- Number of inliers: {(df['is_anomaly'] == 1).sum()}")
-
-# Visualize the data
-print("\n" + "="*60)
-print("VISUALIZING DATA")
-print("="*60)
-
-print("Creating visualization of the time series with anomalies...")
-plt.figure(figsize=(14, 6))
-
-# Separate inliers and outliers
-inliers = df[df['is_anomaly'] == 1]
-outliers = df[df['is_anomaly'] == -1]
-
-# Plot
-plt.plot(inliers['timestamp'], inliers['value'], 'b.', label='Normal', markersize=4)
-plt.plot(outliers['timestamp'], outliers['value'], 'r.', label='Anomaly', markersize=10)
-plt.xlabel('Timestamp')
-plt.ylabel('CPU Utilization')
-plt.title('CPU Utilization with Anomalies')
-plt.legend()
-plt.grid(True, alpha=0.3)
-plt.tight_layout()
-plt.savefig('data_visualization.png')
-print("✓ Saved visualization to 'data_visualization.png'")
-plt.close()
-
-# Check data distribution
-print("\n" + "="*60)
-print("ANALYZING DATA DISTRIBUTION")
-print("="*60)
-
-print("Creating histogram to check if data is normally distributed...")
-plt.figure(figsize=(10, 6))
-plt.hist(df['value'], bins=50, alpha=0.7, color='blue', edgecolor='black')
-median_value = df['value'].median()
-plt.axvline(median_value, color='red', linestyle='dashed', linewidth=2, label=f'Median: {median_value:.2f}')
-plt.xlabel('CPU Utilization')
-plt.ylabel('Frequency')
-plt.title('Distribution of CPU Utilization Values')
-plt.legend()
-plt.grid(True, alpha=0.3)
-plt.tight_layout()
-plt.savefig('data_distribution.png')
-print("✓ Saved distribution plot to 'data_distribution.png'")
-plt.close()
-
-# METHOD 1: ROBUST Z-SCORE WITH MEDIAN ABSOLUTE DEVIATION
-print("\n" + "="*60)
-print("METHOD 1: ROBUST Z-SCORE (MEDIAN ABSOLUTE DEVIATION)")
-print("="*60)
-
-# Calculate MAD and median
-print("Calculating Median Absolute Deviation (MAD)...")
-mad = median_abs_deviation(df['value'])
-median = np.median(df['value'])
-print(f"✓ MAD calculated: {mad:.6f}")
-print(f"✓ Median calculated: {median:.2f}")
-
-if mad < 0.01:
-    print("⚠ WARNING: MAD is very close to zero! This method may not work well.")
-    print("  This happens when >50% of data has the same value.")
-
-# Define robust z-score function
-def compute_robust_zscore(x, median, mad):
-    """Compute robust z-score using MAD"""
-    if mad == 0:
-        return 0
-    return 0.6745 * (x - median) / mad
-
-# Calculate z-scores
-print("Computing robust z-scores for all data points...")
-df['z_score'] = df['value'].apply(lambda x: compute_robust_zscore(x, median, mad))
-print("✓ Z-scores computed successfully")
-
-# Identify outliers using threshold
-z_threshold = 3.5
-print(f"Identifying outliers with z-score threshold = {z_threshold}...")
-df['mad_prediction'] = 1  # Default: inlier
-df.loc[(df['z_score'] > z_threshold) | (df['z_score'] < -z_threshold), 'mad_prediction'] = -1
-mad_outliers = (df['mad_prediction'] == -1).sum()
-print(f"✓ MAD method identified {mad_outliers} outliers")
-
-# Evaluate MAD method
-print("\nEvaluating MAD method...")
-cm_mad = confusion_matrix(df['is_anomaly'], df['mad_prediction'], labels=[1, -1])
-print("Confusion Matrix (MAD):")
-print(f"                Predicted")
-print(f"               Inlier  Outlier")
-print(f"Actual Inlier   {cm_mad[0,0]:5d}   {cm_mad[0,1]:5d}")
-print(f"      Outlier   {cm_mad[1,0]:5d}   {cm_mad[1,1]:5d}")
-
-# Save confusion matrix plot
-plt.figure(figsize=(8, 6))
-disp = ConfusionMatrixDisplay(confusion_matrix=cm_mad, display_labels=['Inlier', 'Outlier'])
-disp.plot(cmap='Blues')
-plt.title('Confusion Matrix - Robust Z-Score (MAD) Method')
-plt.tight_layout()
-plt.savefig('confusion_matrix_mad.png')
-print("✓ Saved MAD confusion matrix to 'confusion_matrix_mad.png'")
-plt.close()
-
-# METHOD 2: ISOLATION FOREST
-print("\n" + "="*60)
-print("METHOD 2: ISOLATION FOREST")
-print("="*60)
-
-# Split data for training and testing
-print("Splitting data into train and test sets...")
-split_index = int(len(df) * 0.8)
-train = df[:split_index].copy()
-test = df[split_index:].copy()
-print(f"✓ Train set size: {len(train)}")
-print(f"✓ Test set size: {len(test)}")
-print(f"✓ Anomalies in train: {(train['is_anomaly'] == -1).sum()}")
-print(f"✓ Anomalies in test: {(test['is_anomaly'] == -1).sum()}")
-
-# Calculate contamination level
-contamination = (train['is_anomaly'] == -1).sum() / len(train)
-if contamination == 0:
-    contamination = 0.01  # Set small default if no anomalies in train
-print(f"✓ Contamination level: {contamination:.4f}")
-
-# Prepare data for sklearn
-X_train = train['value'].values.reshape(-1, 1)
-X_test = test['value'].values.reshape(-1, 1)
-
-# Train Isolation Forest
-print("Training Isolation Forest model...")
-iso_forest = IsolationForest(contamination=contamination, random_state=42)
-iso_forest.fit(X_train)
-print("✓ Isolation Forest trained successfully")
-
-# Make predictions
-print("Making predictions on test set...")
-pred_iso = iso_forest.predict(X_test)
-print("✓ Predictions completed")
-
-# Evaluate Isolation Forest
-print("\nEvaluating Isolation Forest...")
-cm_iso = confusion_matrix(test['is_anomaly'], pred_iso, labels=[1, -1])
-print("Confusion Matrix (Isolation Forest):")
-print(f"                Predicted")
-print(f"               Inlier  Outlier")
-print(f"Actual Inlier   {cm_iso[0,0]:5d}   {cm_iso[0,1]:5d}")
-print(f"      Outlier   {cm_iso[1,0]:5d}   {cm_iso[1,1]:5d}")
-
-# Save confusion matrix plot
-plt.figure(figsize=(8, 6))
-disp = ConfusionMatrixDisplay(confusion_matrix=cm_iso, display_labels=['Inlier', 'Outlier'])
-disp.plot(cmap='Greens')
-plt.title('Confusion Matrix - Isolation Forest')
-plt.tight_layout()
-plt.savefig('confusion_matrix_isolation_forest.png')
-print("✓ Saved Isolation Forest confusion matrix to 'confusion_matrix_isolation_forest.png'")
-plt.close()
-
-# METHOD 3: LOCAL OUTLIER FACTOR
-print("\n" + "="*60)
-print("METHOD 3: LOCAL OUTLIER FACTOR (LOF)")
-print("="*60)
-
-# Train Local Outlier Factor
-print("Training Local Outlier Factor model...")
-lof = LocalOutlierFactor(contamination=contamination, novelty=True)
-lof.fit(X_train)
-print("✓ Local Outlier Factor trained successfully")
-
-# Make predictions
-print("Making predictions on test set...")
-pred_lof = lof.predict(X_test)
-print("✓ Predictions completed")
-
-# Evaluate Local Outlier Factor
-print("\nEvaluating Local Outlier Factor...")
-cm_lof = confusion_matrix(test['is_anomaly'], pred_lof, labels=[1, -1])
-print("Confusion Matrix (Local Outlier Factor):")
-print(f"                Predicted")
-print(f"               Inlier  Outlier")
-print(f"Actual Inlier   {cm_lof[0,0]:5d}   {cm_lof[0,1]:5d}")
-print(f"      Outlier   {cm_lof[1,0]:5d}   {cm_lof[1,1]:5d}")
-
-# Save confusion matrix plot
-plt.figure(figsize=(8, 6))
-disp = ConfusionMatrixDisplay(confusion_matrix=cm_lof, display_labels=['Inlier', 'Outlier'])
-disp.plot(cmap='Oranges')
-plt.title('Confusion Matrix - Local Outlier Factor')
-plt.tight_layout()
-plt.savefig('confusion_matrix_lof.png')
-print("✓ Saved LOF confusion matrix to 'confusion_matrix_lof.png'")
-plt.close()
-
-# SUMMARY
-print("\n" + "="*60)
-print("SUMMARY OF RESULTS")
-print("="*60)
-
-# Calculate metrics for each method
-def calculate_metrics(cm):
-    """Calculate precision, recall, and F1 score from confusion matrix"""
-    tn, fp, fn, tp = cm.ravel()
-    precision = tp / (tp + fp) if (tp + fp) > 0 else 0
-    recall = tp / (tp + fn) if (tp + fn) > 0 else 0
-    f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
-    accuracy = (tp + tn) / (tp + tn + fp + fn)
-    return precision, recall, f1, accuracy
-
-# MAD metrics (on full dataset)
-p_mad, r_mad, f1_mad, acc_mad = calculate_metrics(cm_mad)
-print(f"\n1. Robust Z-Score (MAD) Method:")
-print(f"   - Precision: {p_mad:.3f}")
-print(f"   - Recall: {r_mad:.3f}")
-print(f"   - F1 Score: {f1_mad:.3f}")
-print(f"   - Accuracy: {acc_mad:.3f}")
-print(f"   - Total outliers detected: {mad_outliers}")
-
-# Isolation Forest metrics
-p_iso, r_iso, f1_iso, acc_iso = calculate_metrics(cm_iso)
-print(f"\n2. Isolation Forest:")
-print(f"   - Precision: {p_iso:.3f}")
-print(f"   - Recall: {r_iso:.3f}")
-print(f"   - F1 Score: {f1_iso:.3f}")
-print(f"   - Accuracy: {acc_iso:.3f}")
-
-# LOF metrics
-p_lof, r_lof, f1_lof, acc_lof = calculate_metrics(cm_lof)
-print(f"\n3. Local Outlier Factor:")
-print(f"   - Precision: {p_lof:.3f}")
-print(f"   - Recall: {r_lof:.3f}")
-print(f"   - F1 Score: {f1_lof:.3f}")
-print(f"   - Accuracy: {acc_lof:.3f}")
-
-# Create comparison visualization
-print("\n" + "="*60)
-print("CREATING COMPARISON VISUALIZATION")
-print("="*60)
-
-methods = ['MAD', 'Isolation\nForest', 'Local Outlier\nFactor']
-f1_scores = [f1_mad, f1_iso, f1_lof]
-accuracies = [acc_mad, acc_iso, acc_lof]
-
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-
-# F1 Scores
-ax1.bar(methods, f1_scores, color=['blue', 'green', 'orange'])
-ax1.set_ylabel('F1 Score')
-ax1.set_title('F1 Score Comparison')
-ax1.set_ylim(0, 1)
-for i, v in enumerate(f1_scores):
-    ax1.text(i, v + 0.01, f'{v:.3f}', ha='center')
-
-# Accuracies
-ax2.bar(methods, accuracies, color=['blue', 'green', 'orange'])
-ax2.set_ylabel('Accuracy')
-ax2.set_title('Accuracy Comparison')
-ax2.set_ylim(0, 1)
-for i, v in enumerate(accuracies):
-    ax2.text(i, v + 0.01, f'{v:.3f}', ha='center')
-
-plt.suptitle('Anomaly Detection Methods Comparison')
-plt.tight_layout()
-plt.savefig('methods_comparison.png')
-print("✓ Saved methods comparison to 'methods_comparison.png'")
-plt.close()
-
-print("\n" + "="*60)
-print("SCRIPT COMPLETED SUCCESSFULLY!")
-print("="*60)
-print("\nGenerated files:")
-print("- data_visualization.png: Time series plot with anomalies")
-print("- data_distribution.png: Histogram of data distribution")
-print("- confusion_matrix_mad.png: MAD method results")
-print("- confusion_matrix_isolation_forest.png: Isolation Forest results")
-print("- confusion_matrix_lof.png: Local Outlier Factor results")
-print("- methods_comparison.png: Comparison of all methods")
-print("\nAs mentioned in the tutorial:")
-print("- MAD works best with normally distributed data")
-print("- Isolation Forest is good for general anomaly detection")
-print("- Local Outlier Factor performed best in this example")
-print("\nThank you for using this anomaly detection script!")
+if __name__ == "__main__":
+    main()

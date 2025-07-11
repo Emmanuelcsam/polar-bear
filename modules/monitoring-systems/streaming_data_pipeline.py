@@ -11,6 +11,7 @@ Features:
 """
 
 import faust
+from connector_interface import ConnectorInterface
 from typing import Optional, List, Dict, Any
 import asyncio
 from datetime import datetime, timedelta
@@ -41,6 +42,9 @@ from river import anomaly, metrics, preprocessing
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 logger = logging.getLogger(__name__)
+
+# Initialize connector interface
+connector = ConnectorInterface('streaming_data_pipeline.py')
 
 # Metrics
 MESSAGES_PROCESSED = Counter('pipeline_messages_processed_total', 'Total messages processed')
@@ -173,6 +177,8 @@ async def process_raw_inspections(stream: AsyncIterator[InspectionEvent]) -> Asy
                 
                 if anomaly_score > 0.7:
                     ANOMALIES_DETECTED.inc()
+                    connector.update_metric('stream_anomalies_detected', ANOMALIES_DETECTED._value.get())
+                    connector.update_metric('latest_anomaly_stream', event.stream_id)
             
             # Calculate processing time
             processing_time = (datetime.now() - start_time).total_seconds() * 1000

@@ -160,19 +160,9 @@ def run_tests():
 
 if __name__ == "__main__":
     # This allows running the test runner directly
-    print("Test Runner Utility")
-    print("1. Generate test stubs for missing test files")
-    print("2. Run all tests")
-    print("3. Generate stubs AND run all tests")
-    
-    choice = input("Enter your choice: ")
-    
-    if choice == '1':
-        generate_test_stubs()
-    elif choice == '2':
-        run_tests()
-    elif choice == '3':
-        generate_test_stubs()
-        run_tests()
-    else:
-        print("Invalid choice.")
+    # For non-interactive execution, we'll default to generating stubs and running tests.
+    print("Generating stubs for missing test files...")
+    generate_test_stubs()
+    print("\nRunning all tests...")
+    run_tests()
+

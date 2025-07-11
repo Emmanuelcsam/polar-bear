@@ -14,6 +14,26 @@ import sys
 import subprocess
 from pathlib import Path
 import logging
+import shared_config # Import the shared configuration module
+
+# Import all scripts that need to be controlled
+import live_fiber_analyzer
+import live_monitoring_dashboard
+import live_video_processor
+import location_tracking_pipeline
+import realtime_monitor
+import run_calibration
+import run_circle_detector
+import run_geometry_demo_fixed
+import run_geometry_demo
+import src.applications.example_application as example_application
+import src.applications.realtime_circle_detector as realtime_circle_detector_src
+import src.core.integrated_geometry_system as integrated_geometry_system
+import src.core.python313_fix as python313_fix
+import src.tools.performance_benchmark_tool as performance_benchmark_tool
+import src.tools.realtime_calibration_tool as realtime_calibration_tool_src
+import src.tools.setup_installer as setup_installer
+import src.tools.uv_compatible_setup as uv_compatible_setup
 
 class HivemindConnector:
     def __init__(self):
@@ -27,6 +47,28 @@ class HivemindConnector:
         self.parent_socket = None
         self.child_connectors = {}
         self.scripts_in_directory = {}
+        self.running_scripts = {}
+
+        # Dictionary to hold references to all controllable scripts
+        self.controllable_scripts = {
+            "live_fiber_analyzer": live_fiber_analyzer,
+            "live_monitoring_dashboard": live_monitoring_dashboard,
+            "live_video_processor": live_video_processor,
+            "location_tracking_pipeline": location_tracking_pipeline,
+            "realtime_monitor": realtime_monitor,
+            "run_calibration": run_calibration,
+            "run_circle_detector": run_circle_detector,
+            "run_geometry_demo_fixed": run_geometry_demo_fixed,
+            "run_geometry_demo": run_geometry_demo,
+            "example_application": example_application,
+            "realtime_circle_detector_src": realtime_circle_detector_src,
+            "integrated_geometry_system": integrated_geometry_system,
+            "python313_fix": python313_fix,
+            "performance_benchmark_tool": performance_benchmark_tool,
+            "realtime_calibration_tool_src": realtime_calibration_tool_src,
+            "setup_installer": setup_installer,
+            "uv_compatible_setup": uv_compatible_setup,
+        }
         
         # Setup logging
         self.logger = logging.getLogger(f"Connector_{self.connector_id}")
@@ -83,29 +125,169 @@ class HivemindConnector:
     def process_message(self, message):
         """Process incoming message"""
         cmd = message.get('command')
-        
+        script_name = message.get('script_name')
+
         if cmd == 'status':
             return {
                 'status': 'active',
                 'connector_id': self.connector_id,
                 'directory': str(self.directory),
                 'depth': self.depth,
-                'scripts': len(self.scripts_in_directory),
+                'scripts_loaded': len(self.controllable_scripts),
+                'scripts_running': list(self.running_scripts.keys()),
                 'children': len(self.child_connectors)
             }
+        elif cmd == 'get_all_scripts_status':
+            return self._get_all_scripts_status()
+        elif cmd == 'get_script_status':
+            if script_name:
+                return self._get_script_status(script_name)
+            return {'error': 'script_name not provided'}
+        elif cmd == 'set_script_parameter':
+            if script_name and 'key' in message and 'value' in message:
+                return self._set_script_parameter(script_name, message['key'], message['value'])
+            return {'error': 'script_name, key, or value not provided'}
+        elif cmd == 'start_script':
+            if script_name:
+                return self._start_script(script_name)
+            return {'error': 'script_name not provided'}
+        elif cmd == 'stop_script':
+            if script_name:
+                return self._stop_script(script_name)
+            return {'error': 'script_name not provided'}
         elif cmd == 'scan':
             self.scan_directory()
-            return {'status': 'scan_complete', 'scripts': list(self.scripts_in_directory.keys())}
-        elif cmd == 'execute':
-            script = message.get('script')
-            if script in self.scripts_in_directory:
-                return self.execute_script(script)
-            return {'error': 'Script not found'}
+            return {'status': 'scan_complete', 'scripts_found': list(self.scripts_in_directory.keys())}
         elif cmd == 'troubleshoot':
             return self.troubleshoot_connections()
         else:
             return {'error': 'Unknown command'}
             
+    def _get_all_scripts_status(self):
+        """
+        Retrieves information from all integrated scripts.
+        Returns a dictionary where keys are script names and values are their info.
+        """
+        all_info = {}
+        for name, module in self.controllable_scripts.items():
+            try:
+                if hasattr(module, 'get_script_info') and callable(module.get_script_info):
+                    info = module.get_script_info()
+                    all_info[name] = info
+                else:
+                    all_info[name] = {"status": "not_controllable", "message": "Module does not expose get_script_info"}
+            except Exception as e:
+                self.logger.error(f"Error getting info from {name}: {e}")
+                all_info[name] = {"status": "error", "message": str(e)}
+        return all_info
+
+    def _get_script_status(self, script_name: str):
+        """
+        Retrieves information from a specific integrated script.
+        """
+        if script_name in self.controllable_scripts:
+            module = self.controllable_scripts[script_name]
+            try:
+                if hasattr(module, 'get_script_info') and callable(module.get_script_info):
+                    return module.get_script_info()
+                return {"status": "not_controllable", "message": "Module does not expose get_script_info"}
+            except Exception as e:
+                self.logger.error(f"Error getting info from {script_name}: {e}")
+                return {"status": "error", "message": str(e)}
+        return {"error": "Script not found"}
+
+    def _set_script_parameter(self, script_name: str, key: str, value: any):
+        """
+        Sets a parameter for a specific script.
+        """
+        if script_name in self.controllable_scripts:
+            module = self.controllable_scripts[script_name]
+            try:
+                if hasattr(module, 'set_script_parameter') and callable(module.set_script_parameter):
+                    success = module.set_script_parameter(key, value)
+                    if success:
+                        self.logger.info(f"Successfully set parameter '{key}' to '{value}' for '{script_name}'")
+                        return {"status": "success", "script_name": script_name, "key": key, "value": value}
+                    else:
+                        self.logger.warning(f"Failed to set parameter '{key}' for '{script_name}'. Parameter might not be supported or value is invalid.")
+                        return {"status": "failed", "message": "Parameter not supported or invalid value"}
+                return {"status": "not_controllable", "message": "Module does not expose set_script_parameter"}
+            except Exception as e:
+                self.logger.error(f"Error setting parameter for {script_name}: {e}")
+                return {"status": "error", "message": str(e)}
+        return {"error": "Script not found"}
+
+    def _start_script(self, script_name: str):
+        """
+        Starts a script in a new thread if it's not already running.
+        """
+        if script_name not in self.controllable_scripts:
+            return {"status": "error", "message": "Script not found"}
+
+        if script_name in self.running_scripts and self.running_scripts[script_name].is_alive():
+            return {"status": "info", "message": f"Script {script_name} is already running."}
+
+        module = self.controllable_scripts[script_name]
+        if not hasattr(module, 'main') or not callable(module.main):
+            return {"status": "error", "message": f"Script {script_name} does not have a callable main function."}
+
+        def script_target():
+            try:
+                self.logger.info(f"Starting {script_name} in a new thread...")
+                module.main() # Call the main function of the script
+                self.logger.info(f"Script {script_name} thread finished.")
+            except Exception as e:
+                self.logger.error(f"Error running script {script_name} in thread: {e}")
+            finally:
+                # Clean up reference if script finishes on its own
+                if script_name in self.running_scripts:
+                    del self.running_scripts[script_name]
+
+        thread = threading.Thread(target=script_target, daemon=True)
+        thread.start()
+        self.running_scripts[script_name] = thread
+        self.logger.info(f"Script {script_name} started in background thread.")
+        return {"status": "success", "message": f"Script {script_name} started."}
+
+    def _stop_script(self, script_name: str):
+        """
+        Attempts to stop a running script.
+        This relies on the script having a mechanism to stop (e.g., a 'running' flag).
+        """
+        if script_name not in self.running_scripts or not self.running_scripts[script_name].is_alive():
+            return {"status": "info", "message": f"Script {script_name} is not running."}
+
+        module = self.controllable_scripts[script_name]
+        stop_successful = False
+
+        # Attempt to stop gracefully by setting a 'running' flag or calling a 'stop' method
+        if hasattr(module, 'running_instance') and hasattr(module.running_instance, 'running'):
+            module.running_instance.running = False
+            self.logger.info(f"Attempted graceful stop of {script_name} via 'running' flag.")
+            stop_successful = True
+        elif hasattr(module, 'running_instance') and hasattr(module.running_instance, 'stop') and callable(module.running_instance.stop):
+            module.running_instance.stop()
+            self.logger.info(f"Attempted graceful stop of {script_name} via 'stop()' method.")
+            stop_successful = True
+        elif hasattr(module, 'stop_script') and callable(module.stop_script):
+            module.stop_script()
+            self.logger.info(f"Attempted graceful stop of {script_name} via module-level stop_script().")
+            stop_successful = True
+        else:
+            self.logger.warning(f"No graceful stop mechanism found for {script_name}. Thread will continue until completion or external termination.")
+            return {"status": "warning", "message": "No graceful stop mechanism found. Manual intervention may be required."}
+
+        # Give it a moment to stop and then check if the thread is still alive
+        self.running_scripts[script_name].join(timeout=5) # Wait up to 5 seconds
+
+        if not self.running_scripts[script_name].is_alive():
+            del self.running_scripts[script_name]
+            self.logger.info(f"Script {script_name} thread successfully terminated.")
+            return {"status": "success", "message": f"Script {script_name} stopped."}
+        else:
+            self.logger.error(f"Script {script_name} thread did not terminate after stop signal.")
+            return {"status": "error", "message": f"Script {script_name} did not stop gracefully."}
+
     def connect_to_parent(self):
         """Connect to parent connector"""
         try:
@@ -152,26 +334,9 @@ class HivemindConnector:
         return path.name.startswith('.') or path.name.lower() in skip_dirs
         
     def execute_script(self, script_name):
-        """Execute a script in the directory"""
-        if script_name not in self.scripts_in_directory:
-            return {'error': 'Script not found'}
-            
-        try:
-            result = subprocess.run(
-                [sys.executable, self.scripts_in_directory[script_name]],
-                capture_output=True,
-                text=True,
-                timeout=30
-            )
-            return {
-                'status': 'executed',
-                'script': script_name,
-                'returncode': result.returncode,
-                'stdout': result.stdout[-1000:],  # Last 1000 chars
-                'stderr': result.stderr[-1000:]
-            }
-        except Exception as e:
-            return {'error': f'Execution failed: {str(e)}'}
+        """Execute a script in the directory (legacy, now calls start_script)"""
+        self.logger.warning(f"'execute_script' is deprecated. Use 'start_script' instead.")
+        return self._start_script(script_name)
             
     def troubleshoot_connections(self):
         """Troubleshoot connector connections"""
