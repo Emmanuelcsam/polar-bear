@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 import os
 
 # Basic information
-NAME = "iteration8-pytorch-training"
+NAME = "iteration9-pytorch-production"
 VERSION = "0.1.0"
 DESCRIPTION = "A project dynamically packaged by the Neural Framework."
 

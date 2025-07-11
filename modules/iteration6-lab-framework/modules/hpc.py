@@ -1,3 +1,7 @@
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 try:
     import torch.multiprocessing as mp
     MP_AVAILABLE = True
@@ -5,7 +9,7 @@ except ImportError:
     import multiprocessing as mp
     MP_AVAILABLE = False
 from core.config import CORES
-from .random_pixel import gen
+from modules.random_pixel import gen
 from core.logger import log
 
 def _worker(n):

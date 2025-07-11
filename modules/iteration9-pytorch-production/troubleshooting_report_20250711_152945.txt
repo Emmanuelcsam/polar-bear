@@ -1,0 +1,50 @@
+TROUBLESHOOTING REPORT
+============================================================
+Generated: 2025-07-11 15:29:45
+Directory: /home/jarvis/Documents/GitHub/polar-bear/modules/iteration9-pytorch-production
+
+ISSUES (5):
+  - PyTorch (torch) not installed - run: pip install torch
+  - test_integration.py syntax error:   File "/home/jarvis/Documents/GitHub/polar-bear/modules/iteration9-pytorch-production/test_integration.py", line 100
+    self.results.append(('Parameter setting', 'FAIL', response.get('error', 'Unknown error'))
+                        ^^^^^^^^^^^^^^^^^^
+SyntaxError: invalid syntax. Perhaps you forgot a comma?
+
+  - script_interface import failed: No module named 'torch'
+  - script_wrappers import failed: No module named 'torch'
+  - Integration test failed: No module named 'torch'
+
+WARNINGS (1):
+  - preprocess.py execution warning: Traceback (most recent call last):
+  File "/home/jarvis/Documents/GitHub/polar-bear/modules/iteration9-pytorch-production/preprocess.py", line 1, in <module>
+    import torch
+ModuleNotFoundError: No module named 'torch'
+
+
+OK (26):
+  - Python version: 3.12.3 ✓
+  - NumPy (numpy) installed ✓
+  - OpenCV (cv2) installed ✓
+  - connector.py exists and readable ✓
+  - hivemind_connector.py exists and readable ✓
+  - preprocess.py exists and readable ✓
+  - load.py exists and readable ✓
+  - train.py exists and readable ✓
+  - final.py exists and readable ✓
+  - script_interface.py exists and readable ✓
+  - script_wrappers.py exists and readable ✓
+  - test_integration.py exists and readable ✓
+  - troubleshoot_all.py exists and readable ✓
+  - script_wrappers.py syntax valid ✓
+  - final.py syntax valid ✓
+  - train.py syntax valid ✓
+  - troubleshoot_all.py syntax valid ✓
+  - hivemind_connector.py syntax valid ✓
+  - script_interface.py syntax valid ✓
+  - load.py syntax valid ✓
+  - connector.py syntax valid ✓
+  - setup.py syntax valid ✓
+  - preprocess.py syntax valid ✓
+  - Port 10050 (hivemind_connector) available ✓
+  - Port 10051 (connector) available ✓
+  - Directory writable ✓

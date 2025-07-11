@@ -1,6 +1,9 @@
 import time, glob, pathlib, threading
-from .cv_module import save_hist
-from .intensity_reader import learn
+import sys
+sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
+
+from modules.cv_module import save_hist
+from modules.intensity_reader import learn
 from core.logger import log
 def _loop(folder, poll):
     seen = set()

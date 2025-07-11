@@ -15,6 +15,12 @@ import subprocess
 from pathlib import Path
 import logging
 
+# Import the script interface
+try:
+    from script_interface import get_interface
+except ImportError:
+    get_interface = None
+
 class HivemindConnector:
     def __init__(self):
         self.connector_id = "2bc7bfa1"
@@ -27,6 +33,10 @@ class HivemindConnector:
         self.parent_socket = None
         self.child_connectors = {}
         self.scripts_in_directory = {}
+        
+        # Initialize script interface
+        self.script_interface = get_interface() if get_interface else None
+        self.scripts_loaded = False
         
         # Setup logging
         self.logger = logging.getLogger(f"Connector_{self.connector_id}")
@@ -49,6 +59,10 @@ class HivemindConnector:
         
         # Scan directory
         self.scan_directory()
+        
+        # Load scripts if interface available
+        if self.script_interface:
+            self.load_scripts()
         
         # Heartbeat loop
         self.heartbeat_loop()
@@ -103,6 +117,19 @@ class HivemindConnector:
             return {'error': 'Script not found'}
         elif cmd == 'troubleshoot':
             return self.troubleshoot_connections()
+        elif cmd == 'control_script':
+            # Control scripts through the interface
+            if self.script_interface:
+                return self.control_script(message)
+            return {'error': 'Script interface not available'}
+        elif cmd == 'list_scripts':
+            # List all loaded scripts
+            if self.script_interface:
+                return {
+                    'status': 'success',
+                    'scripts': self.script_interface.list_scripts()
+                }
+            return {'error': 'Script interface not available'}
         else:
             return {'error': 'Unknown command'}
             
@@ -212,6 +239,59 @@ class HivemindConnector:
                 self.connect_to_parent()
                 
             time.sleep(30)  # Heartbeat every 30 seconds
+            
+    def load_scripts(self):
+        """Load all scripts using the script interface"""
+        try:
+            # Load specific scripts we know about
+            scripts_to_load = {
+                'intensity_reader': str(self.directory / 'intensity_reader.py'),
+                'random_pixel_generator': str(self.directory / 'random_pixel_generator.py')
+            }
+            
+            for script_name, script_path in scripts_to_load.items():
+                if Path(script_path).exists():
+                    self.script_interface.load_script(script_name, script_path)
+                    self.logger.info(f"Loaded script: {script_name}")
+                    
+            self.scripts_loaded = True
+        except Exception as e:
+            self.logger.error(f"Error loading scripts: {e}")
+            
+    def control_script(self, message):
+        """Control a script through the interface"""
+        try:
+            script_name = message.get('script_name')
+            action = message.get('action')
+            params = message.get('params', {})
+            
+            if action == 'execute_function':
+                func_name = params.get('function')
+                args = params.get('args', [])
+                kwargs = params.get('kwargs', {})
+                result = self.script_interface.execute_function(script_name, func_name, *args, **kwargs)
+                return {'status': 'success', 'result': result}
+                
+            elif action == 'get_variable':
+                var_name = params.get('variable')
+                value = self.script_interface.get_variable(script_name, var_name)
+                return {'status': 'success', 'value': value}
+                
+            elif action == 'set_variable':
+                var_name = params.get('variable')
+                value = params.get('value')
+                self.script_interface.set_variable(script_name, var_name, value)
+                return {'status': 'success'}
+                
+            elif action == 'get_info':
+                info = self.script_interface.get_script_info(script_name)
+                return {'status': 'success', 'info': info}
+                
+            else:
+                return {'error': f'Unknown action: {action}'}
+                
+        except Exception as e:
+            return {'error': str(e)}
 
 if __name__ == "__main__":
     connector = HivemindConnector()

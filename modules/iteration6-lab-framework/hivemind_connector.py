@@ -27,6 +27,8 @@ class HivemindConnector:
         self.parent_socket = None
         self.child_connectors = {}
         self.scripts_in_directory = {}
+        self.registered_scripts = {}  # Track scripts with connector interface
+        self.script_connections = {}  # Active connections to scripts
         
         # Setup logging
         self.logger = logging.getLogger(f"Connector_{self.connector_id}")
@@ -91,6 +93,7 @@ class HivemindConnector:
                 'directory': str(self.directory),
                 'depth': self.depth,
                 'scripts': len(self.scripts_in_directory),
+                'registered_scripts': len(self.registered_scripts),
                 'children': len(self.child_connectors)
             }
         elif cmd == 'scan':
@@ -103,6 +106,21 @@ class HivemindConnector:
             return {'error': 'Script not found'}
         elif cmd == 'troubleshoot':
             return self.troubleshoot_connections()
+        elif cmd == 'register_script':
+            return self.register_script(message)
+        elif cmd == 'control_script':
+            return self.control_script(message)
+        elif cmd == 'get_script_info':
+            script_name = message.get('script_name')
+            if script_name in self.registered_scripts:
+                return {'status': 'success', 'info': self.registered_scripts[script_name]}
+            return {'status': 'error', 'message': 'Script not registered'}
+        elif cmd == 'list_registered_scripts':
+            return {
+                'status': 'success',
+                'scripts': list(self.registered_scripts.keys()),
+                'details': self.registered_scripts
+            }
         else:
             return {'error': 'Unknown command'}
             
@@ -173,6 +191,44 @@ class HivemindConnector:
         except Exception as e:
             return {'error': f'Execution failed: {str(e)}'}
             
+    def register_script(self, message):
+        """Register a script with connector interface"""
+        script_name = message.get('script_name')
+        script_path = message.get('script_path')
+        capabilities = message.get('capabilities', {})
+        
+        self.registered_scripts[script_name] = {
+            'path': script_path,
+            'capabilities': capabilities,
+            'registered_at': time.time()
+        }
+        
+        self.logger.info(f"Registered script: {script_name}")
+        return {'status': 'success', 'message': f'Script {script_name} registered'}
+        
+    def control_script(self, message):
+        """Control a registered script"""
+        script_name = message.get('script_name')
+        action = message.get('action')
+        
+        if script_name not in self.registered_scripts:
+            return {'status': 'error', 'message': 'Script not registered'}
+            
+        # Forward control message to the script
+        # This would need to be implemented based on how scripts connect
+        script_msg = {
+            'command': action,
+            'parameter': message.get('parameter'),
+            'variable': message.get('variable'),
+            'value': message.get('value'),
+            'method': message.get('method'),
+            'args': message.get('args', []),
+            'kwargs': message.get('kwargs', {})
+        }
+        
+        # For now, return a placeholder
+        return {'status': 'success', 'message': f'Control message sent to {script_name}'}
+        
     def troubleshoot_connections(self):
         """Troubleshoot connector connections"""
         issues = []
@@ -190,10 +246,21 @@ class HivemindConnector:
             if not Path(path).exists():
                 issues.append(f"Child connector missing: {name}")
                 
+        # Check registered scripts
+        inactive_scripts = []
+        for script_name, info in self.registered_scripts.items():
+            if time.time() - info.get('registered_at', 0) > 300:  # 5 minutes
+                inactive_scripts.append(script_name)
+                
+        if inactive_scripts:
+            issues.append(f"Inactive scripts: {', '.join(inactive_scripts)}")
+                
         return {
             'connector_id': self.connector_id,
             'issues': issues,
-            'healthy': len(issues) == 0
+            'healthy': len(issues) == 0,
+            'registered_scripts': len(self.registered_scripts),
+            'active_scripts': len(self.registered_scripts) - len(inactive_scripts)
         }
         
     def heartbeat_loop(self):

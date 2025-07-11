@@ -1,0 +1,32 @@
+TROUBLESHOOTING REPORT
+============================================================
+Generated: 2025-07-11 17:01:25
+Directory: /home/jarvis/Documents/GitHub/polar-bear/modules/iteration2-basic-stats
+
+SUCCESSES (22):
+  [DEPENDENCY] numpy is available
+  [DEPENDENCY] scipy is available
+  [DEPENDENCY] PIL is available
+  [DEPENDENCY] queue is available
+  [DEPENDENCY] socket is available
+  [DEPENDENCY] threading is available
+  [DEPENDENCY] ast is available
+  [SCRIPT] connector.py has valid syntax
+  [SCRIPT] hivemind_connector.py has valid syntax
+  [SCRIPT] correlation-finder.py has valid syntax
+  [SCRIPT] image-anomaly-detector.py has valid syntax
+  [SCRIPT] intensity-matcher.py has valid syntax
+  [PERMISSION] Directory /home/jarvis/Documents/GitHub/polar-bear/modules/iteration2-basic-stats has read/write/execute permissions
+  [CONNECTOR] Found 5 scripts
+  [CONNECTOR] Script image-anomaly-detector loaded successfully
+  [CONNECTOR] Script test_integration loaded successfully
+  [CONNECTOR] Script troubleshoot_all loaded successfully
+  [CONNECTOR] Script intensity-matcher loaded successfully
+  [CONNECTOR] Script correlation-finder loaded successfully
+  [CONNECTOR] Collaboration system enabled
+  [EXECUTION] correlation-finder.py runs successfully
+  [EXECUTION] intensity-matcher.py runs successfully
+
+WARNINGS (2):
+  [HIVEMIND] Cannot connect to hivemind connector on port 10113
+  [HIVEMIND] Run 'python hivemind_connector.py' in another terminal

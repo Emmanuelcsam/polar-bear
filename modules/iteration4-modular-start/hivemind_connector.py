@@ -14,6 +14,7 @@ import sys
 import subprocess
 from pathlib import Path
 import logging
+from script_interface import ScriptManager
 
 class HivemindConnector:
     def __init__(self):
@@ -27,6 +28,9 @@ class HivemindConnector:
         self.parent_socket = None
         self.child_connectors = {}
         self.scripts_in_directory = {}
+        
+        # Initialize script manager
+        self.script_manager = ScriptManager(str(self.directory))
         
         # Setup logging
         self.logger = logging.getLogger(f"Connector_{self.connector_id}")
@@ -90,7 +94,7 @@ class HivemindConnector:
                 'connector_id': self.connector_id,
                 'directory': str(self.directory),
                 'depth': self.depth,
-                'scripts': len(self.scripts_in_directory),
+                'scripts': len(self.script_manager.interfaces),
                 'children': len(self.child_connectors)
             }
         elif cmd == 'scan':
@@ -103,6 +107,17 @@ class HivemindConnector:
             return {'error': 'Script not found'}
         elif cmd == 'troubleshoot':
             return self.troubleshoot_connections()
+        elif cmd == 'control':
+            # New control commands for script manipulation
+            return self.handle_control_command(message)
+        elif cmd == 'get_info':
+            script_name = message.get('script')
+            if script_name:
+                return self.script_manager.get_script_info(script_name)
+            return self.script_manager.get_all_scripts_info()
+        elif cmd == 'orchestrate':
+            workflow = message.get('workflow', [])
+            return {'results': self.script_manager.orchestrate_collaboration(workflow)}
         else:
             return {'error': 'Unknown command'}
             
@@ -129,11 +144,22 @@ class HivemindConnector:
         self.scripts_in_directory.clear()
         
         try:
+            # Discover scripts using script manager
+            scripts = self.script_manager.discover_scripts()
+            for script in scripts:
+                self.scripts_in_directory[script] = str(self.directory / script)
+                
+            # Load all scripts
+            load_results = self.script_manager.load_all_scripts()
+            for script, success in load_results.items():
+                if success:
+                    self.logger.info(f"Loaded script: {script}")
+                else:
+                    self.logger.warning(f"Failed to load script: {script}")
+                    
+            # Scan for child connectors
             for item in self.directory.iterdir():
-                if item.is_file() and item.suffix == '.py' and item.name != 'hivemind_connector.py':
-                    self.scripts_in_directory[item.name] = str(item)
-                elif item.is_dir() and not self.should_skip_directory(item):
-                    # Check for child connector
+                if item.is_dir() and not self.should_skip_directory(item):
                     child_connector = item / 'hivemind_connector.py'
                     if child_connector.exists():
                         self.child_connectors[item.name] = str(child_connector)
@@ -196,6 +222,53 @@ class HivemindConnector:
             'healthy': len(issues) == 0
         }
         
+    def handle_control_command(self, message):
+        """Handle control commands for script manipulation"""
+        control_type = message.get('control_type')
+        script_name = message.get('script')
+        
+        if not script_name:
+            return {'error': 'Script name required'}
+            
+        if control_type == 'set_variable':
+            variable = message.get('variable')
+            value = message.get('value')
+            action = {
+                'type': 'set_variable',
+                'variable_name': variable,
+                'value': value
+            }
+            return self.script_manager.execute_on_script(script_name, action)
+            
+        elif control_type == 'get_variable':
+            variable = message.get('variable')
+            action = {
+                'type': 'get_variable',
+                'variable_name': variable
+            }
+            return self.script_manager.execute_on_script(script_name, action)
+            
+        elif control_type == 'call_function':
+            function = message.get('function')
+            args = message.get('args', [])
+            kwargs = message.get('kwargs', {})
+            action = {
+                'type': 'call_function',
+                'function_name': function,
+                'args': args,
+                'kwargs': kwargs
+            }
+            return self.script_manager.execute_on_script(script_name, action)
+            
+        elif control_type == 'broadcast':
+            action = message.get('action')
+            if action:
+                return self.script_manager.broadcast_action(action)
+            return {'error': 'Action required for broadcast'}
+            
+        else:
+            return {'error': f'Unknown control type: {control_type}'}
+            
     def heartbeat_loop(self):
         """Send heartbeat to parent"""
         while self.running:
@@ -204,7 +277,9 @@ class HivemindConnector:
                     heartbeat = {
                         'command': 'heartbeat',
                         'connector_id': self.connector_id,
-                        'timestamp': time.time()
+                        'timestamp': time.time(),
+                        'scripts_loaded': len(self.script_manager.interfaces),
+                        'active_scripts': list(self.script_manager.interfaces.keys())
                     }
                     self.parent_socket.send(json.dumps(heartbeat).encode())
             except:
