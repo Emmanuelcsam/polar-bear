@@ -29,6 +29,7 @@ import subprocess
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 import os
 import sys
+import shared_config # Import the shared configuration module
 
 # Import from integrated system
 from src.core.integrated_geometry_system import (
@@ -235,27 +236,69 @@ class PerformanceBenchmark:
     def __init__(self):
         self.logger = setup_logging("PerformanceBenchmark")
         self.results = []
+        
+        # Load initial configuration from shared_config
+        self.current_shared_config = shared_config.get_config()
+
         self.scenarios = [
             SimpleShapesScenario(),
             ComplexScenario()
         ]
         
-        # Test configurations
-        self.resolutions = [
+        # Test configurations - prioritize shared_config
+        self.resolutions = self.current_shared_config.get("benchmark_resolutions", [
             (640, 480),
             (1280, 720),
             (1920, 1080)
-        ]
+        ])
         
-        # Detection methods to test
-        self.methods = [
+        # Detection methods to test - prioritize shared_config
+        # Convert string representations from shared_config back to tuples if needed
+        default_methods = [
             ('CPU', {'use_gpu': False, 'max_threads': 1}),
             ('CPU_Multi', {'use_gpu': False, 'max_threads': 4}),
             ('GPU', {'use_gpu': True, 'max_threads': 4}),
         ]
+        self.methods = self.current_shared_config.get("benchmark_methods", default_methods)
         
         # Hardware info
         self.hardware_info = self._get_hardware_info()
+        self.status = "initialized" # Add a status variable
+
+    def get_script_info(self):
+        return {
+            "name": "Performance Benchmark Tool",
+            "status": self.status,
+            "parameters": {
+                "benchmark_resolutions": self.resolutions,
+                "benchmark_methods": self.methods,
+                "log_level": self.current_shared_config.get("log_level"),
+                "data_source": self.current_shared_config.get("data_source"),
+                "processing_enabled": self.current_shared_config.get("processing_enabled"),
+                "threshold_value": self.current_shared_config.get("threshold_value")
+            },
+            "hardware_info": self.hardware_info,
+            "last_run_results_count": len(self.results)
+        }
+
+    def set_script_parameter(self, key, value):
+        if key in self.current_shared_config or key.startswith("benchmark_"):
+            # Update shared_config
+            shared_config.set_config_value(key, value)
+            self.current_shared_config[key] = value # Update local copy
+
+            # Apply changes to relevant attributes
+            if key == "benchmark_resolutions":
+                self.resolutions = value
+            elif key == "benchmark_methods":
+                self.methods = value
+            elif key == "log_level":
+                # Update logging level dynamically if possible
+                logging.getLogger().setLevel(getattr(logging, value.upper()))
+            
+            self.status = f"parameter '{key}' updated"
+            return True
+        return False
     
     def _get_hardware_info(self) -> Dict:
         """Collect hardware information"""
@@ -413,6 +456,7 @@ class PerformanceBenchmark:
         
         print(f"\nRunning {total_tests} benchmark tests...")
         print("="*60)
+        self.status = "running_full_benchmark"
         
         for method_name, config in self.methods:
             # Skip GPU tests if not available
@@ -449,6 +493,7 @@ class PerformanceBenchmark:
         
         print("\n" + "="*60)
         print("Benchmarking complete!")
+        self.status = "full_benchmark_completed"
     
     def visualize_results(self):
         """Create visualization of benchmark results"""
@@ -621,9 +666,9 @@ class PerformanceBenchmark:
                 
                 f.write(f"\n{method_name}:\n")
                 f.write(f"  Average FPS: {method_results['avg_fps'].mean():.2f} "
-                       f"(±{method_results['avg_fps'].std():.2f})\n")
+                       f"(\u00b1{method_results['avg_fps'].std():.2f})\n")
                 f.write(f"  Average Latency: {method_results['avg_latency_ms'].mean():.2f}ms "
-                       f"(±{method_results['avg_latency_ms'].std():.2f}ms)\n")
+                       f"(\u00b1{method_results['avg_latency_ms'].std():.2f}ms)\n")
                 f.write(f"  CPU Usage: {method_results['avg_cpu_percent'].mean():.1f}% "
                        f"(max: {method_results['max_cpu_percent'].max():.1f}%)\n")
                 f.write(f"  Memory Usage: {method_results['avg_memory_mb'].mean():.0f}MB "
@@ -663,17 +708,17 @@ class PerformanceBenchmark:
                 
                 if len(gpu_results) > 0 and len(cpu_results) > 0:
                     gpu_speedup = gpu_results['avg_fps'].mean() / cpu_results['avg_fps'].mean()
-                    f.write(f"• GPU provides {gpu_speedup:.1f}x speedup over single-threaded CPU\n")
+                    f.write(f"\u2022 GPU provides {gpu_speedup:.1f}x speedup over single-threaded CPU\n")
                     
                     if gpu_speedup > 1.5:
-                        f.write("• Recommend using GPU acceleration for production\n")
+                        f.write("\u2022 Recommend using GPU acceleration for production\n")
                     else:
-                        f.write("• GPU speedup is minimal - consider CPU-only deployment\n")
+                        f.write("\u2022 GPU speedup is minimal - consider CPU-only deployment\n")
             else:
-                f.write("• No GPU detected - using multi-threaded CPU processing\n")
+                f.write("\u2022 No GPU detected - using multi-threaded CPU processing\n")
             
             # Resolution recommendations
-            f.write("\n• Performance by resolution:\n")
+            f.write("\n\u2022 Performance by resolution:\n")
             for res in self.resolutions:
                 res_str = f"{res[0]}x{res[1]}"
                 res_results = df[df['resolution'].apply(lambda x: x == res)]
@@ -730,8 +775,24 @@ def run_quick_benchmark():
         print(f"  FPS: {1/avg_time:.1f}")
         print(f"  Shapes detected: {len(shapes)}")
 
+benchmark_instance = None
+
+def get_script_info():
+    """Returns information about the script, its status, and exposed parameters."""
+    if benchmark_instance:
+        return benchmark_instance.get_script_info()
+    return {"name": "Performance Benchmark Tool", "status": "not_initialized", "parameters": {}}
+
+def set_script_parameter(key, value):
+    """Sets a specific parameter for the script and updates shared_config."""
+    if benchmark_instance:
+        return benchmark_instance.set_script_parameter(key, value)
+    return False
+
 def main():
     """Main entry point"""
+    global benchmark_instance
+
     import argparse
     
     parser = argparse.ArgumentParser(description='Performance Benchmark Tool')
@@ -750,29 +811,31 @@ def main():
     print("GEOMETRY DETECTION PERFORMANCE BENCHMARK TOOL")
     print("="*60)
     
-    if args.quick or (not args.full and not args.visualize):
+    # Initialize benchmark_instance here so it's available for get/set_script_parameter
+    benchmark_instance = PerformanceBenchmark()
+
+    if args.quick or (not args.full and not args.visualize and not args.results):
         run_quick_benchmark()
     
     if args.full:
         print("\nStarting full benchmark suite...")
         print("This may take several minutes.\n")
         
-        benchmark = PerformanceBenchmark()
-        benchmark.run_all_benchmarks()
-        benchmark.visualize_results()
-        benchmark.export_results()
+        benchmark_instance.run_all_benchmarks()
+        benchmark_instance.visualize_results()
+        benchmark_instance.export_results()
         
         print("\nBenchmark complete!")
     
     if args.visualize and args.results:
         print(f"\nLoading results from {args.results}...")
-        benchmark = PerformanceBenchmark()
         
         with open(args.results, 'r') as f:
             data = json.load(f)
-            benchmark.results = [BenchmarkResult(**item) for item in data]
+            benchmark_instance.results = [BenchmarkResult(**item) for item in data]
         
-        benchmark.visualize_results()
+        benchmark_instance.visualize_results()
 
 if __name__ == "__main__":
     main()
+

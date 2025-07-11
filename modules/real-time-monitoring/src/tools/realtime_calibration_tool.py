@@ -28,6 +28,7 @@ from tkinter import ttk, messagebox, filedialog
 import threading
 from queue import Queue
 import os
+import shared_config # Import the shared configuration module
 
 # Import from integrated system
 from src.core.integrated_geometry_system import (
@@ -83,9 +84,33 @@ class InteractiveCalibrator:
     def __init__(self):
         self.logger = setup_logging("InteractiveCalibrator")
         
-        # Configuration
-        self.config = CalibrationConfig()
-        self.original_config = CalibrationConfig()
+        # Load initial configuration from shared_config
+        self.current_shared_config = shared_config.get_config()
+        
+        # Configuration - initialize with shared_config values if available
+        self.config = CalibrationConfig(
+            min_shape_area=self.current_shared_config.get("min_shape_area", 100),
+            max_shape_area=self.current_shared_config.get("max_shape_area", 100000),
+            epsilon_factor=self.current_shared_config.get("epsilon_factor", 0.02),
+            canny_low=self.current_shared_config.get("canny_low", 50),
+            canny_high=self.current_shared_config.get("canny_high", 150),
+            brightness=self.current_shared_config.get("brightness", 0.0),
+            contrast=self.current_shared_config.get("contrast", 1.0),
+            exposure=self.current_shared_config.get("exposure", -1.0),
+            roi_enabled=self.current_shared_config.get("roi_enabled", False),
+            roi_x=self.current_shared_config.get("roi_x", 0),
+            roi_y=self.current_shared_config.get("roi_y", 0),
+            roi_width=self.current_shared_config.get("roi_width", 0),
+            roi_height=self.current_shared_config.get("roi_height", 0),
+            shape_filter=self.current_shared_config.get("shape_filter", [s.value for s in ShapeType]),
+            confidence_threshold=self.current_shared_config.get("confidence_threshold", 0.7),
+            show_contours=self.current_shared_config.get("show_contours", True),
+            show_centers=self.current_shared_config.get("show_centers", True),
+            show_bounding_boxes=self.current_shared_config.get("show_bounding_boxes", True),
+            show_labels=self.current_shared_config.get("show_labels", True),
+            show_fps=self.current_shared_config.get("show_fps", True)
+        )
+        self.original_config = CalibrationConfig() # Keep original defaults
         
         # Detection system
         self.camera = None
@@ -112,7 +137,52 @@ class InteractiveCalibrator:
         # Threading
         self.gui_queue = Queue()
         
+        self.status = "initialized" # Add a status variable
         self.logger.info("Interactive Calibrator initialized")
+
+    def get_script_info(self):
+        """Returns information about the script, its status, and exposed parameters."""
+        return {
+            "name": "Real-time Calibration Tool",
+            "status": self.status,
+            "parameters": asdict(self.config), # Expose current config as parameters
+            "performance": {
+                "avg_fps": np.mean(self.fps_history) if self.fps_history else 0,
+                "avg_shapes_per_frame": np.mean(self.detection_history) if self.detection_history else 0
+            }
+        }
+
+    def set_script_parameter(self, key, value):
+        """Sets a specific parameter for the script and updates shared_config."""
+        if hasattr(self.config, key):
+            # Special handling for shape_filter as it's a list
+            if key == "shape_filter" and isinstance(value, list):
+                setattr(self.config, key, value)
+            else:
+                setattr(self.config, key, value)
+
+            shared_config.set_config_value(key, value) # Update shared config
+            
+            # Update GUI elements if they exist
+            if key in self.sliders:
+                self.sliders[key].set(value)
+            if key in self.checkboxes:
+                self.checkboxes[key].set(value)
+            
+            # Apply changes to detector/camera if running
+            if self.running:
+                if key in ["min_shape_area", "max_shape_area", "epsilon_factor", "canny_low", "canny_high", "confidence_threshold"]:
+                    self.update_detection_params()
+                elif key in ["brightness", "contrast", "exposure"]:
+                    self.update_camera_params()
+                elif key == "shape_filter":
+                    self.update_shape_filter()
+                elif key.startswith("show_"):
+                    self.update_display_options()
+            
+            self.status = f"parameter '{key}' updated"
+            return True
+        return False
     
     def create_gui(self):
         """Create the calibration GUI"""
@@ -570,16 +640,19 @@ class InteractiveCalibrator:
         self.status_var.set("Parameters reset")
     
     def save_config(self):
-        """Save configuration to file"""
+        """Save configuration to file and update shared_config"""
         filename = filedialog.asksaveasfilename(
             defaultextension=".json",
-            filetypes=[("JSON files", "*.json"), ("All files", "*.*")]
-        )
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")])
         
         if filename:
             try:
+                config_data = asdict(self.config)
                 with open(filename, 'w') as f:
-                    json.dump(asdict(self.config), f, indent=2)
+                    json.dump(config_data, f, indent=2)
+                
+                # Update shared_config as well
+                shared_config.update_config(config_data)
                 
                 self.status_var.set(f"Configuration saved to {os.path.basename(filename)}")
                 self.logger.info(f"Configuration saved to {filename}")
@@ -588,43 +661,51 @@ class InteractiveCalibrator:
                 messagebox.showerror("Error", f"Failed to save: {str(e)}")
     
     def load_config(self):
-        """Load configuration from file"""
+        """Load configuration from file and update GUI/shared_config"""
         filename = filedialog.askopenfilename(
-            filetypes=[("JSON files", "*.json"), ("All files", "*.*")]
-        )
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")])
         
+        loaded_data = None
         if filename:
             try:
                 with open(filename, 'r') as f:
-                    data = json.load(f)
-                
-                # Update configuration
-                for key, value in data.items():
-                    if hasattr(self.config, key):
-                        setattr(self.config, key, value)
-                
-                # Update GUI elements
-                for attr, slider in self.sliders.items():
-                    if hasattr(self.config, attr):
-                        slider.set(getattr(self.config, attr))
-                
-                for attr, var in self.checkboxes.items():
-                    if hasattr(self.config, attr):
-                        var.set(getattr(self.config, attr))
-                
-                # Update shape filters
-                for shape_type, var in self.shape_vars.items():
-                    var.set(shape_type in self.config.shape_filter)
-                
-                # Apply parameters
-                self.update_detection_params()
-                self.update_camera_params()
-                
-                self.status_var.set(f"Configuration loaded from {os.path.basename(filename)}")
-                self.logger.info(f"Configuration loaded from {filename}")
-                
+                    loaded_data = json.load(f)
             except Exception as e:
-                messagebox.showerror("Error", f"Failed to load: {str(e)}")
+                messagebox.showerror("Error", f"Failed to load from file: {str(e)}")
+                return
+        
+        # Prioritize loaded file, then shared_config, then defaults
+        config_to_apply = self.current_shared_config.copy()
+        if loaded_data:
+            config_to_apply.update(loaded_data)
+
+        # Update configuration object
+        for key, value in config_to_apply.items():
+            if hasattr(self.config, key):
+                setattr(self.config, key, value)
+        
+        # Update GUI elements
+        for attr, slider in self.sliders.items():
+            if hasattr(self.config, attr):
+                slider.set(getattr(self.config, attr))
+        
+        for attr, var in self.checkboxes.items():
+            if hasattr(self.config, attr):
+                var.set(getattr(self.config, attr))
+        
+        # Update shape filters
+        for shape_type, var in self.shape_vars.items():
+            var.set(shape_type in self.config.shape_filter)
+        
+        # Apply parameters
+        self.update_detection_params()
+        self.update_camera_params()
+        
+        # Update shared_config with the newly loaded configuration
+        shared_config.update_config(asdict(self.config))
+
+        self.status_var.set(f"Configuration loaded from {os.path.basename(filename) if filename else 'shared_config'}")
+        self.logger.info(f"Configuration loaded from {filename if filename else 'shared_config'}")
     
     def save_screenshot(self, frame):
         """Save screenshot"""
@@ -735,8 +816,24 @@ def create_test_pattern():
     
     return pattern, shapes_info
 
+calibrator_instance = None
+
+def get_script_info():
+    """Returns information about the script, its status, and exposed parameters."""
+    if calibrator_instance:
+        return calibrator_instance.get_script_info()
+    return {"name": "Real-time Calibration Tool", "status": "not_initialized", "parameters": {}}
+
+def set_script_parameter(key, value):
+    """Sets a specific parameter for the script and updates shared_config."""
+    if calibrator_instance:
+        return calibrator_instance.set_script_parameter(key, value)
+    return False
+
 def main():
     """Main entry point"""
+    global calibrator_instance
+
     import argparse
     
     parser = argparse.ArgumentParser(description='Real-Time Calibration Tool')
@@ -774,8 +871,9 @@ def main():
         print("- Configuration save/load")
         print("\nLaunching GUI...\n")
         
-        calibrator = InteractiveCalibrator()
-        calibrator.run()
+        calibrator_instance = InteractiveCalibrator()
+        calibrator_instance.run()
 
 if __name__ == "__main__":
     main()
+

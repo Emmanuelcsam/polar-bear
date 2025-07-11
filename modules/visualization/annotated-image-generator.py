@@ -2,19 +2,17 @@
 
 import cv2
 import numpy as np
-from typing import List
+import argparse
+import json
+from typing import List, Optional
 
-# Import necessary data structures
-from inspector_config import InspectorConfig
-from image_result import ImageResult
-from zone_definition import ZoneDefinition
-from defect_info import DefectInfo
-from image_analysis_stats import ImageAnalysisStats
-from detected_zone_info import DetectedZoneInfo
-from fiber_specifications import FiberSpecifications
+# Import necessary data structures and utilities from common_data_and_utils
+from common_data_and_utils import (
+    InspectorConfig, ImageResult, ZoneDefinition, DefectInfo, ImageAnalysisStats, 
+    DetectedZoneInfo, FiberSpecifications, load_single_image, log_message, load_json_data
+)
 from datetime import datetime
 from pathlib import Path
-from load_single_image import load_single_image
 
 def generate_annotated_image(
     original_bgr_image: np.ndarray, 
@@ -59,58 +57,65 @@ def generate_annotated_image(
     log_message("Annotated image generated.")
     return annotated_image
 
-# Dummy log_message for standalone execution
-def log_message(message, level="INFO"):
-    print(f"[{level}] {message}")
+def main(image_path: str, image_result_path: str, config_path: str, output_path: str):
+    """
+    Main function to generate an annotated image from provided data paths.
+    
+    Args:
+        image_path (str): Path to the original BGR image.
+        image_result_path (str): Path to a JSON file containing ImageResult data.
+        config_path (str): Path to a JSON file containing InspectorConfig data.
+        output_path (str): Path to save the generated annotated image.
+    """
+    log_message(f"Starting annotated image generation for {image_path}")
+
+    # Load original image
+    original_bgr_image = load_single_image(Path(image_path))
+    if original_bgr_image is None:
+        log_message(f"Failed to load original image from {image_path}", level="ERROR")
+        return
+
+    # Load ImageResult
+    image_result_data = load_json_data(Path(image_result_path))
+    if image_result_data is None:
+        log_message(f"Failed to load ImageResult from {image_result_path}", level="ERROR")
+        return
+    image_res = ImageResult.from_dict(image_result_data)
+
+    # Load InspectorConfig
+    config_data = load_json_data(Path(config_path))
+    if config_data is None:
+        log_message(f"Failed to load InspectorConfig from {config_path}", level="ERROR")
+        return
+    config = InspectorConfig.from_dict(config_data)
+
+    # Use default zones from config for annotation
+    active_zone_definitions = config.DEFAULT_ZONES
+
+    # Generate annotated image
+    annotated_img = generate_annotated_image(
+        original_bgr_image, image_res, active_zone_definitions, config
+    )
+
+    if annotated_img is not None:
+        try:
+            output_dir = Path(output_path).parent
+            output_dir.mkdir(parents=True, exist_ok=True)
+            cv2.imwrite(str(output_path), annotated_img)
+            log_message(f"Successfully saved annotated image to {output_path}")
+        except Exception as e:
+            log_message(f"Failed to save annotated image to {output_path}: {e}", level="ERROR")
+    else:
+        log_message("Annotated image generation failed.", level="ERROR")
 
 if __name__ == '__main__':
-    # Example of how to use generate_annotated_image
+    parser = argparse.ArgumentParser(description="Generate annotated images from inspection results.")
+    parser.add_argument("--image_path", required=True, help="Path to the original BGR image.")
+    parser.add_argument("--image_result_path", required=True, help="Path to a JSON file containing ImageResult data.")
+    parser.add_argument("--config_path", required=True, help="Path to a JSON file containing InspectorConfig data.")
+    parser.add_argument("--output_path", required=True, help="Path to save the generated annotated image.")
     
-    # 1. Setup: Create mock data that an ImageResult would hold
-    conf = InspectorConfig()
-    image_path = Path("./fiber_inspection_output/ima18/ima18_annotated.jpg")
-    bgr_image = load_single_image(image_path)
-
-    if bgr_image is not None:
-        h, w = bgr_image.shape[:2]
-        
-        # Mock defects
-        mock_contour = np.array([[[100, 100]], [[120, 100]], [[120, 120]], [[100, 120]]], dtype=np.int32)
-        mock_defects = [
-            DefectInfo(defect_id=1, zone_name='cladding', defect_type='Region', centroid_px=(110, 110), 
-                       bounding_box_px=(100, 100, 20, 20), contour=mock_contour),
-            DefectInfo(defect_id=2, zone_name='core', defect_type='Scratch', centroid_px=(w//2, h//2 + 20),
-                       bounding_box_px=(w//2 - 30, h//2 + 18, 60, 4), contour=mock_contour) # dummy contour
-        ]
-        
-        # Mock zones
-        mock_zones = {
-            'core': DetectedZoneInfo('core', (w//2, h//2), 60, mask=cv2.circle(np.zeros((h,w), np.uint8), (w//2, h//2), 60, 255, -1)),
-            'cladding': DetectedZoneInfo('cladding', (w//2, h//2), 150, mask=cv2.circle(np.zeros((h,w), np.uint8), (w//2, h//2), 150, 255, -1))
-        }
-
-        # Mock ImageResult
-        mock_image_result = ImageResult(
-            filename=image_path.name,
-            timestamp=datetime.now(),
-            fiber_specs_used=FiberSpecifications(),
-            operating_mode="PIXEL_ONLY",
-            detected_zones=mock_zones,
-            defects=mock_defects,
-            stats=ImageAnalysisStats(total_defects=len(mock_defects), status="Review")
-        )
-
-        # 2. Run the annotation function
-        print("\n--- Generating annotated image from mock data ---")
-        annotated_img = generate_annotated_image(bgr_image, mock_image_result, conf.DEFAULT_ZONES, conf)
-
-        # 3. Save the output
-        if annotated_img is not None:
-            output_filename = "modularized_scripts/z_test_output_full_annotation.png"
-            cv2.imwrite(output_filename, annotated_img)
-            print(f"Success! Saved fully annotated image to '{output_filename}'")
-        else:
-            print("Annotation function failed to return an image.")
-    else:
-        print(f"Could not load image at {image_path}.")
+    args = parser.parse_args()
+    
+    main(args.image_path, args.image_result_path, args.config_path, args.output_path)
 

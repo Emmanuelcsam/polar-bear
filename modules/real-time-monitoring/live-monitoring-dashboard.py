@@ -8,7 +8,8 @@ Browse to http://localhost:5000
 import argparse, time, json
 from flask import Flask, Response, render_template_string
 import cv2
-from realtime_analyzer import RealTimeAnalyzer
+from live_fiber_analyzer import RealTimeAnalyzer
+import shared_config # Import the shared configuration module
 
 HTML = """
 <!doctype html>
@@ -120,6 +121,36 @@ def defect_json():
     return Response(json.dumps(last_defects),
                     mimetype='application/json')
 
+# Add global variables for script status and parameters
+script_status = "initialized"
+script_parameters = {}
+
+def get_script_info():
+    """Returns information about the dashboard script, its status, and exposed parameters."""
+    info = {
+        "name": "Live Monitoring Dashboard",
+        "status": script_status,
+        "parameters": script_parameters,
+        "analyzer_info": {}
+    }
+    if analyzer:
+        info["analyzer_info"] = analyzer.get_script_info()
+    return info
+
+def set_script_parameter(key, value):
+    """Sets a specific parameter for the dashboard script and updates shared_config."""
+    global script_status
+    if key in shared_config.CONFIG:
+        shared_config.set_config_value(key, value)
+        script_parameters[key] = value # Update local script parameters
+        script_status = f"parameter '{key}' updated"
+        
+        # If the parameter affects the analyzer, update it
+        if analyzer and hasattr(analyzer, 'set_script_parameter'):
+            analyzer.set_script_parameter(key, value)
+        return True
+    return False
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--source', default=0,
@@ -128,8 +159,24 @@ if __name__ == '__main__':
                         help='path to pipeline config for analyzer')
     args = parser.parse_args()
 
-    analyzer = RealTimeAnalyzer(config_path=args.config,
-                                fast_segmentation_method="ai",
-                                min_frame_interval=0.05)   # ≈20 FPS target
+    # Load configuration from shared_config.py, overriding defaults or args if present
+    current_shared_config = shared_config.get_config()
+    
+    # Initialize analyzer with parameters from shared_config, falling back to args/defaults
+    analyzer_config_path = current_shared_config.get("analyzer_config_path", args.config)
+    fast_seg_method = current_shared_config.get("fast_segmentation_method", "ai")
+    min_frame_int = current_shared_config.get("min_frame_interval", 0.05)
+
+    analyzer = RealTimeAnalyzer(config_path=analyzer_config_path,
+                                fast_segmentation_method=fast_seg_method,
+                                min_frame_interval=min_frame_int)
+    
+    # Update script_parameters with initial values
+    script_parameters.update({
+        "source": args.source,
+        "config": analyzer_config_path,
+        "fast_segmentation_method": fast_seg_method,
+        "min_frame_interval": min_frame_int
+    })
 
     app.run(host='0.0.0.0', port=5000, threaded=True)

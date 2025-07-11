@@ -14,6 +14,8 @@ import sys
 import subprocess
 from pathlib import Path
 import logging
+from connector_interface import ConnectorInterface, ScriptRegistry, ScriptState
+from typing import Dict, Any, Optional, List, Tuple
 
 class HivemindConnector:
     def __init__(self):
@@ -27,6 +29,9 @@ class HivemindConnector:
         self.parent_socket = None
         self.child_connectors = {}
         self.scripts_in_directory = {}
+        self.script_registry = ScriptRegistry()
+        self.script_connections: Dict[str, socket.socket] = {}
+        self.script_states: Dict[str, ScriptState] = {}
         
         # Setup logging
         self.logger = logging.getLogger(f"Connector_{self.connector_id}")
@@ -101,6 +106,15 @@ class HivemindConnector:
             if script in self.scripts_in_directory:
                 return self.execute_script(script)
             return {'error': 'Script not found'}
+        elif cmd == 'control_script':
+            return self.control_script(message)
+        elif cmd == 'get_script_state':
+            script = message.get('script')
+            return self.get_script_state(script)
+        elif cmd == 'set_parameter':
+            return self.set_script_parameter(message)
+        elif cmd == 'get_all_states':
+            return self.get_all_script_states()
         elif cmd == 'troubleshoot':
             return self.troubleshoot_connections()
         else:
@@ -212,6 +226,182 @@ class HivemindConnector:
                 self.connect_to_parent()
                 
             time.sleep(30)  # Heartbeat every 30 seconds
+            
+    def control_script(self, message: Dict[str, Any]) -> Dict[str, Any]:
+        """Control a script with advanced features"""
+        script_name = message.get('script')
+        action = message.get('action')
+        params = message.get('params', {})
+        
+        if script_name not in self.scripts_in_directory:
+            return {'error': f'Script {script_name} not found'}
+            
+        if action == 'start':
+            return self.start_script_with_interface(script_name, params)
+        elif action == 'stop':
+            return self.stop_script(script_name)
+        elif action == 'pause':
+            return self.pause_script(script_name)
+        elif action == 'resume':
+            return self.resume_script(script_name)
+        else:
+            return {'error': f'Unknown action: {action}'}
+            
+    def start_script_with_interface(self, script_name: str, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Start a script with connector interface enabled"""
+        try:
+            # Create a modified version of the script that includes the interface
+            script_path = Path(self.scripts_in_directory[script_name])
+            
+            # Check if script already has interface
+            with open(script_path, 'r') as f:
+                content = f.read()
+                
+            if 'connector_interface' not in content:
+                # Inject interface code at the beginning
+                interface_code = f'''# Auto-injected connector interface
+from connector_interface import ConnectorInterface
+_connector_interface = ConnectorInterface('{script_name}', {self.port})
+_connector_interface.set_status('initializing')
+\n'''
+                
+                # Create temporary script with interface
+                temp_script = script_path.parent / f'.{script_name}.connected'
+                with open(temp_script, 'w') as f:
+                    f.write(interface_code + content)
+                    
+                script_to_run = str(temp_script)
+            else:
+                script_to_run = str(script_path)
+                
+            # Start the script
+            result = subprocess.Popen(
+                [sys.executable, script_to_run],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env={**os.environ, 'CONNECTOR_PORT': str(self.port)}
+            )
+            
+            # Register the script
+            self.script_registry.register_script(script_name, None)
+            
+            return {
+                'status': 'started',
+                'script': script_name,
+                'pid': result.pid,
+                'message': f'Script {script_name} started with connector interface'
+            }
+            
+        except Exception as e:
+            return {'error': f'Failed to start script: {str(e)}'}
+            
+    def stop_script(self, script_name: str) -> Dict[str, Any]:
+        """Stop a running script"""
+        if script_name in self.script_connections:
+            try:
+                # Send stop command through connection
+                conn = self.script_connections[script_name]
+                command = {'command': 'stop'}
+                conn.send(json.dumps(command).encode())
+                
+                # Remove connection
+                del self.script_connections[script_name]
+                
+                return {'status': 'stopped', 'script': script_name}
+            except Exception as e:
+                return {'error': f'Failed to stop script: {str(e)}'}
+        else:
+            return {'error': f'Script {script_name} not connected'}
+            
+    def pause_script(self, script_name: str) -> Dict[str, Any]:
+        """Pause a running script"""
+        if script_name in self.script_connections:
+            try:
+                conn = self.script_connections[script_name]
+                command = {'command': 'pause'}
+                conn.send(json.dumps(command).encode())
+                return {'status': 'paused', 'script': script_name}
+            except Exception as e:
+                return {'error': f'Failed to pause script: {str(e)}'}
+        else:
+            return {'error': f'Script {script_name} not connected'}
+            
+    def resume_script(self, script_name: str) -> Dict[str, Any]:
+        """Resume a paused script"""
+        if script_name in self.script_connections:
+            try:
+                conn = self.script_connections[script_name]
+                command = {'command': 'resume'}
+                conn.send(json.dumps(command).encode())
+                return {'status': 'resumed', 'script': script_name}
+            except Exception as e:
+                return {'error': f'Failed to resume script: {str(e)}'}
+        else:
+            return {'error': f'Script {script_name} not connected'}
+            
+    def get_script_state(self, script_name: str) -> Dict[str, Any]:
+        """Get the current state of a script"""
+        if script_name in self.script_states:
+            state = self.script_states[script_name]
+            return {
+                'status': 'success',
+                'state': {
+                    'script_name': state.script_name,
+                    'status': state.status,
+                    'parameters': {k: v.__dict__ for k, v in state.parameters.items()},
+                    'metrics': state.metrics,
+                    'last_update': state.last_update,
+                    'error_message': state.error_message
+                }
+            }
+        else:
+            return {'error': f'No state available for script {script_name}'}
+            
+    def set_script_parameter(self, message: Dict[str, Any]) -> Dict[str, Any]:
+        """Set a parameter in a connected script"""
+        script_name = message.get('script')
+        param_name = message.get('parameter')
+        value = message.get('value')
+        
+        if script_name not in self.script_connections:
+            return {'error': f'Script {script_name} not connected'}
+            
+        try:
+            conn = self.script_connections[script_name]
+            command = {
+                'command': 'set_parameter',
+                'parameter': param_name,
+                'value': value
+            }
+            conn.send(json.dumps(command).encode())
+            
+            # Wait for response
+            conn.settimeout(5.0)
+            response = conn.recv(4096)
+            if response:
+                return json.loads(response.decode())
+            else:
+                return {'error': 'No response from script'}
+                
+        except Exception as e:
+            return {'error': f'Failed to set parameter: {str(e)}'}
+            
+    def get_all_script_states(self) -> Dict[str, Any]:
+        """Get states of all connected scripts"""
+        states = {}
+        for script_name, state in self.script_states.items():
+            states[script_name] = {
+                'status': state.status,
+                'parameters_count': len(state.parameters),
+                'metrics': state.metrics,
+                'last_update': state.last_update
+            }
+        return {
+            'status': 'success',
+            'scripts': states,
+            'total_scripts': len(self.scripts_in_directory),
+            'connected_scripts': len(self.script_connections)
+        }
 
 if __name__ == "__main__":
     connector = HivemindConnector()

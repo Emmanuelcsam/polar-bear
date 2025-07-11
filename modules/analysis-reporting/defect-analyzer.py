@@ -1,8 +1,16 @@
 import cv2
 import numpy as np
 from typing import Dict, List
+import sys
+from pathlib import Path
 
-from .defect_info import DefectInfo
+# Handle both relative and absolute imports
+try:
+    from .defect_info import DefectInfo
+except ImportError:
+    # For standalone execution
+    sys.path.insert(0, str(Path(__file__).parent))
+    from defect_info import DefectInfo
 
 def analyze_defects(refined_masks: Dict[str, np.ndarray],
                     pixels_per_micron: float or None) -> List[DefectInfo]:

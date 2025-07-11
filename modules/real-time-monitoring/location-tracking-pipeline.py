@@ -15,6 +15,7 @@ from typing import Dict, List, Tuple, Optional
 from pathlib import Path
 import serial
 import pynmea2
+import shared_config # Import the shared configuration module
 
 # Import our AI detectors
 from ai_segmenter_pytorch import AI_Segmenter
@@ -343,26 +344,67 @@ class RealtimeStreamer:
 class RealtimePipeline:
     """Main pipeline orchestrator"""
     
-    def __init__(self, config_path: str = "config.json"):
-        # Load config
-        with open(config_path) as f:
-            self.config = json.load(f)
+    def __init__(self, config_path: str = None):
+        # Load configuration from shared_config.py
+        self.current_config = shared_config.get_config()
         
-        self.analyzer = RealtimeFiberAnalyzer(self.config)
-        self.streamer = RealtimeStreamer(
-            self.config.get('realtime_settings', {}).get('broadcast', {}).get('host', '0.0.0.0'),
-            self.config.get('realtime_settings', {}).get('broadcast', {}).get('port', 8765)
-        )
+        # Initialize analyzer with parameters from shared_config
+        self.analyzer = RealtimeFiberAnalyzer(self.current_config)
         
-        # Video source
-        rt_config = self.config.get('realtime_settings', {})
-        if rt_config.get('source') == 'camera':
-            self.source = rt_config.get('camera_index', 0)
-        else:
-            self.source = rt_config.get('rtsp_url', 0)
+        # Initialize streamer with parameters from shared_config
+        stream_host = self.current_config.get('websocket_host', '0.0.0.0')
+        stream_port = self.current_config.get('websocket_port', 8765)
+        self.streamer = RealtimeStreamer(host=stream_host, port=stream_port)
         
-        self.max_fps = rt_config.get('max_fps', 10)
-        self.display = rt_config.get('display', True)
+        # Video source from shared_config
+        self.source = self.current_config.get('video_source', 0) # Default to 0 (camera index)
+        self.max_fps = self.current_config.get('max_fps', 10)
+        self.display = self.current_config.get('display_output', True)
+        
+        self.status = "initialized" # Add a status variable
+
+    def get_script_info(self):
+        """Returns information about the script, its status, and exposed parameters."""
+        return {
+            "name": "Location Tracking Pipeline",
+            "status": self.status,
+            "parameters": {
+                "video_source": self.source,
+                "max_fps": self.max_fps,
+                "display_output": self.display,
+                "websocket_host": self.streamer.host,
+                "websocket_port": self.streamer.port,
+                "log_level": self.current_config.get("log_level"),
+                "data_source": self.current_config.get("data_source"),
+                "processing_enabled": self.current_config.get("processing_enabled"),
+                "threshold_value": self.current_config.get("threshold_value")
+            },
+            "analyzer_info": self.analyzer.get_script_info() if hasattr(self.analyzer, 'get_script_info') else "N/A"
+        }
+
+    def set_script_parameter(self, key, value):
+        """Sets a specific parameter for the script and updates shared_config."""
+        if key in self.current_config:
+            self.current_config[key] = value
+            shared_config.set_config_value(key, value) # Update shared config
+            
+            # Apply changes if they affect the running script
+            if key == "video_source":
+                self.source = value
+                # Note: Re-initializing video capture mid-run is complex, might require restart
+            elif key == "max_fps":
+                self.max_fps = value
+            elif key == "display_output":
+                self.display = value
+            elif key == "websocket_host":
+                self.streamer.host = value
+            elif key == "websocket_port":
+                self.streamer.port = value
+            # Add more conditions here for other parameters that need immediate effect
+            
+            self.status = f"parameter '{key}' updated"
+            return True
+        return False
         
     def run(self):
         """Run the pipeline"""
@@ -535,11 +577,25 @@ HTML_CLIENT = """
 </html>
 """
 
+pipeline_instance = None
+
+def get_script_info():
+    """Returns information about the script, its status, and exposed parameters."""
+    if pipeline_instance:
+        return pipeline_instance.get_script_info()
+    return {"name": "Location Tracking Pipeline", "status": "not_initialized", "parameters": {}}
+
+def set_script_parameter(key, value):
+    """Sets a specific parameter for the script and updates shared_config."""
+    if pipeline_instance:
+        return pipeline_instance.set_script_parameter(key, value)
+    return False
+
 if __name__ == "__main__":
     # Save example client
     with open("live_view.html", "w") as f:
         f.write(HTML_CLIENT)
     
     # Run pipeline
-    pipeline = RealtimePipeline("config.json")
-    pipeline.run()
+    pipeline_instance = RealtimePipeline()
+    pipeline_instance.run()

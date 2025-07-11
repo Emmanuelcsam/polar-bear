@@ -13,6 +13,7 @@ Features:
 import asyncio
 import cv2
 import numpy as np
+from connector_interface import ConnectorInterface
 import json
 import time
 import threading
@@ -44,6 +45,9 @@ ANOMALIES_DETECTED = Counter('fiber_anomalies_detected_total', 'Total anomalies 
 PROCESSING_TIME = Histogram('fiber_processing_duration_seconds', 'Processing time per frame')
 ACTIVE_STREAMS = Gauge('fiber_active_streams', 'Number of active inspection streams')
 QUEUE_SIZE = Gauge('fiber_queue_size', 'Current processing queue size')
+
+# Initialize connector interface
+connector = ConnectorInterface('realtime_fiber_system.py')
 
 # Configure logging
 logging.basicConfig(
@@ -239,9 +243,15 @@ class RealtimeProcessor:
         # Performance monitoring
         self.performance_monitor = PerformanceMonitor()
         
+    def _update_fps(self, old_value: int, new_value: int):
+        """Update FPS callback"""
+        logger.info(f"Updating processing FPS from {old_value} to {new_value}")
+        self.config['processing_fps'] = new_value
+        
     async def start(self):
         """Start the real-time processing system"""
         logger.info("Starting Real-time Fiber Inspection System...")
+        connector.set_status('running')
         
         # Start Prometheus metrics server
         start_http_server(8000)
@@ -300,6 +310,11 @@ class RealtimeProcessor:
                     
                 FRAMES_PROCESSED.inc()
                 
+                # Update connector metrics
+                connector.update_metric('frames_processed', FRAMES_PROCESSED._value.get())
+                connector.update_metric('active_streams', len(self.streams))
+                connector.update_metric('queue_size', self.frame_queue.qsize())
+                
             except Exception as e:
                 logger.error(f"Frame processing error: {e}")
                 
@@ -339,6 +354,13 @@ class RealtimeProcessor:
         # Track anomalies
         if result.is_anomalous:
             ANOMALIES_DETECTED.inc()
+            connector.update_metric('anomalies_detected', ANOMALIES_DETECTED._value.get())
+            connector.update_metric('latest_anomaly', {
+                'timestamp': result.timestamp.isoformat(),
+                'frame_id': result.frame_id,
+                'defect_type': result.defect_type,
+                'confidence': result.confidence
+            })
             
         return result
     

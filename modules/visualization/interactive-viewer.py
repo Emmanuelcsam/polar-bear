@@ -22,14 +22,17 @@ from pathlib import Path
 import argparse
 import json
 
+# Import common utilities and data models
+from common_data_and_utils import load_json_data, load_single_image, log_message, DetectedZoneInfo, DefectInfo
+
 # Try to import napari for interactive visualization
 try:
     import napari
     NAPARI_AVAILABLE = True
-    logging.info("Napari available for interactive visualization")
+    log_message("Napari available for interactive visualization", level="INFO")
 except ImportError:
     NAPARI_AVAILABLE = False
-    logging.warning("Napari not available. Using fallback visualization.")
+    log_message("Napari not available. Using fallback visualization.", level="WARNING")
 
 
 class InteractiveVisualizer:
@@ -454,16 +457,23 @@ def create_multi_panel_visualization(
 
 
 def load_inspection_data(file_path: str) -> Optional[Dict[str, Any]]:
-    """Load inspection data from JSON file."""
-    try:
-        with open(file_path, 'r') as f:
-            data = json.load(f)
-        logging.info(f"Inspection data loaded from: {file_path}")
-        return data
-    except Exception as e:
-        logging.error(f"Failed to load inspection data: {e}")
+    """Load inspection data from JSON file using common utility and convert to data models."""
+    data = load_json_data(Path(file_path))
+    if data is None:
         return None
 
+    # Convert detected_zones to DetectedZoneInfo objects
+    if 'detected_zones' in data and isinstance(data['detected_zones'], dict):
+        converted_zones = {}
+        for zone_name, zone_data in data['detected_zones'].items():
+            converted_zones[zone_name] = DetectedZoneInfo.from_dict(zone_data)
+        data['detected_zones'] = converted_zones
+
+    # Convert defects to DefectInfo objects
+    if 'defects' in data and isinstance(data['defects'], list):
+        data['defects'] = [DefectInfo.from_dict(d) for d in data['defects']]
+
+    return data
 
 def main():
     """Main function for standalone execution."""
@@ -489,8 +499,8 @@ def main():
     
     try:
         # Load original image
-        logging.info(f"Loading image: {args.image}")
-        original_image = cv2.imread(args.image, cv2.IMREAD_GRAYSCALE)
+        log_message(f"Loading image: {args.image}", level="INFO")
+        original_image = load_single_image(Path(args.image))
         if original_image is None:
             raise ValueError(f"Failed to load image: {args.image}")
         
@@ -502,9 +512,11 @@ def main():
         # Load defect mask if provided
         defect_mask = None
         if args.defect_mask:
-            defect_mask = cv2.imread(args.defect_mask, cv2.IMREAD_GRAYSCALE)
-            if defect_mask is None:
-                logging.warning(f"Failed to load defect mask: {args.defect_mask}")
+            defect_mask_raw = cv2.imread(args.defect_mask, cv2.IMREAD_GRAYSCALE)
+            if defect_mask_raw is None:
+                log_message(f"Failed to load defect mask: {args.defect_mask}", level="WARNING")
+            else:
+                defect_mask = defect_mask_raw
         
         if args.multi_panel:
             # Create multi-panel visualization
@@ -519,7 +531,7 @@ def main():
                 save_path=args.output
             )
             
-            if not args.no_interactive:
+            if not args.no_interactive and result is not None:
                 cv2.imshow("Multi-Panel Visualization", result)
                 cv2.waitKey(0)
                 cv2.destroyAllWindows()
@@ -556,10 +568,10 @@ def main():
                 cv2.waitKey(0)
                 cv2.destroyAllWindows()
         
-        logging.info("Visualization complete")
+        log_message("Visualization complete", level="INFO")
         
     except Exception as e:
-        logging.error(f"Error: {e}")
+        log_message(f"Error: {e}", level="ERROR")
         return 1
     
     return 0

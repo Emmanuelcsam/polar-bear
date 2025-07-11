@@ -17,11 +17,43 @@ from pathlib import Path
 import logging
 import time
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - [%(levelname)s] - %(message)s'
-)
+# --- Start of Connector Integration ---
+try:
+    import connector
+    logger = connector.logger
+except ImportError:
+    print("Connector not found, using basic logging.")
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] - %(message)s')
+    logger = logging.getLogger(__name__)
+
+CONFIG_FILE = "shared_config.json"
+SCRIPT_NAME = "detection-tutorial"
+
+def load_config(config_object):
+    """Loads configuration from a shared JSON file and updates the config object."""
+    try:
+        with open(CONFIG_FILE, 'r') as f:
+            shared_config = json.load(f)
+        
+        if SCRIPT_NAME in shared_config:
+            script_config = shared_config[SCRIPT_NAME]
+            logger.info(f"Loading configuration for {SCRIPT_NAME} from {CONFIG_FILE}")
+            for key, value in script_config.items():
+                if hasattr(config_object, key):
+                    setattr(config_object, key, value)
+            return config_object
+            
+    except FileNotFoundError:
+        logger.info(f"{CONFIG_FILE} not found. Using default configuration.")
+    except json.JSONDecodeError:
+        logger.error(f"Error decoding {CONFIG_FILE}. Using default configuration.")
+    except Exception as e:
+        logger.error(f"An error occurred while loading config: {e}")
+        
+    return config_object
+
+# --- End of Connector Integration ---
+
 
 # Device configuration for GPU support
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -205,7 +237,7 @@ class OmniFiberAnalyzer:
     def __init__(self, config: OmniConfig):
         self.config = config
         self.device = torch.device(config.device)
-        self.logger = logging.getLogger(__name__)
+        self.logger = logger
         
         # Initialize model
         self.model = AnomalyDetectorNet().to(self.device)
@@ -560,6 +592,8 @@ class NumpyEncoder(json.JSONEncoder):
 
 def main():
     """Main execution function"""
+    logger.info(f"--- Starting {SCRIPT_NAME} ---")
+    
     print("\n" + "="*80)
     print("OMNIFIBER ANALYZER - PYTORCH ENHANCED VERSION (v2.0)".center(80))
     print("="*80)
@@ -567,48 +601,58 @@ def main():
     
     # Create configuration
     config = OmniConfig()
+    config = load_config(config)
     
     # Initialize analyzer
     analyzer = OmniFiberAnalyzer(config)
     
     # Check for GPU
     if torch.cuda.is_available():
-        print(f"✓ GPU detected: {torch.cuda.get_device_name(0)}")
+        print(f"\u2713 GPU detected: {torch.cuda.get_device_name(0)}")
         print(f"  CUDA version: {torch.version.cuda}")
     else:
-        print("✗ No GPU detected, using CPU")
+        print("\u2717 No GPU detected, using CPU")
     
     # Interactive testing loop
-    while True:
-        print("\nOptions:")
-        print("1. Train reference model from directory")
-        print("2. Analyze test image")
-        print("3. Quit")
+    if __name__ == "__main__":
+        while True:
+            print("\nOptions:")
+            print("1. Train reference model from directory")
+            print("2. Analyze test image")
+            print("3. Quit")
+            
+            choice = input("\nSelect option (1-3): ").strip()
+            
+            if choice == '1':
+                ref_dir = input("Enter path to reference images directory: ").strip().strip('"\'')
+                if os.path.isdir(ref_dir):
+                    print(f"\nTraining reference model from {ref_dir}...")
+                    analyzer.build_reference_model(ref_dir)
+                else:
+                    print(f"\u2717 Directory not found: {ref_dir}")
+                    
+            elif choice == '2':
+                test_path = input("Enter path to test image: ").strip().strip('"\'')
+                if os.path.isfile(test_path):
+                    output_dir = f"detection_output_{Path(test_path).stem}_{time.strftime('%Y%m%d_%H%M%S')}"
+                    print(f"\nAnalyzing {test_path}...")
+                    analyzer.analyze_end_face(test_path, output_dir)
+                    print(f"\nResults saved to: {output_dir}/")
+                else:
+                    print(f"\u2717 File not found: {test_path}")
+                    
+            elif choice == '3':
+                break
         
-        choice = input("\nSelect option (1-3): ").strip()
-        
-        if choice == '1':
-            ref_dir = input("Enter path to reference images directory: ").strip().strip('"\'')
-            if os.path.isdir(ref_dir):
-                print(f"\nTraining reference model from {ref_dir}...")
-                analyzer.build_reference_model(ref_dir)
-            else:
-                print(f"✗ Directory not found: {ref_dir}")
-                
-        elif choice == '2':
-            test_path = input("Enter path to test image: ").strip().strip('"\'')
-            if os.path.isfile(test_path):
-                output_dir = f"detection_output_{Path(test_path).stem}_{time.strftime('%Y%m%d_%H%M%S')}"
-                print(f"\nAnalyzing {test_path}...")
-                analyzer.analyze_end_face(test_path, output_dir)
-                print(f"\nResults saved to: {output_dir}/")
-            else:
-                print(f"✗ File not found: {test_path}")
-                
-        elif choice == '3':
-            break
+        print("\nThank you for using the PyTorch-enhanced OmniFiber Analyzer!")
     
-    print("\nThank you for using the PyTorch-enhanced OmniFiber Analyzer!")
+    logger.info(f"--- Finished {SCRIPT_NAME} ---")
+
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        logger.error(f"An error occurred in {SCRIPT_NAME}: {e}", exc_info=True)
+        import sys
+        sys.exit(1)

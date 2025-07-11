@@ -13,7 +13,8 @@ import os
 import sys
 import subprocess
 from pathlib import Path
-import logging
+
+from common_data_and_utils import log_message, load_json_data, ImageResult, InspectorConfig, DefectInfo, DetectedZoneInfo, ZoneDefinition, load_single_image
 
 class HivemindConnector:
     def __init__(self):
@@ -28,16 +29,12 @@ class HivemindConnector:
         self.child_connectors = {}
         self.scripts_in_directory = {}
         
-        # Setup logging
-        self.logger = logging.getLogger(f"Connector_{self.connector_id}")
-        handler = logging.StreamHandler()
-        handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(message)s'))
-        self.logger.addHandler(handler)
-        self.logger.setLevel(logging.INFO)
+        # Use common logging utility
+        log_message(f"Initializing HivemindConnector {self.connector_id}", level="INFO")
         
     def start(self):
         """Start the connector"""
-        self.logger.info(f"Starting connector {self.connector_id} on port {self.port}")
+        log_message(f"Starting connector {self.connector_id} on port {self.port}", level="INFO")
         
         # Start listening for connections
         self.listen_thread = threading.Thread(target=self.listen_for_connections)
@@ -76,7 +73,7 @@ class HivemindConnector:
             response = self.process_message(message)
             conn.send(json.dumps(response).encode())
         except Exception as e:
-            self.logger.error(f"Error handling connection: {e}")
+            log_message(f"Error handling connection: {e}", level="ERROR")
         finally:
             conn.close()
             
@@ -120,9 +117,9 @@ class HivemindConnector:
                 'directory': str(self.directory)
             }
             self.parent_socket.send(json.dumps(register_msg).encode())
-            self.logger.info(f"Connected to parent on port {self.parent_port}")
+            log_message(f"Connected to parent on port {self.parent_port}", level="INFO")
         except Exception as e:
-            self.logger.error(f"Failed to connect to parent: {e}")
+            log_message(f"Failed to connect to parent: {e}", level="ERROR")
             
     def scan_directory(self):
         """Scan directory for Python scripts and subdirectories"""
@@ -138,9 +135,9 @@ class HivemindConnector:
                     if child_connector.exists():
                         self.child_connectors[item.name] = str(child_connector)
                         
-            self.logger.info(f"Found {len(self.scripts_in_directory)} scripts and {len(self.child_connectors)} child connectors")
+            log_message(f"Found {len(self.scripts_in_directory)} scripts and {len(self.child_connectors)} child connectors", level="INFO")
         except Exception as e:
-            self.logger.error(f"Error scanning directory: {e}")
+            log_message(f"Error scanning directory: {e}", level="ERROR")
             
     def should_skip_directory(self, path):
         """Check if directory should be skipped"""
@@ -151,26 +148,61 @@ class HivemindConnector:
         }
         return path.name.startswith('.') or path.name.lower() in skip_dirs
         
-    def execute_script(self, script_name):
-        """Execute a script in the directory"""
+    def execute_script(self, script_name, **kwargs):
+        """Execute a script in the directory by importing its main function."""
         if script_name not in self.scripts_in_directory:
             return {'error': 'Script not found'}
             
         try:
-            result = subprocess.run(
-                [sys.executable, self.scripts_in_directory[script_name]],
-                capture_output=True,
-                text=True,
-                timeout=30
-            )
-            return {
-                'status': 'executed',
-                'script': script_name,
-                'returncode': result.returncode,
-                'stdout': result.stdout[-1000:],  # Last 1000 chars
-                'stderr': result.stderr[-1000:]
-            }
+            module_name = script_name.replace(".py", "")
+            # Dynamically import the module
+            module = __import__(module_name)
+            
+            # Assuming each script has a callable function named after its purpose
+            # For example, result-visualizer.py might have a visualize_results function
+            if module_name == "result-visualizer":
+                if 'image_file' not in kwargs or 'image_result_file' not in kwargs:
+                    return {'error': 'Missing image_file or image_result_file for result-visualizer'}
+                
+                image_path = Path(kwargs['image_file'])
+                image_result_path = Path(kwargs['image_result_file'])
+
+                raw_image_result_data = load_json_data(image_result_path)
+                if raw_image_result_data is None:
+                    return {'error': f'Could not load JSON data from {image_result_path}'}
+                image_result = ImageResult.from_dict(raw_image_result_data)
+                if image_result is None:
+                    return {'error': f'Could not parse ImageResult from {image_result_path}'}
+
+                save_path = Path(kwargs.get('save_path', f"hivemind_output_{image_path.stem}.png"))
+
+                log_message(f"Executing {script_name} with image: {image_path} and result: {image_result_path}", level="INFO")
+                module.visualize_results(image_path, image_result, save_path)
+                return {'status': 'executed', 'script': script_name, 'output_saved_to': str(save_path)}
+            
+            # Add similar blocks for other scripts as they are modularized
+            # elif module_name == "annotated-image-generator":
+            #     ...
+            
+            else:
+                log_message(f"No specific execution logic for {script_name}. Attempting generic execution.", level="WARNING")
+                # Fallback to subprocess for unhandled scripts, or raise error
+                result = subprocess.run(
+                    [sys.executable, self.scripts_in_directory[script_name]],
+                    capture_output=True,
+                    text=True,
+                    timeout=30
+                )
+                return {
+                    'status': 'executed',
+                    'script': script_name,
+                    'returncode': result.returncode,
+                    'stdout': result.stdout[-1000:],  # Last 1000 chars
+                    'stderr': result.stderr[-1000:]
+                }
+
         except Exception as e:
+            log_message(f"Execution of {script_name} failed: {e}", level="ERROR")
             return {'error': f'Execution failed: {str(e)}'}
             
     def troubleshoot_connections(self):
@@ -190,6 +222,7 @@ class HivemindConnector:
             if not Path(path).exists():
                 issues.append(f"Child connector missing: {name}")
                 
+        log_message(f"Troubleshooting complete for {self.connector_id}. Issues: {issues}", level="INFO")
         return {
             'connector_id': self.connector_id,
             'issues': issues,
@@ -207,7 +240,8 @@ class HivemindConnector:
                         'timestamp': time.time()
                     }
                     self.parent_socket.send(json.dumps(heartbeat).encode())
-            except:
+            except Exception as e:
+                log_message(f"Error during heartbeat: {e}. Attempting to reconnect.", level="ERROR")
                 # Reconnect if connection lost
                 self.connect_to_parent()
                 
@@ -219,4 +253,4 @@ if __name__ == "__main__":
         connector.start()
     except KeyboardInterrupt:
         connector.running = False
-        print("\nConnector stopped")
+        log_message("Connector stopped by user.", level="INFO")

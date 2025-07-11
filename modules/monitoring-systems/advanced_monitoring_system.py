@@ -12,6 +12,7 @@ Features:
 
 import asyncio
 import numpy as np
+from connector_interface import ConnectorInterface, connector_enabled
 import pandas as pd
 from datetime import datetime, timedelta
 import json
@@ -46,6 +47,9 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Initialize connector interface
+connector = ConnectorInterface('advanced_monitoring_system.py')
 
 # Metrics
 MODEL_DRIFT_SCORE = Gauge('fiber_model_drift_score', 'Model drift detection score')
@@ -103,6 +107,49 @@ class AdvancedMonitoringSystem:
     
     def __init__(self, config: Dict):
         self.config = config
+        
+        # Register controllable parameters with connector
+        connector.register_parameter(
+            'accuracy_threshold',
+            config.get('accuracy_threshold', 0.95),
+            'float',
+            'Minimum acceptable model accuracy',
+            min_value=0.0,
+            max_value=1.0,
+            callback=self._update_accuracy_threshold
+        )
+        
+        connector.register_parameter(
+            'drift_threshold',
+            config.get('drift_threshold', 0.1),
+            'float',
+            'Maximum acceptable distribution drift',
+            min_value=0.0,
+            max_value=1.0
+        )
+        
+        connector.register_parameter(
+            'monitoring_interval',
+            config.get('monitoring_interval', 300),
+            'int',
+            'Performance monitoring interval in seconds',
+            min_value=60,
+            max_value=3600
+        )
+        
+        connector.register_parameter(
+            'alert_enabled',
+            config.get('alert_enabled', True),
+            'bool',
+            'Enable/disable alerting system'
+        )
+        
+        connector.register_parameter(
+            'retraining_enabled',
+            config.get('retraining_enabled', True),
+            'bool',
+            'Enable/disable automated retraining'
+        )
         self.db = firestore.client()
         self.bq_client = bigquery.Client()
         self.ml_client = aiplatform.gapic.ModelServiceClient()
@@ -122,9 +169,15 @@ class AdvancedMonitoringSystem:
         self.reference_distributions = {}
         self.load_reference_distributions()
         
+    def _update_accuracy_threshold(self, old_value: float, new_value: float):
+        """Update accuracy threshold callback"""
+        logger.info(f"Updating accuracy threshold from {old_value} to {new_value}")
+        self.config['accuracy_threshold'] = new_value
+        
     async def start(self):
         """Start monitoring system"""
         logger.info("Starting Advanced Monitoring System")
+        connector.set_status('running')
         
         # Start monitoring tasks
         tasks = [
@@ -166,7 +219,15 @@ class AdvancedMonitoringSystem:
                 if datetime.now().hour == 0:  # Daily report
                     await self.generate_performance_report()
                 
-                await asyncio.sleep(300)  # Check every 5 minutes
+                # Update metrics in connector
+                connector.update_metric('current_accuracy', metrics.accuracy)
+                connector.update_metric('false_positive_rate', metrics.false_positive_rate)
+                connector.update_metric('false_negative_rate', metrics.false_negative_rate)
+                connector.update_metric('avg_confidence', metrics.avg_confidence)
+                
+                # Use configurable interval
+                interval = connector.get_parameter('monitoring_interval')
+                await asyncio.sleep(interval)
                 
             except Exception as e:
                 logger.error(f"Performance monitoring error: {e}")
@@ -773,6 +834,12 @@ class AlertManager:
 
 async def main():
     """Main entry point for monitoring system"""
+    # Wait for connector to be available
+    if connector.wait_for_connector(timeout=10):
+        logger.info("Connected to monitoring connector")
+    else:
+        logger.warning("Running without connector integration")
+        
     config = {
         'project_id': 'your-project-id',
         'mlflow_uri': 'http://mlflow-server:5000',
@@ -794,4 +861,9 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        connector.set_status('stopped')
+        connector.cleanup()
+        logger.info("Monitoring system stopped")

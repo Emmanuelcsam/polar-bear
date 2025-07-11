@@ -28,6 +28,7 @@ import sqlite3
 import pandas as pd
 from scipy import stats
 import warnings
+import shared_config # Import the shared configuration module
 
 # Import main system components
 from ultimate_defect_detector import UltimateDefectDetector, DefectDetectionConfig, DefectType
@@ -51,6 +52,9 @@ class RealTimeMonitor:
         self.style = ttk.Style()
         self.style.theme_use('clam')
         
+        # Load initial configuration from shared_config
+        self.current_shared_config = shared_config.get_config()
+
         # Initialize components
         self.inspector = None
         self.current_image = None
@@ -79,6 +83,570 @@ class RealTimeMonitor:
         
         # Start GUI update loop
         self.root.after(100, self._update_gui)
+        self.status = "initialized" # Add a status variable
+
+    def get_script_info(self):
+        """Returns information about the script, its status, and exposed parameters."""
+        return {
+            "name": "Real-time Monitor GUI",
+            "status": self.status,
+            "parameters": {
+                "auto_process": self.auto_process_var.get(),
+                "profile": self.profile_var.get(),
+                "log_level": self.current_shared_config.get("log_level"),
+                "data_source": self.current_shared_config.get("data_source"),
+                "processing_enabled": self.current_shared_config.get("processing_enabled"),
+                "threshold_value": self.current_shared_config.get("threshold_value")
+            },
+            "statistics": self.stats # Expose current statistics
+        }
+
+    def set_script_parameter(self, key, value):
+        """Sets a specific parameter for the script and updates shared_config."""
+        if key in self.current_shared_config:
+            self.current_shared_config[key] = value
+            shared_config.set_config_value(key, value) # Update shared config
+            
+            # Apply changes if they affect the running GUI or inspector
+            if key == "auto_process":
+                self.auto_process_var.set(value)
+            elif key == "profile":
+                self.profile_var.set(value)
+                self._setup_inspector() # Re-initialize inspector with new profile
+            # Add more conditions here for other parameters that need immediate effect
+            
+            self.status = f"parameter '{key}' updated"
+            return True
+        return False
+    
+    def _setup_gui(self):
+        """Setup the GUI components"""
+        # Create menu bar
+        menubar = tk.Menu(self.root)
+        self.root.config(menu=menubar)
+        
+        # File menu
+        file_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="File", menu=file_menu)
+        file_menu.add_command(label="Open Image", command=self._open_image)
+        file_menu.add_command(label="Open Folder", command=self._open_folder)
+        file_menu.add_separator()
+        file_menu.add_command(label="Export Results", command=self._export_results)
+        file_menu.add_separator()
+        file_menu.add_command(label="Exit", command=self.root.quit)
+        
+        # Settings menu
+        settings_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Settings", menu=settings_menu)
+        settings_menu.add_command(label="Configuration", command=self._show_config_dialog)
+        settings_menu.add_command(label="Calibration", command=self._show_calibration_dialog)
+        
+        # Tools menu
+        tools_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Tools", menu=tools_menu)
+        tools_menu.add_command(label="Method Comparison", command=self._show_comparison_tool)
+        tools_menu.add_command(label="Batch Processing", command=self._show_batch_dialog)
+        tools_menu.add_command(label="Statistics", command=self._show_statistics)
+        
+        # Main container
+        main_container = ttk.Frame(self.root)
+        main_container.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        # Left panel - Image display
+        left_panel = ttk.Frame(main_container)
+        left_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        # Image display area
+        self.image_frame = ttk.LabelFrame(left_panel, text="Image Display")
+        self.image_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        # Create matplotlib figure for image display
+        self.fig = Figure(figsize=(8, 6), dpi=100)
+        self.ax_original = self.fig.add_subplot(221)
+        self.ax_processed = self.fig.add_subplot(222)
+        self.ax_defects = self.fig.add_subplot(223)
+        self.ax_confidence = self.fig.add_subplot(224)
+        
+        self.canvas = FigureCanvasTkAgg(self.fig, master=self.image_frame)
+        self.canvas.draw()
+        self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+        
+        # Control panel
+        control_panel = ttk.Frame(left_panel)
+        control_panel.pack(fill=tk.X, padx=5, pady=5)
+        
+        self.process_btn = ttk.Button(control_panel, text="Process Image", 
+                                     command=self._process_current_image)
+        self.process_btn.pack(side=tk.LEFT, padx=5)
+        
+        self.auto_process_var = tk.BooleanVar(value=self.current_shared_config.get("auto_process", False))
+        self.auto_process_cb = ttk.Checkbutton(control_panel, text="Auto Process", 
+                                              variable=self.auto_process_var)
+        self.auto_process_cb.pack(side=tk.LEFT, padx=5)
+        
+        # Processing profile
+        ttk.Label(control_panel, text="Profile:").pack(side=tk.LEFT, padx=5)
+        self.profile_var = tk.StringVar(value=self.current_shared_config.get("processing_profile", "balanced"))
+        profile_combo = ttk.Combobox(control_panel, textvariable=self.profile_var,
+                                    values=["fast", "balanced", "comprehensive"],
+                                    width=15, state="readonly")
+        profile_combo.pack(side=tk.LEFT, padx=5)
+        
+        # Right panel - Results and statistics
+        right_panel = ttk.Frame(main_container, width=400)
+        right_panel.pack(side=tk.RIGHT, fill=tk.BOTH, padx=5)
+        right_panel.pack_propagate(False)
+        
+        # Results display
+        results_frame = ttk.LabelFrame(right_panel, text="Analysis Results")
+        results_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        # Results text
+        self.results_text = tk.Text(results_frame, wrap=tk.WORD, height=20)
+        results_scroll = ttk.Scrollbar(results_frame, command=self.results_text.yview)
+        self.results_text.config(yscrollcommand=results_scroll.set)
+        
+        self.results_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        results_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Real-time statistics
+        stats_frame = ttk.LabelFrame(right_panel, text="Real-time Statistics")
+        stats_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        # Statistics labels
+        self.stats_labels = {}
+        stats_to_show = [
+            ('total_processed', 'Total Processed:'),
+            ('passed', 'Passed:'),
+            ('failed', 'Failed:'),
+            ('pass_rate', 'Pass Rate:'),
+            ('avg_quality', 'Avg Quality:'),
+            ('total_defects', 'Total Defects:'),
+            ('avg_time', 'Avg Time:')
+        ]
+        
+        for i, (key, label) in enumerate(stats_to_show):
+            row = i // 2
+            col = i % 2
+            
+            ttk.Label(stats_frame, text=label).grid(row=row, column=col*2, 
+                                                    sticky=tk.W, padx=5, pady=2)
+            self.stats_labels[key] = ttk.Label(stats_frame, text="0")
+            self.stats_labels[key].grid(row=row, column=col*2+1, 
+                                       sticky=tk.W, padx=5, pady=2)
+        
+        # Progress bar
+        self.progress_var = tk.DoubleVar()
+        self.progress_bar = ttk.Progressbar(right_panel, variable=self.progress_var,
+                                          maximum=100, length=380)
+        self.progress_bar.pack(padx=5, pady=5)
+        
+        # Status bar
+        self.status_var = tk.StringVar(value="Ready")
+        status_bar = ttk.Label(self.root, textvariable=self.status_var, 
+                              relief=tk.SUNKEN, anchor=tk.W)
+        status_bar.pack(side=tk.BOTTOM, fill=tk.X)
+    
+    def _setup_inspector(self):
+        """Setup the inspection system"""
+        config = self._get_current_config()
+        self.inspector = CompleteFiberInspectionSystem(config)
+    
+    def _get_current_config(self) -> dict:
+        """Get current configuration based on GUI settings and shared_config"""
+        profile = self.profile_var.get()
+        
+        config = {
+            "defect_detection": {
+                "use_all_methods": profile == "comprehensive"
+            },
+            "output": {
+                "save_all_intermediate": False,
+                "generate_report": False
+            }
+        }
+        
+        if profile == "fast":
+            config["defect_detection"]["method_groups"] = {
+                "statistical": {"enabled": True, "methods": ["zscore"]},
+                "morphological": {"enabled": True, "methods": ["tophat"]}
+            }
+        elif profile == "balanced":
+            config["defect_detection"]["method_groups"] = {
+                "statistical": {"enabled": True, "methods": ["zscore", "mad"]},
+                "morphological": {"enabled": True, "methods": ["tophat", "blackhat"]},
+                "ml": {"enabled": True, "methods": ["isolation_forest"]}
+            }
+        
+        # Merge with shared_config, giving shared_config precedence for common parameters
+        merged_config = self.current_shared_config.copy()
+        merged_config.update(config) # GUI settings might override some shared settings
+        
+        return merged_config
+    
+    def _processing_worker(self):
+        """Worker thread for image processing"""
+        while True:
+            try:
+                # Get image from queue
+                image_path = self.processing_queue.get(timeout=0.1)
+                
+                if image_path is None:
+                    break
+                
+                # Process image
+                start_time = time.time()
+                results = self.inspector.inspect_fiber(image_path)
+                processing_time = time.time() - start_time
+                
+                # Add processing time to results
+                results['processing_time'] = processing_time
+                
+                # Put results in queue
+                self.results_queue.put(results)
+                
+            except queue.Empty:
+                continue
+            except Exception as e:
+                logging.error(f"Processing error: {str(e)}")
+                self.results_queue.put({'error': str(e)})
+    
+    def _update_gui(self):
+        """Update GUI with latest results"""
+        try:
+            # Check for new results
+            while not self.results_queue.empty():
+                results = self.results_queue.get_nowait()
+                self._display_results(results)
+                self._update_statistics(results)
+        except queue.Empty:
+            pass
+        
+        # Schedule next update
+        self.root.after(100, self._update_gui)
+    
+    def _open_image(self):
+        """Open and display an image"""
+        file_path = filedialog.askopenfilename(
+            title="Select Fiber Image",
+            filetypes=[
+                ("Image files", "*.png *.jpg *.jpeg *.bmp *.tiff"),
+                ("All files", "*.*")
+            ]
+        )
+        
+        if file_path:
+            self.current_image = cv2.imread(file_path)
+            self._display_image()
+            
+            if self.auto_process_var.get():
+                self._process_current_image()
+    
+    def _open_folder(self):
+        """Open folder for batch processing"""
+        folder_path = filedialog.askdirectory(title="Select Folder")
+        
+        if folder_path:
+            # Show batch dialog with selected folder
+            self._show_batch_dialog(folder_path)
+    
+    def _display_image(self):
+        """Display current image"""
+        if self.current_image is None:
+            return
+        
+        # Clear all axes
+        for ax in [self.ax_original, self.ax_processed, self.ax_defects, self.ax_confidence]:
+            ax.clear()
+        
+        # Display original
+        if len(self.current_image.shape) == 3:
+            self.ax_original.imshow(cv2.cvtColor(self.current_image, cv2.COLOR_BGR2RGB))
+        else:
+            self.ax_original.imshow(self.current_image, cmap='gray')
+        self.ax_original.set_title('Original')
+        self.ax_original.axis('off')
+        
+        # Clear other plots
+        self.ax_processed.text(0.5, 0.5, 'Processed image\nwill appear here',
+                              ha='center', va='center', transform=self.ax_processed.transAxes)
+        self.ax_processed.set_title('Preprocessed')
+        self.ax_processed.axis('off')
+        
+        self.ax_defects.text(0.5, 0.5, 'Defect mask\nwill appear here',
+                            ha='center', va='center', transform=self.ax_defects.transAxes)
+        self.ax_defects.set_title('Defects')
+        self.ax_defects.axis('off')
+        
+        self.ax_confidence.text(0.5, 0.5, 'Confidence map\nwill appear here',
+                               ha='center', va='center', transform=self.ax_confidence.transAxes)
+        self.ax_confidence.set_title('Confidence')
+        self.ax_confidence.axis('off')
+        
+        self.canvas.draw()
+    
+    def _process_current_image(self):
+        """Process the current image"""
+        if self.current_image is None:
+            messagebox.showwarning("No Image", "Please open an image first")
+            return
+        
+        if self.is_processing:
+            messagebox.showinfo("Processing", "Already processing an image")
+            return
+        
+        # Save temporary image
+        temp_path = "temp_realtime_image.png"
+        cv2.imwrite(temp_path, self.current_image)
+        
+        # Add to processing queue
+        self.processing_queue.put(temp_path)
+        self.is_processing = True
+        self.status_var.set("Processing...")
+        self.progress_var.set(50)
+    
+    def _display_results(self, results: Dict[str, Any]):
+        """Display processing results"""
+        self.current_results = results
+        self.is_processing = False
+        self.progress_var.set(100)
+        
+        if 'error' in results:
+            self.status_var.set(f"Error: {results['error']}")
+            messagebox.showerror("Processing Error", results['error'])
+            return
+        
+        # Update status
+        status = results.get('pass_fail', {}).get('overall', 'UNKNOWN')
+        quality = results.get('quality_metrics', {}).get('surface_quality_index', 0)
+        self.status_var.set(f"Status: {status} | Quality: {quality:.1f}")
+        
+        # Display results text
+        self.results_text.delete(1.0, tk.END)
+        
+        # Overall results
+        self.results_text.insert(tk.END, "INSPECTION RESULTS\n", 'heading')
+        self.results_text.insert(tk.END, "="*40 + "\n\n")
+        
+        self.results_text.insert(tk.END, f"Status: {status}\n", 
+                                'pass' if status == 'PASS' else 'fail')
+        self.results_text.insert(tk.END, f"Quality Index: {quality:.1f}/100\n")
+        self.results_text.insert(tk.END, f"Total Defects: {len(results.get('defects', []))}\n")
+        self.results_text.insert(tk.END, f"Processing Time: {results.get('processing_time', 0):.2f}s\n\n")
+        
+        # Regional results
+        self.results_text.insert(tk.END, "REGIONAL ANALYSIS\n", 'heading')
+        self.results_text.insert(tk.END, "-"*40 + "\n")
+        
+        pass_fail = results.get('pass_fail', {})
+        for region in ['core', 'cladding', 'ferrule']:
+            region_data = pass_fail.get('by_region', {}).get(region, {})
+            if region_data:
+                region_status = region_data.get('status', 'N/A')
+                defect_count = region_data.get('defect_count', 0)
+                
+                self.results_text.insert(tk.END, f"\n{region.title()}:\n")
+                self.results_text.insert(tk.END, f"  Status: {region_status}\n",
+                                       'pass' if region_status == 'PASS' else 'fail')
+                self.results_text.insert(tk.END, f"  Defects: {defect_count}\n")
+                
+                if region_data.get('failures'):
+                    self.results_text.insert(tk.END, "  Failures:\n")
+                    for failure in region_data['failures']:
+                        self.results_text.insert(tk.END, f"    - {failure}\n", 'fail')
+        
+        # Defect details
+        if results.get('defects'):
+            self.results_text.insert(tk.END, "\n\nDEFECT DETAILS\n", 'heading')
+            self.results_text.insert(tk.END, "-"*40 + "\n")
+            
+            for i, defect in enumerate(results['defects'][:10]):  # Show first 10
+                self.results_text.insert(tk.END, 
+                    f"\n{i+1}. {defect.get('type', 'Unknown')} in {defect.get('region', 'Unknown')}\n")
+                self.results_text.insert(tk.END, 
+                    f"   Confidence: {defect.get('confidence', 0):.2f}\n")
+                self.results_text.insert(tk.END, 
+                    f"   Size: {defect.get('area_um2', 0):.1f} \u00b5m\u00b2\n")
+        
+        # Configure text tags
+        self.results_text.tag_config('heading', font=('Arial', 12, 'bold'))
+        self.results_text.tag_config('pass', foreground='green', font=('Arial', 10, 'bold'))
+        self.results_text.tag_config('fail', foreground='red', font=('Arial', 10, 'bold'))
+        
+        # Update image displays
+        self._update_result_images(results)
+        
+        # Save to database
+        self.database.save_inspection_result(results)
+        
+        # Reset progress
+        self.progress_var.set(0)
+    
+    def _update_result_images(self, results: Dict[str, Any]):
+        """Update result image displays"""
+        # Clear axes
+        self.ax_processed.clear()
+        self.ax_defects.clear()
+        self.ax_confidence.clear()
+        
+        # Display preprocessed image (if available)
+        # This would need to be extracted from the processing
+        self.ax_processed.text(0.5, 0.5, 'Preprocessed\n(Not available)',
+                              ha='center', va='center', transform=self.ax_processed.transAxes)
+        self.ax_processed.set_title('Preprocessed')
+        self.ax_processed.axis('off')
+        
+        # Create defect overlay
+        if self.current_image is not None:
+            overlay = self.current_image.copy()
+            
+            # Draw defects
+            for region_name, region_results in results.get('regions', {}).items():
+                for defect in region_results.get('defects', []):
+                    # Get defect bounding box
+                    if 'bbox_px' in defect:
+                        x, y, w, h = defect['bbox_px']
+                        color = {
+                            'core': (255, 0, 0),      # Red
+                            'cladding': (0, 255, 0),  # Green
+                            'ferrule': (0, 0, 255)    # Blue
+                        }.get(region_name.lower(), (255, 255, 0))
+                        
+                        cv2.rectangle(overlay, (x, y), (x+w, y+h), color, 2)
+            
+            if len(overlay.shape) == 3:
+                self.ax_defects.imshow(cv2.cvtColor(overlay, cv2.COLOR_BGR2RGB))
+            else:
+                self.ax_defects.imshow(overlay, cmap='gray')
+        
+        self.ax_defects.set_title(f'Defects ({len(results.get("defects", []))})')
+        self.ax_defects.axis('off')
+        
+        # Confidence map placeholder
+        self.ax_confidence.text(0.5, 0.5, 'Confidence map\n(Not available)',
+                               ha='center', va='center', transform=self.ax_confidence.transAxes)
+        self.ax_confidence.set_title('Confidence Map')
+        self.ax_confidence.axis('off')
+        
+        self.canvas.draw()
+    
+    def _update_statistics(self, results: Dict[str, Any]):
+        """Update real-time statistics"""
+        if 'error' not in results:
+            # Update counters
+            self.stats['total_processed'] += 1
+            
+            status = results.get('pass_fail', {}).get('overall', 'UNKNOWN')
+            if status == 'PASS':
+                self.stats['passed'] += 1
+            elif status == 'FAIL':
+                self.stats['failed'] += 1
+            
+            self.stats['total_defects'] += len(results.get('defects', []))
+            
+            # Processing time
+            proc_time = results.get('processing_time', 0)
+            self.stats['processing_times'].append(proc_time)
+            
+            # Keep only last 100 processing times
+            if len(self.stats['processing_times']) > 100:
+                self.stats['processing_times'] = self.stats['processing_times'][-100:]
+        
+        # Update labels
+        total = self.stats['total_processed']
+        if total > 0:
+            pass_rate = (self.stats['passed'] / total) * 100
+            avg_time = np.mean(self.stats['processing_times'])
+        else:
+            pass_rate = 0
+            avg_time = 0
+        
+        self.stats_labels['total_processed'].config(text=str(total))
+        self.stats_labels['passed'].config(text=str(self.stats['passed']))
+        self.stats_labels['failed'].config(text=str(self.stats['failed']))
+        self.stats_labels['pass_rate'].config(text=f"{pass_rate:.1f}%")
+        self.stats_labels['total_defects'].config(text=str(self.stats['total_defects']))
+        self.stats_labels['avg_time'].config(text=f"{avg_time:.2f}s")
+        
+        # Average quality (would need to track this)
+        self.stats_labels['avg_quality'].config(text="N/A")
+    
+    def _show_config_dialog(self):
+        """Show configuration dialog"""
+        ConfigDialog(self.root, self.inspector)
+    
+    def _show_calibration_dialog(self):
+        """Show calibration dialog"""
+        CalibrationTool(self.root)
+    
+    def _show_comparison_tool(self):
+        """Show method comparison tool"""
+        MethodComparisonTool(self.root)
+    
+    def _show_batch_dialog(self, folder=None):
+        """Show batch processing dialog"""
+        BatchDialog(self.root, folder)
+    
+    def _show_statistics(self):
+        """Show detailed statistics"""
+        StatisticsViewer(self.root, self.database)
+    
+    def _export_results(self):
+        """Export current results"""
+        if self.current_results is None:
+            messagebox.showwarning("No Results", "No results to export")
+            return
+        
+        file_path = filedialog.asksaveasfilename(
+            title="Export Results",
+            defaultextension=".json",
+            filetypes=[
+                ("JSON files", "*.json"),
+                ("Excel files", "*.xlsx"),
+                ("CSV files", "*.csv")
+            ]
+        )
+        
+        if file_path:
+            ext = Path(file_path).suffix.lower()
+            
+            if ext == '.json':
+                with open(file_path, 'w') as f:
+                    json.dump(self.current_results, f, indent=2, default=str)
+            
+            elif ext == '.xlsx':
+                # Convert to DataFrame and export
+                df = pd.DataFrame([self.current_results])
+                df.to_excel(file_path, index=False)
+            
+            elif ext == '.csv':
+                # Flatten results and export
+                flat_results = self._flatten_results(self.current_results)
+                df = pd.DataFrame([flat_results])
+                df.to_csv(file_path, index=False)
+            
+            messagebox.showinfo("Export Complete", f"Results exported to {file_path}")
+    
+    def _flatten_results(self, results: Dict[str, Any]) -> Dict[str, Any]:
+        """Flatten nested results for CSV export"""
+        flat = {
+            'status': results.get('pass_fail', {}).get('overall', 'UNKNOWN'),
+            'quality_index': results.get('quality_metrics', {}).get('surface_quality_index', 0),
+            'total_defects': len(results.get('defects', [])),
+            'processing_time': results.get('processing_time', 0)
+        }
+        
+        # Add regional counts
+        for region in ['core', 'cladding', 'ferrule']:
+            region_defects = len([d for d in results.get('defects', []) 
+                                if d.get('region', '').lower() == region])
+            flat[f'{region}_defects'] = region_defects
+        
+        return flat
+    
+    def run(self):
+        """Run the monitor"""
+        self.root.mainloop()
     
     def _setup_gui(self):
         """Setup the GUI components"""
@@ -1975,9 +2543,25 @@ class StatisticsViewer(tk.Toplevel):
             messagebox.showinfo("Export", "Statistics export functionality to be implemented")
 
 
+monitor_instance = None
+
+def get_script_info():
+    """Returns information about the script, its status, and exposed parameters."""
+    if monitor_instance:
+        return monitor_instance.get_script_info()
+    return {"name": "Real-time Monitor GUI", "status": "not_initialized", "parameters": {}}
+
+def set_script_parameter(key, value):
+    """Sets a specific parameter for the script and updates shared_config."""
+    if monitor_instance:
+        return monitor_instance.set_script_parameter(key, value)
+    return False
+
 # Main application entry point
 def main():
     """Run the real-time monitoring application"""
+    global monitor_instance
+
     # Setup logging
     logging.basicConfig(
         level=logging.INFO,
@@ -1985,8 +2569,8 @@ def main():
     )
     
     # Create and run monitor
-    monitor = RealTimeMonitor()
-    monitor.run()
+    monitor_instance = RealTimeMonitor()
+    monitor_instance.run()
 
 
 if __name__ == "__main__":

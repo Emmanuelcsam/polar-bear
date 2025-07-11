@@ -16,6 +16,18 @@ from pathlib import Path
 
 import requests
 
+# --- Start of Connector Integration ---
+try:
+    import connector
+    logger = connector.logger
+except ImportError:
+    print("Connector not found, using basic logging.")
+    import logging
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] - %(message)s')
+    logger = logging.getLogger(__name__)
+# --- End of Connector Integration ---
+
+
 # Walk through an image classification directory and find out how many files (images)
 # are in each subdirectory.
 import os
@@ -33,7 +45,7 @@ def walk_through_dir(dir_path):
       name of each subdirectory
     """
     for dirpath, dirnames, filenames in os.walk(dir_path):
-        print(f"There are {len(dirnames)} directories and {len(filenames)} images in '{dirpath}'.")
+        logger.info(f"There are {len(dirnames)} directories and {len(filenames)} images in '{dirpath}'.")
 
 def plot_decision_boundary(model: torch.nn.Module, X: torch.Tensor, y: torch.Tensor):
     """Plots decision boundaries of model predicting on X in comparison to y.
@@ -122,7 +134,7 @@ def print_train_time(start, end, device=None):
         float: time between start and end in seconds (higher is longer).
     """
     total_time = end - start
-    print(f"\nTrain time on {device}: {total_time:.3f} seconds")
+    logger.info(f"\nTrain time on {device}: {total_time:.3f} seconds")
     return total_time
 
 
@@ -270,21 +282,21 @@ def download_data(source: str,
 
     # If the image folder doesn't exist, download it and prepare it... 
     if image_path.is_dir():
-        print(f"[INFO] {image_path} directory exists, skipping download.")
+        logger.info(f"[INFO] {image_path} directory exists, skipping download.")
     else:
-        print(f"[INFO] Did not find {image_path} directory, creating one...")
+        logger.info(f"[INFO] Did not find {image_path} directory, creating one...")
         image_path.mkdir(parents=True, exist_ok=True)
         
         # Download pizza, steak, sushi data
         target_file = Path(source).name
         with open(data_path / target_file, "wb") as f:
             request = requests.get(source)
-            print(f"[INFO] Downloading {target_file} from {source}...")
+            logger.info(f"[INFO] Downloading {target_file} from {source}...")
             f.write(request.content)
 
         # Unzip pizza, steak, sushi data
         with zipfile.ZipFile(data_path / target_file, "r") as zip_ref:
-            print(f"[INFO] Unzipping {target_file} data...") 
+            logger.info(f"[INFO] Unzipping {target_file} data...") 
             zip_ref.extractall(image_path)
 
         # Remove .zip file

@@ -36,6 +36,7 @@ import os
 import sys
 import psutil
 import traceback
+import shared_config # Import the shared configuration module
 
 # Optional imports with fallback
 try:
@@ -59,37 +60,37 @@ warnings.filterwarnings('ignore')
 class Config:
     """Central configuration for the system"""
     # Camera settings
-    DEFAULT_CAMERA_INDEX = 0
-    DEFAULT_WIDTH = 1280
-    DEFAULT_HEIGHT = 720
-    DEFAULT_FPS = 30
+    DEFAULT_CAMERA_INDEX = shared_config.CONFIG.get("camera_source", 0)
+    DEFAULT_WIDTH = shared_config.CONFIG.get("camera_width", 1280)
+    DEFAULT_HEIGHT = shared_config.CONFIG.get("camera_height", 720)
+    DEFAULT_FPS = shared_config.CONFIG.get("camera_fps", 30)
     
     # Detection parameters
-    MIN_SHAPE_AREA = 100
-    MAX_SHAPE_AREA = 100000
-    EPSILON_FACTOR = 0.02
-    CANNY_LOW = 50
-    CANNY_HIGH = 150
+    MIN_SHAPE_AREA = shared_config.CONFIG.get("min_shape_area", 100)
+    MAX_SHAPE_AREA = shared_config.CONFIG.get("max_shape_area", 100000)
+    EPSILON_FACTOR = shared_config.CONFIG.get("epsilon_factor", 0.02)
+    CANNY_LOW = shared_config.CONFIG.get("canny_low", 50)
+    CANNY_HIGH = shared_config.CONFIG.get("canny_high", 150)
     
     # Performance settings
-    MAX_THREADS = 4
-    FRAME_BUFFER_SIZE = 10
-    FPS_BUFFER_SIZE = 30
+    MAX_THREADS = shared_config.CONFIG.get("max_threads", 4)
+    FRAME_BUFFER_SIZE = shared_config.CONFIG.get("frame_buffer_size", 10)
+    FPS_BUFFER_SIZE = shared_config.CONFIG.get("fps_buffer_size", 30)
     
     # Kalman filter settings
-    KALMAN_PROCESS_NOISE = 0.01
-    KALMAN_MEASUREMENT_NOISE = 0.1
+    KALMAN_PROCESS_NOISE = shared_config.CONFIG.get("kalman_process_noise", 0.01)
+    KALMAN_MEASUREMENT_NOISE = shared_config.CONFIG.get("kalman_measurement_noise", 0.1)
     
     # Logging
-    LOG_LEVEL = logging.INFO
+    LOG_LEVEL = getattr(logging, shared_config.CONFIG.get("log_level", "INFO").upper())
     LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     
     # GPU settings
-    USE_GPU_DEFAULT = True
+    USE_GPU_DEFAULT = shared_config.CONFIG.get("use_gpu", True)
     
     # Pylon/Basler specific
-    PYLON_GRAB_STRATEGY = 'LatestImageOnly' if PYLON_AVAILABLE else None
-    PYLON_PIXEL_FORMAT = 'Mono8' if PYLON_AVAILABLE else None
+    PYLON_GRAB_STRATEGY = shared_config.CONFIG.get("pylon_grab_strategy", 'LatestImageOnly') if PYLON_AVAILABLE else None
+    PYLON_PIXEL_FORMAT = shared_config.CONFIG.get("pylon_pixel_format", 'Mono8') if PYLON_AVAILABLE else None
 
 # ==================== Logging Setup ====================
 
@@ -1300,24 +1301,34 @@ class Visualizer:
 class GeometryDetectionSystem:
     """Main integrated geometry detection system"""
     
-    def __init__(self, camera_backend: str = 'opencv', 
-                 camera_source: Union[int, str] = 0,
-                 use_gpu: bool = Config.USE_GPU_DEFAULT,
-                 enable_tube_detection: bool = True,
-                 enable_benchmarking: bool = True):
+    def __init__(self, camera_backend: str = None, 
+                 camera_source: Union[int, str] = None,
+                 use_gpu: bool = None,
+                 enable_tube_detection: bool = None,
+                 enable_benchmarking: bool = None):
         
         self.logger = logging.getLogger(f"{__name__}.GeometryDetectionSystem")
         
+        # Load initial configuration from shared_config
+        self.current_shared_config = shared_config.get_config()
+
+        # Initialize parameters from shared_config, falling back to defaults or constructor args
+        self.camera_backend = self.current_shared_config.get("camera_backend", camera_backend if camera_backend is not None else 'opencv')
+        self.camera_source = self.current_shared_config.get("camera_source", camera_source if camera_source is not None else Config.DEFAULT_CAMERA_INDEX)
+        self.use_gpu = self.current_shared_config.get("use_gpu", use_gpu if use_gpu is not None else Config.USE_GPU_DEFAULT)
+        self.enable_tube_detection = self.current_shared_config.get("enable_tube_detection", enable_tube_detection if enable_tube_detection is not None else True)
+        self.enable_benchmarking = self.current_shared_config.get("enable_benchmarking", enable_benchmarking if enable_benchmarking is not None else True)
+
         # Initialize camera
-        if camera_backend == 'pylon' and PYLON_AVAILABLE:
-            self.camera = PylonCamera(camera_source if isinstance(camera_source, int) else 0)
+        if self.camera_backend == 'pylon' and PYLON_AVAILABLE:
+            self.camera = PylonCamera(self.camera_source if isinstance(self.camera_source, int) else 0)
         else:
-            self.camera = OpenCVCamera(camera_source)
+            self.camera = OpenCVCamera(self.camera_source)
         
         # Initialize components
-        self.detector = GeometryDetector(use_gpu)
-        self.tube_detector = TubeAngleDetector() if enable_tube_detection else None
-        self.performance_monitor = PerformanceMonitor() if enable_benchmarking else None
+        self.detector = GeometryDetector(self.use_gpu)
+        self.tube_detector = TubeAngleDetector() if self.enable_tube_detection else None
+        self.performance_monitor = PerformanceMonitor() if self.enable_benchmarking else None
         self.visualizer = Visualizer()
         
         # State
@@ -1329,15 +1340,79 @@ class GeometryDetectionSystem:
         # Results storage
         self.results_history = deque(maxlen=1000)
         
+        self.status = "initialized" # Add a status variable
         self.logger.info("Geometry Detection System initialized")
+
+    def get_script_info(self):
+        return {
+            "name": "Integrated Geometry Detection System",
+            "status": self.status,
+            "parameters": {
+                "camera_backend": self.camera_backend,
+                "camera_source": self.camera_source,
+                "use_gpu": self.use_gpu,
+                "enable_tube_detection": self.enable_tube_detection,
+                "enable_benchmarking": self.enable_benchmarking,
+                "min_shape_area": Config.MIN_SHAPE_AREA,
+                "max_shape_area": Config.MAX_SHAPE_AREA,
+                "epsilon_factor": Config.EPSILON_FACTOR,
+                "canny_low": Config.CANNY_LOW,
+                "canny_high": Config.CANNY_HIGH,
+                "log_level": self.current_shared_config.get("log_level"),
+                "data_source": self.current_shared_config.get("data_source"),
+                "processing_enabled": self.current_shared_config.get("processing_enabled"),
+                "threshold_value": self.current_shared_config.get("threshold_value")
+            },
+            "camera_properties": self.camera.get_properties() if self.camera else {},
+            "detector_info": self.detector.get_script_info() if hasattr(self.detector, 'get_script_info') else "N/A",
+            "performance_metrics": self.performance_monitor.get_metrics(0) if self.performance_monitor else "N/A"
+        }
+
+    def set_script_parameter(self, key, value):
+        if key in self.current_shared_config or hasattr(Config, key.upper()):
+            # Update shared_config
+            shared_config.set_config_value(key, value)
+            self.current_shared_config[key] = value # Update local copy
+
+            # Apply changes to relevant components
+            if key == "camera_source":
+                self.camera_source = value
+                # Re-initialize camera if running, or mark for re-init on next start
+                if self.running and self.camera:
+                    self.camera.close()
+                    if self.camera_backend == 'pylon' and PYLON_AVAILABLE:
+                        self.camera = PylonCamera(self.camera_source if isinstance(self.camera_source, int) else 0)
+                    else:
+                        self.camera = OpenCVCamera(self.camera_source)
+                    self.camera.open()
+            elif key == "use_gpu":
+                self.use_gpu = value
+                self.detector.use_gpu = value # Update detector's GPU setting
+            elif key == "enable_tube_detection":
+                self.enable_tube_detection = value
+                self.tube_detector = TubeAngleDetector() if value else None
+            elif key == "enable_benchmarking":
+                self.enable_benchmarking = value
+                self.performance_monitor = PerformanceMonitor() if value else None
+            elif key.upper() in dir(Config): # For parameters directly in Config class
+                setattr(Config, key.upper(), value)
+                # Re-initialize detector if detection parameters changed
+                if key in ["min_shape_area", "max_shape_area", "epsilon_factor", "canny_low", "canny_high"]:
+                    self.detector = GeometryDetector(self.use_gpu)
+            
+            self.status = f"parameter '{key}' updated"
+            return True
+        return False
     
     def run(self):
         """Main application loop"""
         if not self.camera.open():
             self.logger.error("Failed to open camera")
+            self.status = "camera_error"
             return
         
         self.running = True
+        self.status = "running"
         self.logger.info("Starting detection loop")
         
         # Get camera properties
@@ -1365,31 +1440,35 @@ class GeometryDetectionSystem:
                     self.logger.warning("Failed to read frame")
                     continue
                 
-                # Detect shapes
-                shapes = self.detector.detect_shapes(frame)
-                
-                # Detect tube angles if enabled
-                tube_angle = None
-                if self.tube_detector:
-                    tube_angle = self.tube_detector.detect_tube_angle(frame)
-                
-                # Draw results
-                output = self.visualizer.draw_shapes(frame, shapes)
-                if tube_angle:
-                    output = self.visualizer.draw_tube_angle(output, tube_angle)
-                
-                # Draw performance overlay
-                if self.performance_monitor:
-                    metrics = self.performance_monitor.get_metrics(len(shapes))
-                    output = self.visualizer.draw_performance_overlay(output, metrics)
+                # Process frame only if processing is enabled
+                if self.current_shared_config.get("processing_enabled", True):
+                    # Detect shapes
+                    shapes = self.detector.detect_shapes(frame)
                     
-                    # Store results
-                    self.results_history.append({
-                        'timestamp': time.time(),
-                        'shapes': [s.to_dict() for s in shapes],
-                        'tube_angle': asdict(tube_angle) if tube_angle else None,
-                        'metrics': asdict(metrics)
-                    })
+                    # Detect tube angles if enabled
+                    tube_angle = None
+                    if self.tube_detector:
+                        tube_angle = self.tube_detector.detect_tube_angle(frame)
+                    
+                    # Draw results
+                    output = self.visualizer.draw_shapes(frame, shapes)
+                    if tube_angle:
+                        output = self.visualizer.draw_tube_angle(output, tube_angle)
+                    
+                    # Draw performance overlay
+                    if self.performance_monitor:
+                        metrics = self.performance_monitor.get_metrics(len(shapes))
+                        output = self.visualizer.draw_performance_overlay(output, metrics)
+                        
+                        # Store results
+                        self.results_history.append({
+                            'timestamp': time.time(),
+                            'shapes': [s.to_dict() for s in shapes],
+                            'tube_angle': asdict(tube_angle) if tube_angle else None,
+                            'metrics': asdict(metrics)
+                        })
+                else:
+                    output = frame.copy() # Display original frame if processing is disabled
                 
                 # Record if enabled
                 if self.recording and self.writer:
@@ -1406,7 +1485,7 @@ class GeometryDetectionSystem:
         except KeyboardInterrupt:
             self.logger.info("Interrupted by user")
         except Exception as e:
-            self.logger.error(f"Error in main loop: {e}")
+            self.logger.error(f"Fatal error: {e}")
             traceback.print_exc()
         finally:
             self.cleanup()
@@ -1417,6 +1496,7 @@ class GeometryDetectionSystem:
             return False
         elif key == ord('p'):
             self.paused = not self.paused
+            self.status = "paused" if self.paused else "running"
             self.logger.info(f"{'Paused' if self.paused else 'Resumed'}")
         elif key == ord('s'):
             self._save_screenshot()
@@ -1429,13 +1509,17 @@ class GeometryDetectionSystem:
         elif key == ord('b'):
             self._save_benchmark_results()
         elif key == ord('g'):
-            self.detector.use_gpu = not self.detector.use_gpu
-            self.logger.info(f"GPU: {'Enabled' if self.detector.use_gpu else 'Disabled'}")
+            self.use_gpu = not self.use_gpu
+            self.detector.use_gpu = self.use_gpu # Update detector's GPU setting
+            shared_config.set_config_value("use_gpu", self.use_gpu) # Update shared config
+            self.logger.info(f"GPU: {'Enabled' if self.use_gpu else 'Disabled'}")
         elif key == ord('+'):
             Config.EPSILON_FACTOR = min(0.1, Config.EPSILON_FACTOR + 0.005)
+            shared_config.set_config_value("epsilon_factor", Config.EPSILON_FACTOR) # Update shared config
             self.logger.info(f"Epsilon factor: {Config.EPSILON_FACTOR:.3f}")
         elif key == ord('-'):
             Config.EPSILON_FACTOR = max(0.001, Config.EPSILON_FACTOR - 0.005)
+            shared_config.set_config_value("epsilon_factor", Config.EPSILON_FACTOR) # Update shared config
             self.logger.info(f"Epsilon factor: {Config.EPSILON_FACTOR:.3f}")
         
         return True
@@ -1596,32 +1680,49 @@ class TestGeometryDetection(unittest.TestCase):
 
 # ==================== Main Entry Point ====================
 
+system_instance = None
+
+def get_script_info():
+    """Returns information about the script, its status, and exposed parameters."""
+    if system_instance:
+        return system_instance.get_script_info()
+    return {"name": "Integrated Geometry Detection System", "status": "not_initialized", "parameters": {}}
+
+def set_script_parameter(key, value):
+    """Sets a specific parameter for the script and updates shared_config."""
+    if system_instance:
+        return system_instance.set_script_parameter(key, value)
+    return False
+
 def main():
     """Main entry point"""
+    global system_instance
+
     import argparse
     
     parser = argparse.ArgumentParser(description='Integrated Geometry Detection System')
-    parser.add_argument('-s', '--source', default=0,
-                       help='Camera source (index or path)')
-    parser.add_argument('-b', '--backend', default='opencv',
+    parser.add_argument('-s', '--source', default=None,
+                       help='Camera source (index or path), can be overridden by shared_config')
+    parser.add_argument('-b', '--backend', default=None,
                        choices=['opencv', 'pylon'],
-                       help='Camera backend')
+                       help='Camera backend, can be overridden by shared_config')
     parser.add_argument('--no-gpu', action='store_true',
-                       help='Disable GPU acceleration')
+                       help='Disable GPU acceleration, can be overridden by shared_config')
     parser.add_argument('--no-tube', action='store_true',
-                       help='Disable tube angle detection')
+                       help='Disable tube angle detection, can be overridden by shared_config')
     parser.add_argument('--no-benchmark', action='store_true',
-                       help='Disable performance benchmarking')
+                       help='Disable performance benchmarking, can be overridden by shared_config')
     parser.add_argument('--test', action='store_true',
                        help='Run unit tests')
-    parser.add_argument('--log-level', default='INFO',
+    parser.add_argument('--log-level', default=None,
                        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
-                       help='Logging level')
+                       help='Logging level, can be overridden by shared_config')
     
     args = parser.parse_args()
     
-    # Set logging level
-    logging.getLogger().setLevel(getattr(logging, args.log_level))
+    # Set logging level based on args or shared_config
+    log_level_str = shared_config.CONFIG.get("log_level", args.log_level if args.log_level is not None else "INFO")
+    logging.getLogger().setLevel(getattr(logging, log_level_str.upper()))
     
     # Run tests if requested
     if args.test:
@@ -1630,7 +1731,7 @@ def main():
     
     # Convert source to int if numeric
     source = args.source
-    if str(source).isdigit():
+    if source is not None and str(source).isdigit():
         source = int(source)
     
     print("="*60)
@@ -1653,15 +1754,15 @@ def main():
     
     # Create and run system
     try:
-        system = GeometryDetectionSystem(
+        system_instance = GeometryDetectionSystem(
             camera_backend=args.backend,
             camera_source=source,
-            use_gpu=not args.no_gpu,
-            enable_tube_detection=not args.no_tube,
-            enable_benchmarking=not args.no_benchmark
+            use_gpu=not args.no_gpu if args.no_gpu else None, # Pass None if not explicitly set by arg
+            enable_tube_detection=not args.no_tube if args.no_tube else None,
+            enable_benchmarking=not args.no_benchmark if args.no_benchmark else None
         )
         
-        system.run()
+        system_instance.run()
         
     except Exception as e:
         logger.error(f"Fatal error: {e}")
@@ -1669,3 +1770,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

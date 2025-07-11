@@ -20,6 +20,7 @@ import zipfile
 import tarfile
 from typing import List, Dict, Tuple, Optional
 import importlib.util
+import shared_config # Import the shared configuration module
 
 # ANSI color codes for pretty output
 class Colors:
@@ -648,350 +649,184 @@ class ConfigurationWizard:
             self.config['log_level'] = level
     
     def save_config(self):
-        """Save configuration to file"""
+        """Save configuration to file and update shared_config"""
         with open('geometry_config.json', 'w') as f:
             json.dump(self.config, f, indent=2)
         
+        # Update shared_config as well
+        shared_config.update_config(self.config)
+
         print_success("Configuration saved to geometry_config.json")
 
-class TestRunner:
-    """Run system tests"""
-    
+class SetupInstaller:
+    """Main class to orchestrate the setup and installation process"""
     def __init__(self):
-        self.tests_passed = 0
-        self.tests_failed = 0
-    
-    def run_all_tests(self):
-        """Run all system tests"""
-        print_header("System Tests")
+        self.status = "initialized"
+        self.system_checker = SystemChecker()
+        self.package_installer = PackageInstaller()
+        self.camera_detector = CameraDetector()
+        self.config_wizard = ConfigurationWizard()
+        self.test_runner = TestRunner()
+        self.working_cameras = []
+        self.setup_config = {}
+
+    def get_script_info(self):
+        """Returns information about the installer's status and collected configuration."""
+        return {
+            "name": "Setup and Installation Helper",
+            "status": self.status,
+            "setup_config": self.setup_config,
+            "system_check_issues": self.system_checker.issues,
+            "system_check_warnings": self.system_checker.warnings,
+            "detected_cameras": self.camera_detector.cameras,
+            "working_cameras": self.camera_detector.working_cameras
+        }
+
+    def set_script_parameter(self, key, value):
+        """Allows triggering specific setup phases or setting configuration values."""
+        if key == "run_system_check":
+            if value:
+                self.status = "running_system_check"
+                self.system_checker.check_all()
+                self.status = "system_check_complete"
+                return True
+        elif key == "install_packages":
+            if value:
+                self.status = "installing_packages"
+                self.package_installer.install_all()
+                self.status = "package_installation_complete"
+                return True
+        elif key == "detect_cameras":
+            if value:
+                self.status = "detecting_cameras"
+                self.camera_detector.detect_all()
+                self.working_cameras = self.camera_detector.working_cameras
+                self.status = "camera_detection_complete"
+                return True
+        elif key == "run_config_wizard":
+            if value and self.working_cameras:
+                self.status = "running_config_wizard"
+                self.config_wizard.run(self.working_cameras)
+                self.setup_config = self.config_wizard.config # Update internal config
+                self.status = "config_wizard_complete"
+                return True
+        elif key == "run_tests":
+            if value:
+                self.status = "running_tests"
+                self.test_runner.run_all_tests()
+                self.status = "tests_complete"
+                return True
+        elif key == "create_launcher_scripts":
+            if value:
+                self.status = "creating_launchers"
+                create_launcher_scripts()
+                self.status = "launchers_created"
+                return True
+        elif key == "start_main_program":
+            if value:
+                self.status = "starting_main_program"
+                print("\nStarting system...")
+                time.sleep(1)
+                try:
+                    if os.path.exists('integrated_geometry_system.py'):
+                        subprocess.run([sys.executable, 'integrated_geometry_system.py'])
+                        self.status = "main_program_running"
+                    else:
+                        print_error("integrated_geometry_system.py not found!")
+                        print("Make sure both files are in the same directory.")
+                        self.status = "main_program_start_failed"
+                except KeyboardInterrupt:
+                    print("\nProgram interrupted.")
+                    self.status = "main_program_interrupted"
+                except Exception as e:
+                    print_error(f"Failed to start: {e}")
+                    self.status = "main_program_start_failed"
+                return True
+        return False
+
+    def run_interactive_setup(self):
+        """Runs the full interactive setup process."""
+        print_header("Integrated Geometry Detection System Setup")
+        print("This wizard will help you set up everything needed for geometry detection.\n")
         
-        # Test OpenCV
-        self.test_opencv()
+        # System check
+        if not self.system_checker.check_all():
+            print("\n⚠️  System check found issues. Continue anyway? (y/n): ", end='')
+            if input().lower() != 'y':
+                print("Setup cancelled.")
+                self.status = "cancelled"
+                return
         
-        # Test NumPy
-        self.test_numpy()
+        # Package installation
+        print("\n" + "="*60)
+        print("Ready to install packages? (y/n): ", end='')
+        if input().lower() == 'y':
+            if not self.package_installer.install_all():
+                print_warning("Some packages failed to install")
         
-        # Test shape detection
-        self.test_shape_detection()
+        # Camera detection
+        print("\n" + "="*60)
+        print("Detect cameras? (y/n): ", end='')
+        if input().lower() == 'y':
+            self.camera_detector.detect_all()
+            self.working_cameras = self.camera_detector.working_cameras
+            
+            # Configuration wizard
+            if self.working_cameras:
+                print("\n" + "="*60)
+                print("Run configuration wizard? (y/n): ", end='')
+                if input().lower() == 'y':
+                    self.config_wizard.run(self.working_cameras)
+                    self.setup_config = self.config_wizard.config # Update internal config
         
-        # Test GPU
-        self.test_gpu()
+        # Run tests
+        print("\n" + "="*60)
+        print("Run system tests? (y/n): ", end='')
+        if input().lower() == 'y':
+            self.test_runner.run_all_tests()
         
-        # Print summary
-        print("\n" + "-"*60)
-        total = self.tests_passed + self.tests_failed
-        print(f"Tests completed: {total}")
-        print_success(f"Passed: {self.tests_passed}")
-        if self.tests_failed > 0:
-            print_error(f"Failed: {self.tests_failed}")
+        # Create launcher scripts
+        create_launcher_scripts()
         
-        return self.tests_failed == 0
-    
-    def test_opencv(self):
-        """Test OpenCV installation"""
-        print("Testing OpenCV...", end=' ')
-        try:
-            import cv2
-            
-            # Test basic operations
-            img = cv2.imread('nonexistent.jpg')  # Should return None
-            test_img = cv2.cvtColor(255 * np.ones((100, 100, 3), dtype=np.uint8), 
-                                   cv2.COLOR_BGR2GRAY)
-            
-            print_success(f"OK (version {cv2.__version__})")
-            self.tests_passed += 1
-        except Exception as e:
-            print_error(f"FAILED: {e}")
-            self.tests_failed += 1
-    
-    def test_numpy(self):
-        """Test NumPy installation"""
-        print("Testing NumPy...", end=' ')
-        try:
-            import numpy as np
-            
-            # Test basic operations
-            arr = np.array([1, 2, 3])
-            result = np.sum(arr)
-            assert result == 6
-            
-            print_success(f"OK (version {np.__version__})")
-            self.tests_passed += 1
-        except Exception as e:
-            print_error(f"FAILED: {e}")
-            self.tests_failed += 1
-    
-    def test_shape_detection(self):
-        """Test basic shape detection"""
-        print("Testing shape detection...", end=' ')
-        try:
-            import cv2
-            import numpy as np
-            
-            # Create test image
-            img = np.ones((200, 200, 3), dtype=np.uint8) * 255
-            cv2.rectangle(img, (50, 50), (150, 150), (0, 0, 0), -1)
-            
-            # Detect edges
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            edges = cv2.Canny(gray, 50, 150)
-            
-            # Find contours
-            contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, 
-                                          cv2.CHAIN_APPROX_SIMPLE)
-            
-            assert len(contours) == 1, f"Expected 1 contour, found {len(contours)}"
-            
-            print_success("OK")
-            self.tests_passed += 1
-        except Exception as e:
-            print_error(f"FAILED: {e}")
-            self.tests_failed += 1
-    
-    def test_gpu(self):
-        """Test GPU capabilities"""
-        print("Testing GPU...", end=' ')
-        try:
-            import cv2
-            
-            gpu_count = cv2.cuda.getCudaEnabledDeviceCount()
-            if gpu_count > 0:
-                # Test GPU operation
-                gpu_mat = cv2.cuda_GpuMat()
-                gpu_mat.upload(np.zeros((100, 100), dtype=np.uint8))
-                result = gpu_mat.download()
-                
-                print_success(f"OK ({gpu_count} device(s))")
-            else:
-                print_info("No GPU (CPU mode will be used)")
-            
-            self.tests_passed += 1
-        except Exception as e:
-            print_info("No GPU support (CPU mode will be used)")
-            self.tests_passed += 1
-
-def create_launcher_scripts():
-    """Create platform-specific launcher scripts"""
-    print_header("Creating Launcher Scripts")
-    
-    system = platform.system()
-    
-    # Create run script
-    if system == "Windows":
-        # Batch file for Windows
-        with open("run_geometry_detector.bat", "w") as f:
-            f.write("""@echo off
-echo Starting Integrated Geometry Detection System...
-echo.
-
-REM Load configuration if it exists
-if exist geometry_config.json (
-    echo Loading saved configuration...
-    python integrated_geometry_system.py
-) else (
-    echo No configuration found, using defaults...
-    python integrated_geometry_system.py
-)
-
-pause
-""")
-        print_success("Created run_geometry_detector.bat")
+        # Show next steps
+        show_next_steps()
         
-        # PowerShell script
-        with open("run_geometry_detector.ps1", "w") as f:
-            f.write("""
-Write-Host "Starting Integrated Geometry Detection System..." -ForegroundColor Green
-
-if (Test-Path "geometry_config.json") {
-    Write-Host "Loading saved configuration..." -ForegroundColor Cyan
-} else {
-    Write-Host "No configuration found, using defaults..." -ForegroundColor Yellow
-}
-
-python integrated_geometry_system.py
-
-Read-Host -Prompt "Press Enter to exit"
-""")
-        print_success("Created run_geometry_detector.ps1")
+        # Offer to run main program
+        print("\n" + "="*60)
+        print("Start the geometry detection system now? (y/n): ", end='')
+        if input().lower() == 'y':
+            self.set_script_parameter("start_main_program", True)
         
-    else:  # Linux/Mac
-        # Shell script
-        with open("run_geometry_detector.sh", "w") as f:
-            f.write("""#!/bin/bash
+        self.status = "completed"
 
-echo "Starting Integrated Geometry Detection System..."
-echo
+installer_instance = None
 
-# Load configuration if it exists
-if [ -f "geometry_config.json" ]; then
-    echo "Loading saved configuration..."
-else
-    echo "No configuration found, using defaults..."
-fi
+def get_script_info():
+    """Global function to get installer information."""
+    if installer_instance:
+        return installer_instance.get_script_info()
+    return {"name": "Setup and Installation Helper", "status": "not_initialized"}
 
-python3 integrated_geometry_system.py
-
-echo
-echo "Press Enter to exit..."
-read
-""")
-        os.chmod("run_geometry_detector.sh", 0o755)
-        print_success("Created run_geometry_detector.sh")
-    
-    # Create test script
-    with open("test_camera.py", "w") as f:
-        f.write("""#!/usr/bin/env python3
-import cv2
-import sys
-
-print("Simple camera test")
-print("Press 'q' to quit")
-
-# Try different camera indices
-for i in range(5):
-    print(f"\\nTrying camera index {i}...")
-    cap = cv2.VideoCapture(i)
-    
-    if cap.isOpened():
-        print(f"Camera {i} opened successfully!")
-        
-        while True:
-            ret, frame = cap.read()
-            if ret:
-                cv2.putText(frame, f"Camera {i} - Press 'q' to quit", 
-                           (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-                cv2.imshow(f'Camera {i} Test', frame)
-                
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
-            else:
-                print(f"Failed to read from camera {i}")
-                break
-        
-        cap.release()
-        cv2.destroyAllWindows()
-        sys.exit(0)
-
-print("\\nNo working cameras found!")
-""")
-    
-    if system != "Windows":
-        os.chmod("test_camera.py", 0o755)
-    
-    print_success("Created test_camera.py")
-
-def show_next_steps():
-    """Show next steps to the user"""
-    print_header("Setup Complete!")
-    
-    print("🎉 Your system is ready for geometry detection!\n")
-    
-    print("Next steps:")
-    print("\n1. TEST YOUR CAMERA:")
-    print("   python test_camera.py")
-    
-    print("\n2. RUN THE MAIN PROGRAM:")
-    if platform.system() == "Windows":
-        print("   • Double-click: run_geometry_detector.bat")
-        print("   • Or run: python integrated_geometry_system.py")
-    else:
-        print("   • Run: ./run_geometry_detector.sh")
-        print("   • Or: python3 integrated_geometry_system.py")
-    
-    print("\n3. RUN WITH CUSTOM OPTIONS:")
-    print("   python integrated_geometry_system.py --help")
-    
-    print("\n4. RUN UNIT TESTS:")
-    print("   python integrated_geometry_system.py --test")
-    
-    print("\n5. VIEW DOCUMENTATION:")
-    print("   See integrated_geometry_system.py for full API documentation")
-    
-    print("\nKEYBOARD CONTROLS:")
-    print("  'q' - Quit")
-    print("  'p' - Pause/Resume")
-    print("  's' - Screenshot")
-    print("  'r' - Record video")
-    print("  'b' - Save benchmark")
-    print("  'g' - Toggle GPU")
-    print("  '+/-' - Adjust sensitivity")
-    
-    print("\n" + "="*60)
-    print("Happy detecting! 🔍")
+def set_script_parameter(key, value):
+    """Global function to set installer parameters."""
+    if installer_instance:
+        return installer_instance.set_script_parameter(key, value)
+    return False
 
 def main():
-    """Main setup function"""
-    print_header("Integrated Geometry Detection System Setup")
-    print("This wizard will help you set up everything needed for geometry detection.\n")
-    
-    # System check
-    checker = SystemChecker()
-    if not checker.check_all():
-        print("\n⚠️  System check found issues. Continue anyway? (y/n): ", end='')
-        if input().lower() != 'y':
-            print("Setup cancelled.")
-            return
-    
-    # Package installation
-    print("\n" + "="*60)
-    print("Ready to install packages? (y/n): ", end='')
-    if input().lower() == 'y':
-        installer = PackageInstaller()
-        if not installer.install_all():
-            print_warning("Some packages failed to install")
-    
-    # Camera detection
-    print("\n" + "="*60)
-    print("Detect cameras? (y/n): ", end='')
-    if input().lower() == 'y':
-        detector = CameraDetector()
-        detector.detect_all()
-        
-        # Configuration wizard
-        if detector.working_cameras:
-            print("\n" + "="*60)
-            print("Run configuration wizard? (y/n): ", end='')
-            if input().lower() == 'y':
-                wizard = ConfigurationWizard()
-                wizard.run(detector.working_cameras)
-    
-    # Run tests
-    print("\n" + "="*60)
-    print("Run system tests? (y/n): ", end='')
-    if input().lower() == 'y':
-        runner = TestRunner()
-        runner.run_all_tests()
-    
-    # Create launcher scripts
-    create_launcher_scripts()
-    
-    # Show next steps
-    show_next_steps()
-    
-    # Offer to run main program
-    print("\n" + "="*60)
-    print("Start the geometry detection system now? (y/n): ", end='')
-    if input().lower() == 'y':
-        print("\nStarting system...")
-        time.sleep(1)
-        
-        try:
-            if os.path.exists('integrated_geometry_system.py'):
-                subprocess.run([sys.executable, 'integrated_geometry_system.py'])
-            else:
-                print_error("integrated_geometry_system.py not found!")
-                print("Make sure both files are in the same directory.")
-        except KeyboardInterrupt:
-            print("\nProgram interrupted.")
-        except Exception as e:
-            print_error(f"Failed to start: {e}")
-
-if __name__ == "__main__":
+    """Main entry point for the setup installer."""
+    global installer_instance
+    installer_instance = SetupInstaller()
     try:
-        main()
+        installer_instance.run_interactive_setup()
     except KeyboardInterrupt:
         print("\n\nSetup interrupted by user.")
+        installer_instance.status = "interrupted"
     except Exception as e:
         print(f"\n{Colors.FAIL}Setup error: {e}{Colors.ENDC}")
         import traceback
         traceback.print_exc()
+        installer_instance.status = "error"
+
+if __name__ == "__main__":
+    main()

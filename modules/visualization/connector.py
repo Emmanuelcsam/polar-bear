@@ -1,58 +1,32 @@
 
-import os
-import logging
-import sys
-
-# --- Configuration ---
-LOG_FILE = "connector.log"
-
-# --- Setup Logging ---
-# Ensure the logger is configured from scratch for each script
-logger = logging.getLogger(os.path.abspath(__file__))
-logger.setLevel(logging.INFO)
-
-# Prevent logging from propagating to the root logger
-logger.propagate = False
-
-# Remove any existing handlers to avoid duplicate logs
-for handler in logger.handlers[:]:
-    logger.removeHandler(handler)
-
-log_formatter = logging.Formatter("%(asctime)s [%(levelname)s] - %(message)s")
-
-# File Handler
-try:
-    file_handler = logging.FileHandler(LOG_FILE)
-    file_handler.setFormatter(log_formatter)
-    logger.addHandler(file_handler)
-except (IOError, OSError) as e:
-    # Fallback to console if file logging fails
-    print(f"Could not write to log file {LOG_FILE}: {e}", file=sys.stderr)
-
-# Console Handler
-console_handler = logging.StreamHandler(sys.stdout)
-console_handler.setFormatter(log_formatter)
-logger.addHandler(console_handler)
-
+from pathlib import Path
+from common_data_and_utils import log_message as logger, load_json_data, InspectorConfig, ImageResult, DefectInfo, DetectedZoneInfo, ZoneDefinition, load_single_image
 
 def main():
     """Main function for the connector script."""
-    logger.info(f"--- Connector Script Initialized in {os.getcwd()} ---")
-    logger.info(f"This script is responsible for connecting the modules in this directory to the main control script.")
+    logger("--- Connector Script Initialized ---", level="INFO")
+    logger("This script is intended to orchestrate the visualization modules.", level="INFO")
     
-    # List files in the current directory
+    # Example: Load a dummy ImageResult and pass it to a visualization script
     try:
-        files = os.listdir()
-        if files:
-            logger.info("Files in this directory:")
-            for file in files:
-                logger.info(f"- {file}")
+        dummy_image_result_path = Path("dummy_image_result.json")
+        raw_data = load_json_data(dummy_image_result_path)
+        if raw_data:
+            image_result = ImageResult.from_dict(raw_data)
+            logger(f"Loaded ImageResult for {image_result.filename}", level="INFO")
+            
+            # Example of calling a visualization script function (assuming it's modularized)
+            # from result_visualizer import visualize_results
+            # visualize_results(Path("dummy_image.png"), image_result, Path("connector_output.png"))
+            # logger("Example visualization executed.", level="INFO")
+            
         else:
-            logger.info("No files found in this directory.")
-    except OSError as e:
-        logger.error(f"Error listing files: {e}")
+            logger("Could not load dummy_image_result.json", level="ERROR")
+            
+    except Exception as e:
+        logger(f"An error occurred during connector execution: {e}", level="ERROR")
 
-    logger.info("Connector script finished.")
+    logger("Connector script finished.", level="INFO")
 
 if __name__ == "__main__":
     main()

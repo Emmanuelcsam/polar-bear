@@ -10,7 +10,6 @@ import os
 import sys
 import importlib
 import inspect
-import logging
 import subprocess
 import re
 from pathlib import Path
@@ -20,31 +19,14 @@ from pathlib import Path
 file_dir = Path(__file__).parent.resolve()
 sys.path.insert(0, str(file_dir))
 
+# Import common logging utility
+from common_data_and_utils import log_message as log
+
 # --- Configuration ---
-LOG_FILE_NAME = "neural_connector.log"
-LOG_LEVEL = logging.DEBUG
+# LOG_FILE_NAME is now handled by common_data_and_utils if it sets up file logging
+# LOG_LEVEL is now handled by common_data_and_utils if it sets up logging
 
-# --- Setup Logging ---
-def setup_logging():
-    """Configures logging to output to both console and a file."""
-    logging.basicConfig(
-        level=LOG_LEVEL,
-        format="%(asctime)s - %(levelname)-8s - %(name)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-        handlers=[
-            logging.FileHandler(LOG_FILE_NAME, mode='w'),
-            logging.StreamHandler(sys.stdout)
-        ]
-    )
-    # Silence noisy loggers if necessary
-    logging.getLogger("matplotlib").setLevel(logging.WARNING)
-    logging.getLogger("PIL").setLevel(logging.WARNING)
-    
-    log = logging.getLogger("NeuralConnector")
-    log.info("Logging system initialized.")
-    return log
-
-log = setup_logging()
+log("Neural Connector Initializing...", level="INFO")
 
 class NeuralConnector:
     """
@@ -267,7 +249,7 @@ class NeuralConnector:
                 self.execute_function(module, func_name, functions[func_name])
 
             except KeyboardInterrupt:
-                log.warning("\nReturning to module selection.")
+                log("\nReturning to module selection.", level="WARNING")
                 break
             except Exception as e:
                 log.error(f"An error occurred while inspecting module {module_name}: {e}", exc_info=True)
@@ -337,16 +319,16 @@ class NeuralConnector:
 
 def main():
     """Main entry point for the Neural Connector script."""
-    log.info("="*50)
-    log.info("Neural Connector Initializing...")
-    log.info("="*50)
+    log("="*50)
+    log("Neural Connector Initializing...")
+    log("="*50)
     
     connector = NeuralConnector()
     connector.check_and_install_dependencies()
     connector.discover_modules()
     connector.run_interactive_session()
     
-    log.info("Neural Connector shutting down.")
+    log("Neural Connector shutting down.")
 
 if __name__ == "__main__":
     main()

@@ -9,13 +9,22 @@ import subprocess
 import importlib
 import os
 from datetime import datetime
+import json
 
-# Create a logger function
-def log(message):
-    """Log messages with timestamp"""
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    print(f"[{timestamp}] {message}")
-    sys.stdout.flush()
+# --- Start of Connector Integration ---
+try:
+    import connector
+    logger = connector.logger
+except ImportError:
+    print("Connector not found, using basic logging.")
+    import logging
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] - %(message)s')
+    logger = logging.getLogger(__name__)
+
+CONFIG_FILE = "shared_config.json"
+SCRIPT_NAME = "cv-training-guide"
+
+# --- End of Connector Integration ---
 
 # Function to check and install packages
 def ensure_package_installed(package_name, import_name=None, min_version=None):
@@ -23,43 +32,43 @@ def ensure_package_installed(package_name, import_name=None, min_version=None):
     if import_name is None:
         import_name = package_name
     
-    log(f"Checking for {package_name}...")
+    logger.info(f"Checking for {package_name}...")
     
     try:
         module = importlib.import_module(import_name)
-        log(f"✓ {package_name} is already installed")
+        logger.info(f"✓ {package_name} is already installed")
         
         # Check version if specified
         if min_version and hasattr(module, '__version__'):
             current_version = module.__version__
             if current_version < min_version:
-                log(f"⚠ {package_name} version {current_version} is older than required {min_version}")
-                log(f"Upgrading {package_name}...")
+                logger.info(f"⚠ {package_name} version {current_version} is older than required {min_version}")
+                logger.info(f"Upgrading {package_name}...")
                 subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", package_name])
-                log(f"✓ {package_name} upgraded successfully")
+                logger.info(f"✓ {package_name} upgraded successfully")
         
         return module
     except ImportError:
-        log(f"✗ {package_name} not found. Installing...")
+        logger.info(f"✗ {package_name} not found. Installing...")
         try:
             subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", package_name])
             module = importlib.import_module(import_name)
-            log(f"✓ {package_name} installed successfully")
+            logger.info(f"✓ {package_name} installed successfully")
             return module
         except Exception as e:
-            log(f"✗ Failed to install {package_name}: {e}")
+            logger.error(f"✗ Failed to install {package_name}: {e}")
             sys.exit(1)
 
 # Install all required packages
-log("=== Setting up environment ===")
-log("Ensuring all required packages are installed...")
+logger.info("=== Setting up environment ===")
+logger.info("Ensuring all required packages are installed...")
 
 # Core packages
 torch = ensure_package_installed("torch")
 torchvision = ensure_package_installed("torchvision")
 np = ensure_package_installed("numpy", "numpy")
 matplotlib = ensure_package_installed("matplotlib")
-plt = matplotlib.pyplot
+import matplotlib.pyplot as plt
 tqdm_auto = ensure_package_installed("tqdm", "tqdm.auto")
 pandas = ensure_package_installed("pandas", "pandas")
 ensure_package_installed("requests")
@@ -86,47 +95,71 @@ from timeit import default_timer as timer
 import torchmetrics
 from mlxtend.plotting import plot_confusion_matrix
 
-log("✓ All packages installed and imported successfully")
+logger.info("✓ All packages installed and imported successfully")
 
 # Print versions
-log(f"PyTorch version: {torch.__version__}")
-log(f"Torchvision version: {torchvision.__version__}")
-log(f"CUDA available: {torch.cuda.is_available()}")
+logger.info(f"PyTorch version: {torch.__version__}")
+logger.info(f"Torchvision version: {torchvision.__version__}")
+logger.info(f"CUDA available: {torch.cuda.is_available()}")
 if torch.cuda.is_available():
-    log(f"CUDA device: {torch.cuda.get_device_name(0)}")
+    logger.info(f"CUDA device: {torch.cuda.get_device_name(0)}")
 
 # Download helper functions
-log("\n=== Downloading helper functions ===")
+logger.info("\n=== Downloading helper functions ===")
 helper_functions_path = Path("helper_functions.py")
 
 if helper_functions_path.exists():
-    log("✓ helper_functions.py already exists, skipping download")
+    logger.info("✓ helper_functions.py already exists, skipping download")
 else:
-    log("Downloading helper_functions.py...")
+    logger.info("Downloading helper_functions.py...")
     request = requests.get(
         "https://raw.githubusercontent.com/mrdbourke/pytorch-deep-learning/main/helper_functions.py"
     )
     with open(helper_functions_path, "wb") as f:
         f.write(request.content)
-    log("✓ helper_functions.py downloaded successfully")
+    logger.info("✓ helper_functions.py downloaded successfully")
 
 from helper_functions import accuracy_fn
 
 # Setup device agnostic code
-log("\n=== Setting up device ===")
+logger.info("\n=== Setting up device ===")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-log(f"Using device: {device}")
+logger.info(f"Using device: {device}")
 
 # Setup hyperparameters
-log("\n=== Setting up hyperparameters ===")
+logger.info("\n=== Setting up hyperparameters ===")
 NUM_EPOCHS = 3
 BATCH_SIZE = 32
 LEARNING_RATE = 0.1
-log(f"Epochs: {NUM_EPOCHS}, Batch size: {BATCH_SIZE}, Learning rate: {LEARNING_RATE}")
+
+def load_and_apply_config():
+    """Loads configuration from shared file and applies it."""
+    global NUM_EPOCHS, BATCH_SIZE, LEARNING_RATE
+    try:
+        with open(CONFIG_FILE, 'r') as f:
+            shared_config = json.load(f)
+        
+        if SCRIPT_NAME in shared_config:
+            script_config = shared_config[SCRIPT_NAME]
+            logger.info(f"Loading configuration for {SCRIPT_NAME} from {CONFIG_FILE}")
+            NUM_EPOCHS = script_config.get("NUM_EPOCHS", NUM_EPOCHS)
+            BATCH_SIZE = script_config.get("BATCH_SIZE", BATCH_SIZE)
+            LEARNING_RATE = script_config.get("LEARNING_RATE", LEARNING_RATE)
+            
+    except FileNotFoundError:
+        logger.info(f"{CONFIG_FILE} not found. Using default hyperparameters.")
+    except json.JSONDecodeError:
+        logger.error(f"Error decoding {CONFIG_FILE}. Using default hyperparameters.")
+    except Exception as e:
+        logger.error(f"An error occurred while loading config: {e}")
+
+load_and_apply_config()
+logger.info(f"Epochs: {NUM_EPOCHS}, Batch size: {BATCH_SIZE}, Learning rate: {LEARNING_RATE}")
+
 
 # Download and prepare data
-log("\n=== Preparing Fashion MNIST dataset ===")
-log("Downloading training data...")
+logger.info("\n=== Preparing Fashion MNIST dataset ===")
+logger.info("Downloading training data...")
 train_data = datasets.FashionMNIST(
     root="data",
     train=True,
@@ -134,7 +167,7 @@ train_data = datasets.FashionMNIST(
     transform=transforms.ToTensor()
 )
 
-log("Downloading test data...")
+logger.info("Downloading test data...")
 test_data = datasets.FashionMNIST(
     root="data",
     train=False,
@@ -142,15 +175,15 @@ test_data = datasets.FashionMNIST(
     transform=transforms.ToTensor()
 )
 
-log(f"✓ Training samples: {len(train_data)}")
-log(f"✓ Test samples: {len(test_data)}")
+logger.info(f"✓ Training samples: {len(train_data)}")
+logger.info(f"✓ Test samples: {len(test_data)}")
 
 # Get class names
 class_names = train_data.classes
-log(f"Classes: {class_names}")
+logger.info(f"Classes: {class_names}")
 
 # Create DataLoaders
-log("\n=== Creating DataLoaders ===")
+logger.info("\n=== Creating DataLoaders ===")
 train_dataloader = DataLoader(
     dataset=train_data,
     batch_size=BATCH_SIZE,
@@ -163,19 +196,19 @@ test_dataloader = DataLoader(
     shuffle=False
 )
 
-log(f"✓ Train DataLoader: {len(train_dataloader)} batches of {BATCH_SIZE}")
-log(f"✓ Test DataLoader: {len(test_dataloader)} batches of {BATCH_SIZE}")
+logger.info(f"✓ Train DataLoader: {len(train_dataloader)} batches of {BATCH_SIZE}")
+logger.info(f"✓ Test DataLoader: {len(test_dataloader)} batches of {BATCH_SIZE}")
 
 # Visualize a sample
-log("\n=== Visualizing sample data ===")
+logger.info("\n=== Visualizing sample data ===")
 image, label = train_data[0]
-log(f"Image shape: {image.shape}")
-log(f"Image label: {label} ({class_names[label]})")
+logger.info(f"Image shape: {image.shape}")
+logger.info(f"Image label: {label} ({class_names[label]})")
 
 # Function to plot random images
 def plot_random_images(dataset, n=9):
     """Plot n random images from dataset"""
-    log(f"Plotting {n} random images...")
+    logger.info(f"Plotting {n} random images...")
     fig = plt.figure(figsize=(9, 9))
     rows, cols = 3, 3
     
@@ -190,13 +223,13 @@ def plot_random_images(dataset, n=9):
     
     plt.tight_layout()
     plt.savefig("random_fashion_mnist_samples.png")
-    log("✓ Saved random samples plot")
+    logger.info("✓ Saved random samples plot")
     plt.close()
 
 plot_random_images(train_data)
 
 # Model 0: Baseline model
-log("\n=== Building Model 0: Baseline (Linear) ===")
+logger.info("\n=== Building Model 0: Baseline (Linear) ===")
 
 class FashionMNISTModelV0(nn.Module):
     def __init__(self, input_shape: int, hidden_units: int, output_shape: int):
@@ -217,7 +250,7 @@ model_0 = FashionMNISTModelV0(
     hidden_units=10,
     output_shape=len(class_names)
 )
-log(f"✓ Model 0 created: {model_0}")
+logger.info(f"✓ Model 0 created: {model_0}")
 
 # Setup loss and optimizer for model 0
 loss_fn = nn.CrossEntropyLoss()
@@ -267,7 +300,7 @@ def print_train_time(start: float, end: float, device: torch.device = None):
     return total_time
 
 # Train Model 0
-log("\n=== Training Model 0 (Baseline) ===")
+logger.info("\n=== Training Model 0 (Baseline) ===")
 torch.manual_seed(42)
 train_time_start_model_0 = timer()
 
@@ -305,10 +338,10 @@ def eval_model(model, data_loader, loss_fn, accuracy_fn):
     }
 
 model_0_results = eval_model(model_0, test_dataloader, loss_fn, accuracy_fn)
-log(f"✓ Model 0 results: {model_0_results}")
+logger.info(f"✓ Model 0 results: {model_0_results}")
 
 # Model 1: Model with non-linearity
-log("\n=== Building Model 1: With Non-linearity (ReLU) ===")
+logger.info("\n=== Building Model 1: With Non-linearity (ReLU) ===")
 
 class FashionMNISTModelV1(nn.Module):
     def __init__(self, input_shape: int, hidden_units: int, output_shape: int):
@@ -331,13 +364,13 @@ model_1 = FashionMNISTModelV1(
     hidden_units=10,
     output_shape=len(class_names)
 ).to(device)
-log(f"✓ Model 1 created and moved to {device}")
+logger.info(f"✓ Model 1 created and moved to {device}")
 
 # Setup loss and optimizer for model 1
 optimizer_1 = torch.optim.SGD(params=model_1.parameters(), lr=LEARNING_RATE)
 
 # Train Model 1
-log("\n=== Training Model 1 (With Non-linearity) ===")
+logger.info("\n=== Training Model 1 (With Non-linearity) ===")
 torch.manual_seed(42)
 torch.cuda.manual_seed(42)
 
@@ -377,10 +410,10 @@ def eval_model_gpu(model, data_loader, loss_fn, accuracy_fn, device):
     }
 
 model_1_results = eval_model_gpu(model_1, test_dataloader, loss_fn, accuracy_fn, device)
-log(f"✓ Model 1 results: {model_1_results}")
+logger.info(f"✓ Model 1 results: {model_1_results}")
 
 # Model 2: Convolutional Neural Network (TinyVGG)
-log("\n=== Building Model 2: CNN (TinyVGG) ===")
+logger.info("\n=== Building Model 2: CNN (TinyVGG) ===")
 
 class FashionMNISTModelV2(nn.Module):
     """Model architecture that replicates the TinyVGG model from CNN explainer website"""
@@ -435,21 +468,21 @@ model_2 = FashionMNISTModelV2(
     hidden_units=10,
     output_shape=len(class_names)
 ).to(device)
-log(f"✓ Model 2 (CNN) created and moved to {device}")
+logger.info(f"✓ Model 2 (CNN) created and moved to {device}")
 
 # Test with dummy data
-log("Testing CNN with dummy data...")
+logger.info("Testing CNN with dummy data...")
 dummy_img = torch.rand(size=(1, 1, 28, 28)).to(device)
-log(f"Dummy input shape: {dummy_img.shape}")
+logger.info(f"Dummy input shape: {dummy_img.shape}")
 dummy_output = model_2(dummy_img)
-log(f"Dummy output shape: {dummy_output.shape}")
-log("✓ CNN forward pass successful")
+logger.info(f"Dummy output shape: {dummy_output.shape}")
+logger.info("✓ CNN forward pass successful")
 
 # Setup loss and optimizer for model 2
 optimizer_2 = torch.optim.SGD(params=model_2.parameters(), lr=LEARNING_RATE)
 
 # Train Model 2
-log("\n=== Training Model 2 (CNN) ===")
+logger.info("\n=== Training Model 2 (CNN) ===")
 torch.manual_seed(42)
 torch.cuda.manual_seed(42)
 
@@ -468,15 +501,15 @@ total_train_time_model_2 = print_train_time(
 )
 
 model_2_results = eval_model_gpu(model_2, test_dataloader, loss_fn, accuracy_fn, device)
-log(f"✓ Model 2 results: {model_2_results}")
+logger.info(f"✓ Model 2 results: {model_2_results}")
 
 # Compare results
-log("\n=== Comparing All Models ===")
+logger.info("\n=== Comparing All Models ===")
 compare_results = pd.DataFrame([model_0_results, model_1_results, model_2_results])
 compare_results["training_time"] = [total_train_time_model_0, 
                                     total_train_time_model_1, 
                                     total_train_time_model_2]
-log("\nModel Comparison:")
+logger.info("\nModel Comparison:")
 print(compare_results)
 
 # Save comparison plot
@@ -489,11 +522,11 @@ ax.set_ylim([0, 100])
 plt.xticks(rotation=45, ha='right')
 plt.tight_layout()
 plt.savefig("model_comparison.png")
-log("✓ Saved model comparison plot")
+logger.info("✓ Saved model comparison plot")
 plt.close()
 
 # Make predictions and visualize
-log("\n=== Making Predictions with Best Model ===")
+logger.info("\n=== Making Predictions with Best Model ===")
 
 def make_predictions(model, data, device):
     """Make predictions on data using model"""
@@ -516,12 +549,12 @@ for sample, label in random.sample(list(test_data), k=9):
     test_labels.append(label)
 
 # Make predictions
-log("Making predictions on random test samples...")
+logger.info("Making predictions on random test samples...")
 pred_probs = make_predictions(model=model_2, data=test_samples, device=device)
 pred_classes = pred_probs.argmax(dim=1)
 
 # Plot predictions
-log("Plotting predictions...")
+logger.info("Plotting predictions...")
 plt.figure(figsize=(9, 9))
 nrows = 3
 ncols = 3
@@ -541,12 +574,12 @@ for i, sample in enumerate(test_samples):
 
 plt.tight_layout()
 plt.savefig("predictions_visualization.png")
-log("✓ Saved predictions visualization")
+logger.info("✓ Saved predictions visualization")
 plt.close()
 
 # Create confusion matrix
-log("\n=== Creating Confusion Matrix ===")
-log("Making predictions on entire test set...")
+logger.info("\n=== Creating Confusion Matrix ===")
+logger.info("Making predictions on entire test set...")
 
 # Make predictions on entire test dataset
 y_preds = []
@@ -560,10 +593,10 @@ with torch.inference_mode():
 
 # Concatenate predictions
 y_pred_tensor = torch.cat(y_preds)
-log(f"Total predictions made: {len(y_pred_tensor)}")
+logger.info(f"Total predictions made: {len(y_pred_tensor)}")
 
 # Create confusion matrix
-log("Creating confusion matrix...")
+logger.info("Creating confusion matrix...")
 confmat = torchmetrics.ConfusionMatrix(num_classes=len(class_names), task='multiclass')
 confmat_tensor = confmat(preds=y_pred_tensor, target=test_data.targets)
 
@@ -574,27 +607,39 @@ fig, ax = plot_confusion_matrix(
     figsize=(10, 7)
 )
 plt.savefig("confusion_matrix.png")
-log("✓ Saved confusion matrix")
+logger.info("✓ Saved confusion matrix")
 plt.close()
 
 # Save the best model
-log("\n=== Saving Best Model ===")
+logger.info("\n=== Saving Best Model ===")
 MODEL_PATH = Path("models")
 MODEL_PATH.mkdir(parents=True, exist_ok=True)
 
 MODEL_NAME = "fashion_mnist_tinyvgg.pth"
 MODEL_SAVE_PATH = MODEL_PATH / MODEL_NAME
 
-log(f"Saving model to: {MODEL_SAVE_PATH}")
+logger.info(f"Saving model to: {MODEL_SAVE_PATH}")
 torch.save(obj=model_2.state_dict(), f=MODEL_SAVE_PATH)
-log(f"✓ Model saved successfully! Size: {MODEL_SAVE_PATH.stat().st_size/1024:.2f} KB")
+logger.info(f"✓ Model saved successfully! Size: {MODEL_SAVE_PATH.stat().st_size/1024:.2f} KB")
 
 # Summary
-log("\n=== Training Complete! ===")
-log("\nFinal Results Summary:")
+logger.info("\n=== Training Complete! ===")
+logger.info("\nFinal Results Summary:")
 print(compare_results.to_string())
-log(f"\nBest performing model: {compare_results.iloc[compare_results['model_acc'].idxmax()]['model_name']}")
-log(f"Best accuracy: {compare_results['model_acc'].max():.2f}%")
-log("\nAll visualizations saved to current directory")
-log("Model weights saved to ./models/fashion_mnist_tinyvgg.pth")
-log("\n✓ Script completed successfully!")
+logger.info(f"\nBest performing model: {compare_results.iloc[compare_results['model_acc'].idxmax()]['model_name']}")
+logger.info(f"Best accuracy: {compare_results['model_acc'].max():.2f}%")
+logger.info("\nAll visualizations saved to current directory")
+logger.info("Model weights saved to ./models/fashion_mnist_tinyvgg.pth")
+logger.info("\n✓ Script completed successfully!")
+
+if __name__ == "__main__":
+    logger.info(f"--- Starting {SCRIPT_NAME} ---")
+    try:
+        # The main logic of the script is already executed above.
+        # This block is to ensure we log the end of the script.
+        pass
+    except Exception as e:
+        logger.error(f"An error occurred in {SCRIPT_NAME}: {e}", exc_info=True)
+        sys.exit(1)
+    finally:
+        logger.info(f"--- Finished {SCRIPT_NAME} ---")

@@ -1,69 +1,94 @@
 
 import cv2
 import numpy as np
+import argparse
+import sys
+from pathlib import Path
 
-def analyze_and_display_results(display_image, region_defects, scratch_defects, zones):
+from common_data_and_utils import log_message, load_single_image, load_json_data, InspectorConfig, ImageResult, DefectInfo, DetectedZoneInfo, ZoneDefinition
+
+def analyze_and_display_results(display_image: np.ndarray, image_result: ImageResult) -> np.ndarray:
     """
     Analyzes the detected defects within each zone, counts them, and overlays
     the results on the display image for visualization.
 
     Args:
         display_image (np.array): The image with zones drawn on it.
-        region_defects (np.array): Binary mask of region-based defects.
-        scratch_defects (np.array): Binary mask of scratch defects.
-        zones (dict): Dictionary containing the geometry of the fiber zones.
+        image_result (ImageResult): The ImageResult object containing defect and zone information.
 
     Returns:
         np.array: The final image with all defects highlighted.
     """
-    print("Stage 4: Analyzing and Visualizing Results...")
-    # Use different colors to highlight different defect types
-    display_image[region_defects == 255] = [255, 100, 100] # Blue for Region-based
-    display_image[scratch_defects == 255] = [100, 100, 255] # Red for Scratches
+    log_message("INFO: Analyzing and Visualizing Results...")
+    
+    # Get inspector configuration for defect colors and zone definitions
+    config = InspectorConfig()
+    defect_color_map_bgr = config.DEFECT_COLORS
+    zone_definitions = config.DEFAULT_ZONES
 
-    if zones:
-        core_mask = np.zeros(region_defects.shape, dtype="uint8")
-        cv2.circle(core_mask, zones['center'], zones['core_radius'], 255, -1)
-        
-        core_region_defects = cv2.bitwise_and(region_defects, core_mask)
-        core_scratch_defects = cv2.bitwise_and(scratch_defects, core_mask)
+    # Create a copy to draw on
+    output_image = display_image.copy()
 
-        contours_region, _ = cv2.findContours(core_region_defects, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        contours_scratch, _ = cv2.findContours(core_scratch_defects, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        
-        num_core_defects = len(contours_region) + len(contours_scratch)
-        
-        text = f"Defects in Core: {num_core_defects}"
-        cv2.putText(display_image, text, (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-        
-        print(f"Analysis complete. Found {num_core_defects} defects in the core.")
-        
-    return display_image
+    # Draw defects
+    for defect in image_result.defects:
+        color_bgr = defect_color_map_bgr.get(defect.defect_type, (0, 255, 255)) # Default to yellow
+        # Draw a circle at the centroid for simplicity
+        center_px = (int(defect.centroid_px[0]), int(defect.centroid_px[1]))
+        cv2.circle(output_image, center_px, 5, color_bgr, -1) # Filled circle
+        cv2.putText(output_image, defect.defect_type, (center_px[0] + 10, center_px[1] - 5), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_bgr, 1)
+
+    # Analyze and display defects per zone
+    zone_defect_counts = {zone.name: 0 for zone in zone_definitions}
+    for defect in image_result.defects:
+        if defect.zone_name in zone_defect_counts:
+            zone_defect_counts[defect.zone_name] += 1
+
+    y_offset = 30
+    for zone_name, count in zone_defect_counts.items():
+        text = f"Defects in {zone_name}: {count}"
+        cv2.putText(output_image, text, (10, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+        y_offset += 30
+
+    log_message("INFO: Analysis and visualization complete.")
+    return output_image
 
 if __name__ == '__main__':
-    # Create dummy data for demonstration
-    sz = 600
-    display_image = np.full((sz, sz, 3), (200, 200, 200), dtype=np.uint8)
-    center = (sz//2, sz//2)
-    core_radius = 50
-    zones = {'center': center, 'core_radius': core_radius}
+    parser = argparse.ArgumentParser(description="Analyze and Display Fiber Optic Inspection Results")
+    parser.add_argument("image_file", help="Path to the original image file")
+    parser.add_argument("image_result_file", help="Path to the JSON file containing ImageResult data")
+    parser.add_argument("--output_image", help="Optional: Path to save the annotated output image")
     
-    # Draw zones on the display image for context
-    cv2.circle(display_image, center, 200, (150, 150, 150), -1)
-    cv2.circle(display_image, center, core_radius, (0, 255, 255), 2)
+    args = parser.parse_args()
 
+    # Load the original image
+    original_image = load_single_image(Path(args.image_file))
+    if original_image is None:
+        log_message(f"ERROR: Could not load image from {args.image_file}", level="ERROR")
+        sys.exit(1)
 
-    region_defects = np.zeros((sz, sz), dtype=np.uint8)
-    cv2.circle(region_defects, (center[0] + 20, center[1] + 20), 10, 255, -1)
+    # Load the ImageResult data
+    raw_image_result_data = load_json_data(Path(args.image_result_file))
+    if raw_image_result_data is None:
+        log_message(f"ERROR: Could not load JSON data from {args.image_result_file}", level="ERROR")
+        sys.exit(1)
+    image_result = ImageResult.from_dict(raw_image_result_data)
+    if image_result is None:
+        log_message(f"ERROR: Could not parse ImageResult from {args.image_result_file}", level="ERROR")
+        sys.exit(1)
 
-    scratch_defects = np.zeros((sz, sz), dtype=np.uint8)
-    cv2.line(scratch_defects, (center[0] - 20, center[1] - 20), (center[0] + 40, center[1] + 40), 255, 2)
+    # Perform analysis and display
+    final_display_image = analyze_and_display_results(original_image.copy(), image_result)
 
-    # Run the function
-    final_image = analyze_and_display_results(display_image.copy(), region_defects, scratch_defects, zones)
-    
-    cv2.imshow('Final Analysis', final_image)
-    
-    print("Press any key to exit.")
+    # Save output image if path is provided
+    if args.output_image:
+        output_path = Path(args.output_image)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        cv2.imwrite(str(output_path), final_display_image)
+        log_message(f"INFO: Annotated image saved to {output_path}")
+
+    # Display the image
+    cv2.imshow('Fiber Optic Inspection Results', final_display_image)
+    log_message("INFO: Press any key to exit display.")
     cv2.waitKey(0)
     cv2.destroyAllWindows()

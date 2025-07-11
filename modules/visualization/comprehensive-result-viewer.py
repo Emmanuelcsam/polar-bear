@@ -1,7 +1,11 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-from typing import Dict, Any
+import argparse
+import json
+from typing import Dict, Any, Optional
+from pathlib import Path
+from common_data_and_utils import load_json_data, load_single_image, log_message
 
 def _save_simple_anomaly_image(results: Dict[str, Any], test_image: np.ndarray, output_path: str):
     """Save a simple image with just anomalies highlighted in blue."""
@@ -29,10 +33,10 @@ def visualize_comprehensive_results(results: Dict[str, Any], reference_model: Di
     fig.suptitle(f"Anomaly Analysis: {results['metadata'].get('filename', 'Unknown')}", fontsize=16)
 
     test_img_rgb = cv2.cvtColor(results['test_image'], cv2.COLOR_BGR2RGB) if len(results['test_image'].shape) == 3 else cv2.cvtColor(results['test_image'], cv2.COLOR_GRAY2RGB)
+    archetype_rgb = cv2.cvtColor(reference_model['archetype_image'], cv2.COLOR_GRAY2RGB)
     
     # Panel 1: Original vs Archetype
     ax = axes[0, 0]
-    archetype_rgb = cv2.cvtColor(reference_model['archetype_image'], cv2.COLOR_GRAY2RGB)
     comparison_img = np.hstack((test_img_rgb, cv2.resize(archetype_rgb, (test_img_rgb.shape[1], test_img_rgb.shape[0]))))
     ax.imshow(comparison_img)
     ax.set_title('Test Image (Left) vs. Reference Archetype (Right)')
@@ -75,10 +79,54 @@ def visualize_comprehensive_results(results: Dict[str, Any], reference_model: Di
 
     plt.savefig(output_path, dpi=150, bbox_inches='tight')
     plt.close()
-    print(f"✓ Comprehensive visualization saved to: {output_path}")
+    log_message(f"✓ Comprehensive visualization saved to: {output_path}")
     
     _save_simple_anomaly_image(results, results['test_image'], output_path.replace('.png', '_simple.png'))
 
+def main(results_path: str, reference_model_path: str, output_path: str):
+    log_message(f"Starting comprehensive result visualization for {results_path}")
+
+    results_data = load_json_data(Path(results_path))
+    if results_data is None:
+        log_message(f"Failed to load results from {results_path}", level="ERROR")
+        return
+
+    reference_model_data = load_json_data(Path(reference_model_path))
+    if reference_model_data is None:
+        log_message(f"Failed to load reference model from {reference_model_path}", level="ERROR")
+        return
+
+    # Load images if paths are provided in JSON
+    if 'test_image_path' in results_data:
+        test_image = load_single_image(Path(results_data['test_image_path']))
+        if test_image is None:
+            log_message(f"Failed to load test image from {results_data['test_image_path']}", level="ERROR")
+            return
+        results_data['test_image'] = test_image
+    else:
+        log_message("'test_image_path' not found in results JSON. Visualization might fail.", level="WARNING")
+
+    if 'archetype_image_path' in reference_model_data:
+        archetype_image = load_single_image(Path(reference_model_data['archetype_image_path']))
+        if archetype_image is None:
+            log_message(f"Failed to load archetype image from {reference_model_data['archetype_image_path']}", level="ERROR")
+            return
+        reference_model_data['archetype_image'] = archetype_image
+    else:
+        log_message("'archetype_image_path' not found in reference model JSON. Visualization might fail.", level="WARNING")
+
+    if 'anomaly_map' in results_data['local_analysis']:
+        results_data['local_analysis']['anomaly_map'] = np.array(results_data['local_analysis']['anomaly_map'], dtype=np.uint8)
+    else:
+        log_message("'anomaly_map' not found in results JSON. Visualization might fail.", level="WARNING")
+
+    visualize_comprehensive_results(results_data, reference_model_data, output_path)
+
 if __name__ == '__main__':
-    print("This script contains the 'visualize_comprehensive_results' function.")
-    print("To run a full analysis and visualization, use 'jack_main.py'.")
+    parser = argparse.ArgumentParser(description="Comprehensive Result Viewer")
+    parser.add_argument("--results_path", required=True, help="Path to JSON file with analysis results.")
+    parser.add_argument("--reference_model_path", required=True, help="Path to JSON file with reference model data.")
+    parser.add_argument("--output_path", required=True, help="Path to save the comprehensive visualization.")
+    
+    args = parser.parse_args()
+    main(args.results_path, args.reference_model_path, args.output_path)
