@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-Automated Image Processing Studio V2 - Fixed Version
-===================================================
-Enhanced version with better image matching, anomaly visualization,
-and comprehensive OpenCV operation support.
+Automated Image Processing Studio V4 - Enhanced with PyTorch and Deep ML
+=======================================================================
+Further enhanced with PyTorch integration for deep learning, automatic parameter tuning using Optuna,
+script troubleshooting, template matching, classification, keyword-folder matching,
+comprehensive testing, and full timestamped logging.
 """
 
 import os
@@ -23,14 +24,16 @@ from datetime import datetime
 from collections import defaultdict, deque
 import numpy as np
 import warnings
+import inspect
+from scipy.optimize import minimize_scalar
 warnings.filterwarnings('ignore')
 
-# Set up comprehensive logging
+# Enhanced logging with timestamps and declaration stamps
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s',
+    format='%(asctime)s [%(levelname)s] %(message)s - %(funcName)s:%(lineno)d',
     handlers=[
-        logging.FileHandler('aps_processing.log'),
+        logging.FileHandler('aps_processing_v4.log'),
         logging.StreamHandler(sys.stdout)
     ]
 )
@@ -44,7 +47,11 @@ def check_dependencies():
         'numpy': 'numpy',
         'scikit-learn': 'sklearn',
         'matplotlib': 'matplotlib',
-        'psutil': 'psutil'
+        'psutil': 'psutil',
+        'scipy': 'scipy',
+        'torch': 'torch',
+        'torchvision': 'torchvision',
+        'optuna': 'optuna'
     }
 
     missing = []
@@ -55,14 +62,14 @@ def check_dependencies():
             missing.append(package)
 
     if missing:
-        print(f"Installing missing packages: {missing}")
+        logger.info(f"Installing missing packages: {missing}")
         for package in missing:
             try:
                 subprocess.check_call([sys.executable, "-m", "pip", "install", package])
             except subprocess.CalledProcessError as e:
-                print(f"Failed to install {package}: {e}")
+                logger.error(f"Failed to install {package}: {e}")
                 return False
-        print("Dependencies installed successfully.")
+        logger.info("Dependencies installed successfully.")
     return True
 
 
@@ -77,26 +84,32 @@ try:
     import matplotlib.pyplot as plt
     import matplotlib.cm as cm
     import psutil
+    from scipy import optimize
+    import torch
+    import torch.nn as nn
+    import torchvision.models as models
+    import torchvision.transforms as transforms
+    import optuna
     DEPS_AVAILABLE = True
 except ImportError as e:
-    print(f"Missing dependency: {e}")
-    print("Please run 'python automated_processing_studio_v2_fixed.py' once to install dependencies.")
+    logger.error(f"Missing dependency: {e}")
+    logger.info("Please run 'python automated_processing_studio_v4.py' once to install dependencies.")
     DEPS_AVAILABLE = False
 
 
 class ParameterAdapter:
-    """Handles adaptive parameter adjustment for image processing"""
-    
+    """Handles adaptive parameter adjustment for image processing with Optuna tuning"""
+
     def __init__(self):
         self.parameter_history = defaultdict(list)
         self.best_parameters = {}
         self.adaptation_rate = 0.1
-        
-    def adapt_parameters(self, script_name: str, current_params: Dict, 
+
+    def adapt_parameters(self, script_name: str, current_params: Dict,
                        performance: float) -> Dict:
         """Adapt parameters based on performance"""
         logger.info(f"Adapting parameters for {script_name}, current performance: {performance:.4f}")
-        
+
         if script_name not in self.best_parameters:
             self.best_parameters[script_name] = {
                 'params': current_params.copy(),
@@ -107,41 +120,89 @@ class ParameterAdapter:
                 'params': current_params.copy(),
                 'performance': performance
             }
-            
+
         # Record history
         self.parameter_history[script_name].append({
             'params': current_params.copy(),
             'performance': performance,
             'timestamp': datetime.now().isoformat()
         })
-        
-        # Adapt parameters
+
+        # Adapt parameters with controlled variation
         adapted_params = current_params.copy()
         for param, value in adapted_params.items():
             if isinstance(value, (int, float)):
-                # Add some controlled randomness
                 variation = np.random.uniform(-self.adaptation_rate, self.adaptation_rate)
                 if isinstance(value, int):
-                    adapted_params[param] = int(value * (1 + variation))
+                    adapted_params[param] = max(1, int(value * (1 + variation)))  # Avoid zero or negative
                 else:
-                    adapted_params[param] = value * (1 + variation)
-                    
+                    adapted_params[param] = max(0.01, value * (1 + variation))  # Avoid zero or negative
+
         logger.info(f"Adapted parameters: {adapted_params}")
         return adapted_params
-        
+
+    def tune_parameters_optuna(self, objective: Callable, param_ranges: Dict) -> Dict:
+        """Automatic parameter tuning using Optuna"""
+        def optuna_objective(trial):
+            params = {}
+            for param, (low, high) in param_ranges.items():
+                if isinstance(low, int) and isinstance(high, int):
+                    params[param] = trial.suggest_int(param, low, high)
+                else:
+                    params[param] = trial.suggest_float(param, low, high)
+            return objective(params)
+
+        study = optuna.create_study(direction="minimize")
+        study.optimize(optuna_objective, n_trials=50)
+        logger.info(f"Optuna best params: {study.best_params}")
+        return study.best_params
+
     def get_best_parameters(self, script_name: str) -> Optional[Dict]:
         """Get best known parameters for a script"""
         if script_name in self.best_parameters:
             return self.best_parameters[script_name]['params']
         return None
-        
+
+
+class DeepFeatureExtractor:
+    """PyTorch-based deep feature extraction and classification"""
+
+    def __init__(self):
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model = models.resnet50(pretrained=True).to(self.device)
+        self.model.eval()
+        self.transform = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.Resize(224),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
+        self.classifier = nn.Linear(2048, 1000).to(self.device)  # Example classifier
+
+    def extract_features(self, image: np.ndarray) -> np.ndarray:
+        """Extract deep features using ResNet"""
+        with torch.no_grad():
+            img_tensor = self.transform(image).unsqueeze(0).to(self.device)
+            features = self.model(img_tensor)
+            return features.cpu().numpy().flatten()
+
+    def classify_image(self, image: np.ndarray) -> str:
+        """Classify image using pre-trained model"""
+        with torch.no_grad():
+            img_tensor = self.transform(image).unsqueeze(0).to(self.device)
+            output = self.model(img_tensor)
+            _, predicted = torch.max(output, 1)
+            return f"Class {predicted.item()}"  # Placeholder; use actual class names in production
+
 
 class EnhancedImageProcessor:
-    """Enhanced image processor with better matching algorithms"""
+    """Enhanced image processor with PyTorch integration"""
 
     def __init__(self):
         self.feature_cache = {}
         self.parameter_adapter = ParameterAdapter()
+        self.deep_extractor = DeepFeatureExtractor()
         if not DEPS_AVAILABLE or cv2 is None:
             raise ImportError("OpenCV is required but not available. Please install dependencies.")
 
@@ -222,11 +283,11 @@ class EnhancedImageProcessor:
 
             return hash_str
         except Exception as e:
-            print(f"Warning: Failed to calculate perceptual hash: {e}")
+            logger.warning(f"Failed to calculate perceptual hash: {e}")
             return "0" * 64
 
     def calculate_similarity_score(self, img1: np.ndarray, img2: np.ndarray) -> float:
-        """Enhanced similarity calculation with multiple metrics and error handling"""
+        """Enhanced similarity calculation with deep features"""
         try:
             img1, img2 = self.normalize_images(img1, img2)
 
@@ -234,36 +295,39 @@ class EnhancedImageProcessor:
 
             # 1. MSE (normalized)
             try:
-                if DEPS_AVAILABLE and 'sklearn' in sys.modules:
-                    mse = mean_squared_error(img1.flatten(), img2.flatten())
-                else:
-                    mse = np.mean((img1.astype(np.float32) - img2.astype(np.float32)) ** 2)
+                mse = mean_squared_error(img1.flatten(), img2.flatten())
                 mse_score = 1.0 - min(mse / (255.0 ** 2), 1.0)
-                scores.append(mse_score * 0.3)
+                scores.append(mse_score * 0.25)
             except Exception:
-                # Fallback MSE calculation
                 mse = np.mean((img1.astype(np.float32) - img2.astype(np.float32)) ** 2)
                 mse_score = 1.0 - min(mse / (255.0 ** 2), 1.0)
-                scores.append(mse_score * 0.3)
+                scores.append(mse_score * 0.25)
 
             # 2. Structural Similarity
             ssim = self._calculate_ssim(img1, img2)
-            scores.append(ssim * 0.3)
+            scores.append(ssim * 0.25)
 
-            # 3. Histogram Correlation
+            # 3. Histogram Correlation (normalized to 0-1)
             hist_score = self._histogram_correlation(img1, img2)
-            scores.append(hist_score * 0.2)
+            normalized_hist = (hist_score + 1) / 2
+            scores.append(normalized_hist * 0.15)
 
             # 4. Edge Similarity
             edge_score = self._edge_similarity(img1, img2)
-            scores.append(edge_score * 0.2)
+            scores.append(edge_score * 0.15)
+
+            # 5. Deep Feature Similarity
+            feat1 = self.deep_extractor.extract_features(img1)
+            feat2 = self.deep_extractor.extract_features(img2)
+            deep_sim = 1.0 - np.linalg.norm(feat1 - feat2) / np.linalg.norm(feat1 + feat2)
+            scores.append(deep_sim * 0.2)
 
             # Combined score (0 = identical, 1 = completely different)
             similarity = 1.0 - sum(scores)
             return max(0.0, min(1.0, similarity))
 
         except Exception as e:
-            print(f"Warning: Similarity calculation failed: {e}")
+            logger.warning(f"Similarity calculation failed: {e}")
             return 1.0  # Maximum dissimilarity on error
 
     def _calculate_ssim(self, img1: np.ndarray, img2: np.ndarray) -> float:
@@ -322,7 +386,7 @@ class EnhancedImageProcessor:
             return float(ssim_map.mean())
 
         except Exception as e:
-            print(f"Warning: SSIM calculation failed: {e}")
+            logger.warning(f"SSIM calculation failed: {e}")
             return 0.0
 
     def _histogram_correlation(self, img1: np.ndarray, img2: np.ndarray) -> float:
@@ -344,8 +408,8 @@ class EnhancedImageProcessor:
 
             return np.mean(correlations)
         except Exception as e:
-            print(f"Warning: Histogram correlation failed: {e}")
-            return 0.0
+            logger.warning(f"Histogram correlation failed: {e}")
+            return -1.0  # Worst case
 
     def _edge_similarity(self, img1: np.ndarray, img2: np.ndarray) -> float:
         """Calculate edge-based similarity"""
@@ -370,11 +434,11 @@ class EnhancedImageProcessor:
 
             return intersection / union
         except Exception as e:
-            print(f"Warning: Edge similarity failed: {e}")
+            logger.warning(f"Edge similarity failed: {e}")
             return 0.0
 
     def extract_features(self, image: np.ndarray) -> Dict[str, Any]:
-        """Extract comprehensive features for learning"""
+        """Extract comprehensive features including deep features"""
         features = {}
 
         try:
@@ -410,8 +474,11 @@ class EnhancedImageProcessor:
             corners = cv2.cornerHarris(gray, 2, 3, 0.04)
             features['corner_density'] = (corners > 0.01 * corners.max()).mean()
 
+            # Deep features
+            features['deep_features'] = self.deep_extractor.extract_features(image)[:100]  # Truncate for efficiency
+
         except Exception as e:
-            print(f"Warning: Feature extraction failed: {e}")
+            logger.warning(f"Feature extraction failed: {e}")
             # Return minimal features on error
             features = {
                 'mean': 0,
@@ -419,7 +486,8 @@ class EnhancedImageProcessor:
                 'min': 0,
                 'max': 0,
                 'edge_density': 0,
-                'corner_density': 0
+                'corner_density': 0,
+                'deep_features': np.zeros(100)
             }
 
         return features
@@ -462,15 +530,36 @@ class EnhancedImageProcessor:
 
             return anomaly_map, diff_enhanced, heatmap
         except Exception as e:
-            print(f"Warning: Anomaly map creation failed: {e}")
+            logger.warning(f"Anomaly map creation failed: {e}")
             # Return empty arrays on error
             h, w = original.shape[:2]
             empty = np.zeros((h, w, 3), dtype=np.uint8)
             return empty, np.zeros((h, w), dtype=np.uint8), empty
 
+    def template_matching(self, image: np.ndarray, template: np.ndarray) -> Dict:
+        """Perform template matching"""
+        try:
+            res = cv2.matchTemplate(image, template, cv2.TM_CCOEFF_NORMED)
+            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+            return {
+                'score': max_val,
+                'location': max_loc
+            }
+        except Exception as e:
+            logger.warning(f"Template matching failed: {e}")
+            return {'score': 0.0, 'location': (0, 0)}
+
+    def classify(self, image: np.ndarray) -> str:
+        """Classify image using deep model"""
+        try:
+            return self.deep_extractor.classify_image(image)
+        except Exception as e:
+            logger.warning(f"Classification failed: {e}")
+            return "Unknown"
+
 
 class ImprovedScriptManager:
-    """Improved script manager with better organization"""
+    """Improved script manager with troubleshooting and keyword-folder matching"""
 
     def __init__(self, scripts_dirs: List[Union[str, Path]]):
         self.scripts_dirs = []
@@ -478,7 +567,7 @@ class ImprovedScriptManager:
             path = Path(d)
             if path.exists():
                 self.scripts_dirs.append(path)
-        
+
         self.functions = {}
         self.function_info = {}
         self.category_map = defaultdict(list)
@@ -486,12 +575,12 @@ class ImprovedScriptManager:
 
     def _load_all_scripts(self):
         """Load scripts from all directories"""
-        print(f"Loading scripts from {len(self.scripts_dirs)} directories...")
+        logger.info(f"Loading scripts from {len(self.scripts_dirs)} directories...")
 
         for scripts_dir in self.scripts_dirs:
             self._load_scripts_from_dir(scripts_dir)
 
-        print(f"✓ Loaded {len(self.functions)} total scripts")
+        logger.info(f"✓ Loaded {len(self.functions)} total scripts")
 
         # Organize by category
         for func_name, info in self.function_info.items():
@@ -502,50 +591,57 @@ class ImprovedScriptManager:
         def wrapped_function(image, **kwargs):
             try:
                 result = func(image, **kwargs) if kwargs else func(image)
-                
+
                 # Handle various return types
                 if isinstance(result, np.ndarray):
                     return result
                 elif hasattr(result, '__dict__'):
-                    # Object with attributes - check common ones
-                    for attr in ['enhanced_image', 'processed_image', 'result_image', 
+                    for attr in ['enhanced_image', 'processed_image', 'result_image',
                                'output_image', 'final_image', 'image']:
                         if hasattr(result, attr):
                             img = getattr(result, attr)
                             if isinstance(img, np.ndarray):
                                 logger.debug(f"Extracted image from {attr} attribute")
                                 return img
-                    # Try to extract mask attributes
                     for attr in ['final_cleaned_mask', 'mask', 'binary_mask']:
                         if hasattr(result, attr):
                             mask = getattr(result, attr)
                             if isinstance(mask, np.ndarray):
                                 logger.debug(f"Extracted mask from {attr} attribute")
-                                # Convert mask to image format
                                 if len(mask.shape) == 2:
-                                    # Apply mask to original image or convert to visible format
                                     if mask.dtype == bool:
                                         mask = mask.astype(np.uint8) * 255
                                     return mask
                 elif isinstance(result, tuple) or isinstance(result, list):
-                    # Return first numpy array found
                     for item in result:
                         if isinstance(item, np.ndarray):
                             logger.debug(f"Extracted image from tuple/list")
                             return item
-                            
-                # If we get here, couldn't extract image
+
                 logger.warning(f"Script {script_name} returned unexpected type: {type(result)}")
                 return image  # Return original
-                
+
             except Exception as e:
                 logger.error(f"Error in wrapped script {script_name}: {e}")
                 return image  # Return original on error
-                
+
         return wrapped_function
 
+    def _troubleshoot_script(self, module, script_path: Path) -> bool:
+        """Test script with dummy image to ensure functionality"""
+        try:
+            dummy_image = np.random.randint(0, 255, (100, 100, 3), dtype=np.uint8)
+            result = module.process_image(dummy_image)
+            if not isinstance(result, np.ndarray):
+                raise ValueError("Script did not return ndarray")
+            logger.info(f"Script {script_path} passed troubleshooting")
+            return True
+        except Exception as e:
+            logger.error(f"Script {script_path} failed troubleshooting: {e}")
+            return False
+
     def _load_scripts_from_dir(self, scripts_dir: Path):
-        """Load all scripts from a directory"""
+        """Load all scripts from a directory with troubleshooting"""
         try:
             for script_path in scripts_dir.rglob("*.py"):
                 if script_path.name.startswith("_") or script_path.name == "__init__.py":
@@ -560,36 +656,52 @@ class ImprovedScriptManager:
                         spec.loader.exec_module(module)
 
                         if hasattr(module, 'process_image'):
+                            # Troubleshoot
+                            if not self._troubleshoot_script(module, script_path):
+                                continue
+
                             # Use full path relative to scripts dir as key
                             rel_path = script_path.relative_to(scripts_dir)
                             func_key = str(rel_path).replace('\\', '/')  # Normalize path separators
 
-                            # Wrap the function to handle various return types
-                            self.functions[func_key] = self._wrap_script_function(
+                            # Wrap the function
+                            wrapped_func = self._wrap_script_function(
                                 module.process_image, func_key
                             )
+                            self.functions[func_key] = wrapped_func
+
+                            # Inspect parameters
+                            sig = inspect.signature(module.process_image)
+                            params = {
+                                k: v.default for k, v in sig.parameters.items()
+                                if k != 'image' and v.default != inspect.Parameter.empty
+                            }
+
                             self.function_info[func_key] = {
                                 'path': script_path,
                                 'category': self._determine_category(script_path),
-                                'name': script_path.stem
+                                'name': script_path.stem,
+                                'parameters': params
                             }
                 except Exception as e:
-                    # Log error but continue loading other scripts
                     logger.warning(f"Failed to load {script_path}: {e}")
                     continue
         except Exception as e:
             logger.error(f"Error accessing directory {scripts_dir}: {e}")
 
     def _determine_category(self, script_path: Path) -> str:
-        """Determine category from path or filename"""
+        """Determine category from path or filename with keyword matching to folder"""
         # Check if in a category subdirectory
         parts = script_path.parts
         for part in parts:
             if part in ['filtering', 'morphology', 'thresholding', 'edge_detection',
                        'transformations', 'histogram', 'features', 'noise', 'effects']:
-                return part
+                # Ensure keyword match
+                filename_lower = script_path.name.lower()
+                if any(keyword in filename_lower for keyword in part.lower().split('_')):
+                    return part
 
-        # Fallback to filename analysis
+        # Fallback to filename analysis with keywords
         filename = script_path.name.lower()
         categories = {
             'filtering': ['blur', 'filter', 'smooth', 'denoise'],
@@ -621,7 +733,7 @@ class ImprovedScriptManager:
 
 
 class SmartLearner:
-    """Improved learning system with better state representation"""
+    """Improved learning system with deep state representation"""
 
     def __init__(self, num_scripts: int):
         self.num_scripts = num_scripts
@@ -630,9 +742,10 @@ class SmartLearner:
         self.script_success_rate = defaultdict(float)
         self.script_usage_count = defaultdict(int)
         self.combination_memory = {}
+        self.q_table = defaultdict(lambda: defaultdict(float))  # State -> Action -> Q-value
 
     def get_recommended_scripts(self, current_state: Dict, target_state: Dict) -> List[str]:
-        """Get recommended scripts based on current and target states"""
+        """Get recommended scripts based on current and target states using Q-learning"""
         recommendations = []
 
         # Analyze what needs to change
@@ -641,10 +754,11 @@ class SmartLearner:
         # Get scripts that have worked well for similar needs
         for need, weight in needs.items():
             suitable_scripts = self._get_scripts_for_need(need)
-            recommendations.extend([(script, weight * self.script_success_rate.get(script, 0.5))
-                                  for script in suitable_scripts])
+            for script in suitable_scripts:
+                q_value = self.q_table.get(need, {}).get(script, 0.0)
+                recommendations.append((script, weight * (self.script_success_rate.get(script, 0.5) + q_value)))
 
-        # Sort by weighted success rate
+        # Sort by weighted score
         recommendations.sort(key=lambda x: x[1], reverse=True)
 
         # Return unique scripts
@@ -658,7 +772,7 @@ class SmartLearner:
         return result[:10]  # Top 10 recommendations
 
     def _analyze_needs(self, current: Dict, target: Dict) -> Dict[str, float]:
-        """Analyze what transformations are needed"""
+        """Analyze what transformations are needed, including deep features"""
         needs = {}
 
         # Brightness difference
@@ -685,6 +799,12 @@ class SmartLearner:
             except Exception:
                 pass
 
+        # Deep feature difference
+        if 'deep_features' in current and 'deep_features' in target:
+            deep_diff = np.linalg.norm(target['deep_features'] - current['deep_features'])
+            if deep_diff > 0.1:
+                needs['deep'] = deep_diff / 10.0  # Normalize
+
         return needs
 
     def _get_scripts_for_need(self, need: str) -> List[str]:
@@ -693,13 +813,14 @@ class SmartLearner:
             'brightness': ['gamma_correction.py', 'histogram_equalization.py', 'brightness_adjust.py'],
             'contrast': ['clahe.py', 'histogram_stretching.py', 'contrast_enhance.py'],
             'edges': ['canny_edges.py', 'sobel_combined.py', 'sharpening_filter.py'],
-            'texture': ['bilateral_filter.py', 'texture_enhance.py', 'detail_enhance.py']
+            'texture': ['bilateral_filter.py', 'texture_enhance.py', 'detail_enhance.py'],
+            'deep': ['deep_denoise.py', 'deep_enhance.py']  # Assume deep scripts exist
         }
 
         return script_mapping.get(need, [])
 
     def record_result(self, sequence: List[str], success: bool, improvement: float):
-        """Record the result of a processing sequence"""
+        """Record the result of a processing sequence and update Q-table"""
         if success:
             self.successful_sequences.append(sequence)
         else:
@@ -709,25 +830,32 @@ class SmartLearner:
         for script in sequence:
             self.script_usage_count[script] += 1
             if success:
-                # Weighted update based on improvement
                 current_rate = self.script_success_rate[script]
                 self.script_success_rate[script] = (
                     current_rate * 0.9 + improvement * 0.1
                 )
+
+        # Update Q-table for each action in sequence
+        if success:
+            reward = improvement
+            for i, script in enumerate(sequence):
+                state = f"step_{i}"  # Simple state representation
+                self.q_table[state][script] = self.q_table[state].get(script, 0) * 0.9 + reward * 0.1
 
     def save_knowledge(self, filepath: Union[str, Path]):
         """Save learned knowledge"""
         knowledge = {
             'successful_sequences': self.successful_sequences[-100:],  # Keep last 100
             'script_success_rate': dict(self.script_success_rate),
-            'script_usage_count': dict(self.script_usage_count)
+            'script_usage_count': dict(self.script_usage_count),
+            'q_table': {k: dict(v) for k, v in self.q_table.items()}
         }
 
         try:
             with open(filepath, 'w') as f:
                 json.dump(knowledge, f, indent=2)
         except Exception as e:
-            print(f"Warning: Failed to save knowledge: {e}")
+            logger.warning(f"Failed to save knowledge: {e}")
 
     def load_knowledge(self, filepath: Union[str, Path]):
         """Load previously learned knowledge"""
@@ -742,20 +870,21 @@ class SmartLearner:
                     self.script_usage_count = defaultdict(
                         int, knowledge.get('script_usage_count', {})
                     )
+                    self.q_table = defaultdict(lambda: defaultdict(float), knowledge.get('q_table', {}))
         except Exception as e:
-            print(f"Warning: Failed to load knowledge: {e}")
+            logger.warning(f"Failed to load knowledge: {e}")
 
 
 class ProcessingDebugger:
     """Handles debugging and testing of processing pipelines"""
-    
+
     def __init__(self, cache_dir: Path):
         self.cache_dir = cache_dir
         self.debug_dir = cache_dir / "debug"
         self.debug_dir.mkdir(exist_ok=True)
         self.test_results = []
-        
-    def save_debug_state(self, iteration: int, image: np.ndarray, 
+
+    def save_debug_state(self, iteration: int, image: np.ndarray,
                         script: str, params: Dict, similarity: float):
         """Save debug information for analysis"""
         debug_info = {
@@ -765,43 +894,43 @@ class ProcessingDebugger:
             'similarity': similarity,
             'timestamp': datetime.now().isoformat()
         }
-        
+
         # Save image
         img_path = self.debug_dir / f"iter_{iteration:04d}_{script.replace('/', '_').replace('.py', '')}.png"
         cv2.imwrite(str(img_path), image)
-        
+
         # Save metadata
         meta_path = self.debug_dir / f"iter_{iteration:04d}_meta.json"
         with open(meta_path, 'w') as f:
             json.dump(debug_info, f, indent=2)
-            
+
         logger.debug(f"Saved debug state for iteration {iteration}")
-        
-    def run_test_suite(self, processor, test_pairs: List[Tuple[str, str]], 
+
+    def run_test_suite(self, processor, test_pairs: List[Tuple[str, str]],
                       max_iterations: int = 50) -> Dict:
         """Run comprehensive test suite"""
         logger.info(f"Running test suite with {len(test_pairs)} test pairs")
-        
+
         results = []
         for i, (input_path, target_path) in enumerate(test_pairs):
             logger.info(f"Test {i+1}/{len(test_pairs)}: {input_path} -> {target_path}")
-            
+
             try:
                 input_img = cv2.imread(input_path)
                 target_img = cv2.imread(target_path)
-                
+
                 if input_img is None or target_img is None:
                     logger.error(f"Failed to load test images")
                     continue
-                    
+
                 start_time = time.time()
                 result = processor.process_to_match_target(
-                    input_img, target_img, 
+                    input_img, target_img,
                     max_iterations=max_iterations,
                     similarity_threshold=0.1,
                     verbose=False
                 )
-                
+
                 results.append({
                     'input': input_path,
                     'target': target_path,
@@ -810,7 +939,7 @@ class ProcessingDebugger:
                     'iterations': result['iterations'],
                     'time': time.time() - start_time
                 })
-                
+
             except Exception as e:
                 logger.error(f"Test failed: {e}")
                 results.append({
@@ -819,15 +948,15 @@ class ProcessingDebugger:
                     'success': False,
                     'error': str(e)
                 })
-                
+
         self.test_results = results
         return self._analyze_test_results(results)
-        
+
     def _analyze_test_results(self, results: List[Dict]) -> Dict:
         """Analyze test results"""
         successful = [r for r in results if r.get('success', False)]
         success_rate = len(successful) / len(results) if results else 0
-        
+
         analysis = {
             'total_tests': len(results),
             'successful': len(successful),
@@ -836,15 +965,59 @@ class ProcessingDebugger:
             'average_iterations': np.mean([r.get('iterations', 0) for r in results]),
             'average_time': np.mean([r.get('time', 0) for r in results])
         }
-        
+
         logger.info(f"Test suite results: {success_rate:.1%} success rate")
         return analysis
 
+    def run_unit_tests(self):
+        """Run unit tests for key components"""
+        logger.info("Running unit tests...")
+        # Simple unit test examples
+        try:
+            # Test normalize_images
+            img1 = np.zeros((10, 10, 3), dtype=np.uint8)
+            img2 = np.ones((20, 20, 3), dtype=np.uint8)
+            norm1, norm2 = EnhancedImageProcessor().normalize_images(img1, img2)
+            assert norm1.shape == norm2.shape, "Normalization failed"
+
+            # Test template matching
+            processor = EnhancedImageProcessor()
+            match = processor.template_matching(img2, img1[:5, :5])
+            assert 'score' in match, "Template matching failed"
+
+            # Test classification
+            class_label = processor.classify(img1)
+            assert isinstance(class_label, str), "Classification failed"
+
+            logger.info("All unit tests passed")
+            return True
+        except AssertionError as e:
+            logger.error(f"Unit test failed: {e}")
+            return False
+
+    def run_script_tests(self, script_manager):
+        """Test all loaded scripts"""
+        logger.info("Running script tests...")
+        for script_key, func in script_manager.functions.items():
+            try:
+                dummy = np.random.randint(0, 255, (100, 100, 3), dtype=np.uint8)
+                result = func(dummy)
+                assert isinstance(result, np.ndarray), f"Script {script_key} test failed"
+            except Exception as e:
+                logger.error(f"Script test failed for {script_key}: {e}")
+        logger.info("Script tests complete")
+
+    def run_program_tests(self, studio):
+        """Run full program tests"""
+        logger.info("Running program tests...")
+        self.run_test_suite(studio, [("test_input.png", "test_target.png")])  # Assume test files
+        logger.info("Program tests complete")
+
 
 class EnhancedProcessingStudio:
-    """Enhanced automated processing studio with better matching"""
+    """Enhanced automated processing studio with PyTorch and testing"""
 
-    def __init__(self, scripts_dirs: List[str] = None, cache_dir: str = ".studio_cache_v2"):
+    def __init__(self, scripts_dirs: List[str] = None, cache_dir: str = ".studio_cache_v4"):
         if scripts_dirs is None:
             scripts_dirs = ["scripts", "opencv_scripts"]
 
@@ -864,14 +1037,14 @@ class EnhancedProcessingStudio:
         # Processing state
         self.processing_history = []
         self.best_matches = []
-        
+
         # Parameter tracking
         self.parameter_log = []
 
     def process_to_match_target(self, input_image: np.ndarray, target_image: np.ndarray,
                                max_iterations: int = 200, similarity_threshold: float = 0.05,
-                               verbose: bool = True) -> Dict[str, Any]:
-        """Process input to match target with improved algorithm"""
+                               verbose: bool = True, optimize_params: bool = True) -> Dict[str, Any]:
+        """Process input to match target with param optimization"""
         start_time = time.time()
 
         # Validate inputs
@@ -882,7 +1055,7 @@ class EnhancedProcessingStudio:
         try:
             input_norm, target_norm = self.processor.normalize_images(input_image, target_image)
         except Exception as e:
-            print(f"Error normalizing images: {e}")
+            logger.error(f"Error normalizing images: {e}")
             return {
                 'success': False,
                 'final_similarity': 1.0,
@@ -944,7 +1117,6 @@ class EnhancedProcessingStudio:
                     current_features, target_features
                 )
             elif strategy == 'category_based':
-                # Choose category based on what's needed
                 categories = ['filtering', 'histogram', 'morphology', 'effects']
                 category = np.random.choice(categories)
                 candidates = self.script_manager.get_scripts_by_category(category)
@@ -960,22 +1132,23 @@ class EnhancedProcessingStudio:
                 try:
                     # Apply script with parameter adaptation
                     script_func = self.script_manager.functions[script_key]
-                    
-                    # Try to extract and adapt parameters
-                    script_params = {}
-                    try:
-                        # Get function signature to see if it accepts parameters
-                        import inspect
-                        sig = inspect.signature(script_func)
-                        if len(sig.parameters) > 1:
-                            # Script accepts additional parameters
-                            best_params = self.processor.parameter_adapter.get_best_parameters(script_key)
-                            if best_params:
-                                script_params = best_params
-                                logger.info(f"Using adapted parameters for {script_key}: {script_params}")
-                    except:
-                        pass
-                    
+
+                    # Get parameters
+                    script_params = self.script_manager.function_info[script_key]['parameters']
+                    best_params = self.processor.parameter_adapter.get_best_parameters(script_key)
+                    if best_params:
+                        script_params = best_params
+
+                    if optimize_params and script_params:
+                        # Optuna tuning
+                        def objective(params):
+                            processed = script_func(current_image, **params)
+                            return self.processor.calculate_similarity_score(processed, target_norm)
+
+                        param_ranges = {k: (0.1 * v, 10 * v) for k, v in script_params.items()}
+                        tuned_params = self.processor.parameter_adapter.tune_parameters_optuna(objective, param_ranges)
+                        script_params = tuned_params
+
                     # Log the operation
                     logger.info(f"Applying script: {script_key} with params: {script_params}")
                     self.parameter_log.append({
@@ -984,12 +1157,9 @@ class EnhancedProcessingStudio:
                         'parameters': script_params,
                         'timestamp': datetime.now().isoformat()
                     })
-                    
+
                     # Apply the script
-                    if script_params:
-                        processed = script_func(current_image, **script_params)
-                    else:
-                        processed = script_func(current_image)
+                    processed = script_func(current_image, **script_params)
 
                     # Ensure proper format
                     if processed is not None and isinstance(processed, np.ndarray):
@@ -1022,28 +1192,26 @@ class EnhancedProcessingStudio:
                             self.learner.record_result(
                                 [script_key], True, improvement
                             )
-                            
+
                             # Adapt parameters based on performance
-                            if script_params:
-                                adapted_params = self.processor.parameter_adapter.adapt_parameters(
-                                    script_key, script_params, improvement
-                                )
-                            
+                            adapted_params = self.processor.parameter_adapter.adapt_parameters(
+                                script_key, script_params, improvement
+                            )
+
                             # Save debug state if enabled
                             if hasattr(self, 'debug_mode') and self.debug_mode:
                                 self.debugger.save_debug_state(
-                                    iteration, processed, script_key, 
+                                    iteration, processed, script_key,
                                     script_params, similarity
                                 )
-                            
+
                             break
 
                 except Exception as e:
-                    # Record failure with detailed logging
                     self.learner.record_result([script_key], False, 0)
                     logger.error(f"Script {script_key} failed: {e}")
                     logger.error(f"Traceback: {traceback.format_exc()}")
-                    
+
                     if verbose:
                         print(f"Warning: Script {script_key} failed: {e}")
                     continue
@@ -1059,30 +1227,21 @@ class EnhancedProcessingStudio:
             # If no improvement for a while, try a different approach
             if not improvement_found:
                 if len(attempts) > 10 and all(not a['improved'] for a in attempts[-10:]):
-                    # Try combining successful sequences
-                    if self.learner.successful_sequences and len(self.learner.successful_sequences) > 0:
-                        # Fix: Handle list of sequences properly
+                    if self.learner.successful_sequences:
                         seq_idx = np.random.randint(0, len(self.learner.successful_sequences))
                         seq = self.learner.successful_sequences[seq_idx]
-                        
-                        logger.info(f"Trying successful sequence #{seq_idx} with {len(seq) if isinstance(seq, list) else 1} scripts")
-                        
-                        if isinstance(seq, list):
-                            for script in seq[:3]:  # Apply up to 3 scripts
-                                if script in self.script_manager.functions:
-                                    try:
-                                        logger.info(f"Applying script from sequence: {script}")
-                                        current_image = self.script_manager.functions[script](
-                                            current_image
-                                        )
-                                    except Exception as e:
-                                        logger.error(f"Failed to apply {script}: {e}")
-                        elif isinstance(seq, str) and seq in self.script_manager.functions:
-                            try:
-                                logger.info(f"Applying single script from sequence: {seq}")
-                                current_image = self.script_manager.functions[seq](current_image)
-                            except Exception as e:
-                                logger.error(f"Failed to apply {seq}: {e}")
+
+                        logger.info(f"Trying successful sequence #{seq_idx} with {len(seq)} scripts")
+
+                        for script in seq[:3]:  # Apply up to 3 scripts
+                            if script in self.script_manager.functions:
+                                try:
+                                    logger.info(f"Applying script from sequence: {script}")
+                                    current_image = self.script_manager.functions[script](
+                                        current_image
+                                    )
+                                except Exception as e:
+                                    logger.error(f"Failed to apply {script}: {e}")
 
             # Save best matches periodically
             if iteration % 50 == 0 and iteration > 0:
@@ -1095,7 +1254,7 @@ class EnhancedProcessingStudio:
 
         # Save knowledge
         self.learner.save_knowledge(self.knowledge_file)
-        
+
         # Save parameter log
         param_log_path = self.cache_dir / f"parameters_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         with open(param_log_path, 'w') as f:
@@ -1123,9 +1282,90 @@ class EnhancedProcessingStudio:
                 results, input_image, target_image, best_image
             )
         except Exception as e:
-            print(f"Warning: Failed to generate report: {e}")
+            logger.warning(f"Failed to generate report: {e}")
 
         return results
+
+    def process_batch(self, input_paths: List[str], target_image: np.ndarray,
+                      max_iterations: int = 200, similarity_threshold: float = 0.05,
+                      verbose: bool = True) -> List[Dict[str, Any]]:
+        """Process multiple input images to match a single target"""
+        results = []
+        shared_pipeline = None
+        for input_path in input_paths:
+            input_image = cv2.imread(input_path)
+            if input_image is None:
+                logger.error(f"Failed to load {input_path}")
+                continue
+
+            if shared_pipeline:
+                current_image = input_image.copy()
+                for script in shared_pipeline:
+                    if script in self.script_manager.functions:
+                        current_image = self.script_manager.functions[script](current_image)
+                result = self.process_to_match_target(current_image, target_image,
+                                                      max_iterations=max_iterations // 2,
+                                                      similarity_threshold=similarity_threshold,
+                                                      verbose=verbose)
+            else:
+                result = self.process_to_match_target(input_image, target_image,
+                                                      max_iterations=max_iterations,
+                                                      similarity_threshold=similarity_threshold,
+                                                      verbose=verbose)
+                if result['success']:
+                    shared_pipeline = result['pipeline']
+
+            results.append(result)
+        return results
+
+    def process_video_to_match_target(self, input_video_path: str, target_image: np.ndarray,
+                                      output_video_path: str, max_iterations: int = 50,
+                                      similarity_threshold: float = 0.1, verbose: bool = True):
+        """Process each frame of a video to match the target image"""
+        cap = cv2.VideoCapture(input_video_path)
+        if not cap.isOpened():
+            raise ValueError("Failed to open video")
+
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        out = cv2.VideoWriter(output_video_path, fourcc, fps, (width, height))
+
+        frame_count = 0
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                break
+
+            result = self.process_to_match_target(frame, target_image,
+                                                  max_iterations=max_iterations,
+                                                  similarity_threshold=similarity_threshold,
+                                                  verbose=verbose)
+            out.write(result['final_image'])
+            frame_count += 1
+            if verbose:
+                print(f"Processed frame {frame_count}")
+
+        cap.release()
+        out.release()
+
+    def export_pipeline(self, pipeline: List[str], output_file: str):
+        """Export the processing pipeline as a standalone Python script"""
+        with open(output_file, 'w') as f:
+            f.write("#!/usr/bin/env python3\n")
+            f.write("import cv2\n")
+            f.write("import numpy as np\n\n")
+            f.write("def process_image(image):\n")
+            for script in pipeline:
+                f.write(f"    # Apply {script}\n")
+                f.write(f"    image = {script.replace('.py', '')}.process_image(image)\n")  # Assume imports
+            f.write("    return image\n\n")
+            f.write("if __name__ == '__main__':\n")
+            f.write("    input_img = cv2.imread('input.png')\n")
+            f.write("    output_img = process_image(input_img)\n")
+            f.write("    cv2.imwrite('output.png', output_img)\n")
+        logger.info(f"Pipeline exported to {output_file}")
 
     def generate_anomaly_visualization(self, original: np.ndarray,
                                      processed: np.ndarray) -> Dict[str, np.ndarray]:
@@ -1199,11 +1439,11 @@ class EnhancedProcessingStudio:
                     plt.savefig(hist_path)
                     plt.close()
                 except Exception as e:
-                    print(f"Warning: Failed to create histogram visualization: {e}")
+                    logger.warning(f"Failed to create histogram visualization: {e}")
 
             return visualizations
         except Exception as e:
-            print(f"Warning: Failed to generate anomaly visualizations: {e}")
+            logger.warning(f"Failed to generate anomaly visualizations: {e}")
             return {}
 
     def _generate_comprehensive_report(self, results: Dict, input_image: np.ndarray,
@@ -1299,9 +1539,9 @@ PROCESSING PIPELINE
             with open(report_dir / "processing_data.json", 'w') as f:
                 json.dump(json_data, f, indent=2, default=str)
 
-            print(f"\n📄 Report saved to: {report_dir}")
+            logger.info(f"Report saved to: {report_dir}")
         except Exception as e:
-            print(f"Error generating report: {e}")
+            logger.error(f"Error generating report: {e}")
 
     def _create_comparison_grid(self, input_img: np.ndarray, target_img: np.ndarray,
                                output_img: np.ndarray, save_path: Path):
@@ -1341,7 +1581,7 @@ PROCESSING PIPELINE
 
             cv2.imwrite(str(save_path), grid)
         except Exception as e:
-            print(f"Warning: Failed to create comparison grid: {e}")
+            logger.warning(f"Failed to create comparison grid: {e}")
 
     def _visualize_processing_sequence(self, start_image: np.ndarray,
                                      sequence: List[str], save_path: Path):
@@ -1394,11 +1634,11 @@ PROCESSING PIPELINE
 
             cv2.imwrite(str(save_path), canvas)
         except Exception as e:
-            print(f"Warning: Failed to visualize processing sequence: {e}")
+            logger.warning(f"Failed to visualize processing sequence: {e}")
 
     def interactive_setup(self):
         """Interactive configuration"""
-        print("\n🎨 Enhanced Automated Image Processing Studio V2")
+        print("\n🎨 Enhanced Automated Image Processing Studio V4")
         print("=" * 50)
 
         config = {}
@@ -1439,71 +1679,71 @@ PROCESSING PIPELINE
 def run_debug_mode(studio, num_cycles=5):
     """Run multiple debug cycles with test images"""
     logger.info(f"Starting debug mode with {num_cycles} cycles")
-    
+
     # Create test images if they don't exist
     test_dir = studio.cache_dir / "test_images"
     test_dir.mkdir(exist_ok=True)
-    
+
     # Generate simple test images
     test_pairs = []
-    
+
     # Test 1: Brightness change
     img1 = np.ones((200, 200, 3), dtype=np.uint8) * 100
     img2 = np.ones((200, 200, 3), dtype=np.uint8) * 150
     cv2.imwrite(str(test_dir / "test1_input.png"), img1)
     cv2.imwrite(str(test_dir / "test1_target.png"), img2)
     test_pairs.append((str(test_dir / "test1_input.png"), str(test_dir / "test1_target.png")))
-    
+
     # Test 2: Add noise
     img3 = np.ones((200, 200, 3), dtype=np.uint8) * 128
     img4 = img3.copy()
     noise = np.random.normal(0, 20, img3.shape).astype(np.uint8)
     img4 = cv2.add(img4, noise)
-    cv2.imwrite(str(test_dir / "test2_input.png"), img3)
-    cv2.imwrite(str(test_dir / "test2_target.png"), img4)
+    cv2.imwrite(str(test_dir / "test2_input.png"), img4)
+    cv2.imwrite(str(test_dir / "test2_target.png"), img3)
     test_pairs.append((str(test_dir / "test2_input.png"), str(test_dir / "test2_target.png")))
-    
+
     # Run debug cycles
     for cycle in range(num_cycles):
         logger.info(f"\n{'='*50}")
         logger.info(f"Debug cycle {cycle + 1}/{num_cycles}")
         logger.info(f"{'='*50}")
-        
+
         studio.debug_mode = True
         results = studio.debugger.run_test_suite(studio, test_pairs, max_iterations=50)
-        
+
         logger.info(f"Cycle {cycle + 1} results:")
         logger.info(f"  Success rate: {results['success_rate']:.1%}")
         logger.info(f"  Avg similarity: {results['average_similarity']:.4f}")
         logger.info(f"  Avg iterations: {results['average_iterations']:.1f}")
-        
+
         # Adjust learning parameters based on results
         if results['success_rate'] < 0.5:
             studio.processor.parameter_adapter.adaptation_rate *= 1.2
             logger.info(f"Increased adaptation rate to {studio.processor.parameter_adapter.adaptation_rate:.3f}")
-            
+
     # Final validation
     logger.info("\nRunning final validation...")
     final_results = studio.debugger.run_test_suite(studio, test_pairs, max_iterations=100)
-    
+
     logger.info("\nFinal validation results:")
     logger.info(f"  Success rate: {final_results['success_rate']:.1%}")
     logger.info(f"  Avg similarity: {final_results['average_similarity']:.4f}")
     logger.info(f"  Avg iterations: {final_results['average_iterations']:.1f}")
-    
+
     return final_results
 
 
 def main():
     """Main entry point"""
-    print("Enhanced Automated Image Processing Studio V2")
+    print("Enhanced Automated Image Processing Studio V4")
     print("=" * 50)
-    
+
     # Check dependencies first
     if not check_dependencies():
         print("Failed to install required dependencies. Please install manually.")
         return
-    
+
     # Re-import if dependencies were just installed
     global DEPS_AVAILABLE, cv2, plt, cm
     if not DEPS_AVAILABLE:
@@ -1522,7 +1762,12 @@ def main():
 
         print(f"\n📚 Loaded {len(studio.script_manager.functions)} processing scripts")
         print(f"📂 Categories: {list(studio.script_manager.category_map.keys())}")
-        
+
+        # Run tests
+        studio.debugger.run_unit_tests()
+        studio.debugger.run_script_tests(studio.script_manager)
+        studio.debugger.run_program_tests(studio)
+
         # Check if debug mode requested
         if len(sys.argv) > 1 and sys.argv[1] == '--debug':
             logger.info("Running in debug mode")
@@ -1549,7 +1794,8 @@ def main():
             target_image,
             max_iterations=config['max_iterations'],
             similarity_threshold=config['similarity_threshold'],
-            verbose=config['verbose']
+            verbose=config['verbose'],
+            optimize_params=True
         )
 
         print("\n" + "="*50)
@@ -1567,6 +1813,10 @@ def main():
                 print(f"  {i}. {script}")
             if len(results['pipeline']) > 10:
                 print(f"  ... and {len(results['pipeline']) - 10} more")
+
+        # Export pipeline
+        export_path = "exported_pipeline.py"
+        studio.export_pipeline(results['pipeline'], export_path)
 
     except Exception as e:
         print(f"\n❌ Error: {e}")

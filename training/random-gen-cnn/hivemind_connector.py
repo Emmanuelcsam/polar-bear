@@ -27,6 +27,9 @@ class HivemindConnector:
         self.parent_socket = None
         self.child_connectors = {}
         self.scripts_in_directory = {}
+        self.script_registry = {}  # Registry for scripts with their parameters
+        self.script_status = {}    # Current status of scripts
+        self.script_ports = {}     # Ports where scripts are listening
         
         # Setup logging
         self.logger = logging.getLogger(f"Connector_{self.connector_id}")
@@ -103,6 +106,16 @@ class HivemindConnector:
             return {'error': 'Script not found'}
         elif cmd == 'troubleshoot':
             return self.troubleshoot_connections()
+        elif cmd == 'register_script':
+            return self.register_script(message)
+        elif cmd == 'update_status':
+            return self.update_script_status(message)
+        elif cmd == 'get_parameters':
+            return self.get_script_parameters(message)
+        elif cmd == 'script_listening':
+            return self.register_script_port(message)
+        elif cmd == 'control_script':
+            return self.control_script(message)
         else:
             return {'error': 'Unknown command'}
             
@@ -196,6 +209,75 @@ class HivemindConnector:
             'healthy': len(issues) == 0
         }
         
+    def register_script(self, message):
+        """Register a script with its parameters"""
+        script_name = message.get('script')
+        parameters = message.get('parameters', {})
+        
+        self.script_registry[script_name] = {
+            'parameters': parameters,
+            'registered_at': time.time()
+        }
+        
+        self.logger.info(f"Registered script: {script_name}")
+        return {'status': 'registered', 'script': script_name}
+        
+    def update_script_status(self, message):
+        """Update the status of a script"""
+        script_name = message.get('script')
+        status = message.get('status', {})
+        
+        self.script_status[script_name] = {
+            'status': status,
+            'updated_at': time.time()
+        }
+        
+        return {'status': 'updated', 'script': script_name}
+        
+    def get_script_parameters(self, message):
+        """Get parameters for a script"""
+        script_name = message.get('script')
+        
+        # Check if we have override parameters for this script
+        if script_name in self.script_registry:
+            params = self.script_registry[script_name].get('parameters', {})
+            # Here you could merge with global parameters or parent-provided parameters
+            return {'parameters': params}
+            
+        return {'parameters': {}}
+        
+    def register_script_port(self, message):
+        """Register the port where a script is listening"""
+        script_name = message.get('script')
+        port = message.get('port')
+        
+        self.script_ports[script_name] = port
+        self.logger.info(f"Script {script_name} listening on port {port}")
+        
+        return {'status': 'registered', 'script': script_name, 'port': port}
+        
+    def control_script(self, message):
+        """Send control command to a script"""
+        script_name = message.get('script')
+        command = message.get('command')
+        
+        if script_name not in self.script_ports:
+            return {'error': 'Script not listening'}
+            
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.connect(('localhost', self.script_ports[script_name]))
+            sock.send(json.dumps(command).encode())
+            
+            response = sock.recv(4096).decode()
+            result = json.loads(response)
+            sock.close()
+            
+            return result
+            
+        except Exception as e:
+            return {'error': f'Failed to control script: {str(e)}'}
+    
     def heartbeat_loop(self):
         """Send heartbeat to parent"""
         while self.running:

@@ -1,16 +1,63 @@
-"""Apply median filter for noise reduction"""
+#!/usr/bin/env python3
+"""
+Apply median filter for noise reduction
+Category: blur
+"""
 import cv2
 import numpy as np
+import argparse
+import os
+from logging_utils import get_logger
+import aps # Placeholder for aps.py integration
 
-def process_image(image: np.ndarray, kernel_size: int = 5) -> np.ndarray:
+# Logger setup
+logger = get_logger(__file__)
+
+def median_filter(image: np.ndarray, kernel_size: int) -> np.ndarray:
     """
     Apply median filter to reduce noise while preserving edges.
     
     Args:
         image: Input image
-        kernel_size: Size of the median filter kernel
+        kernel_size: Size of the median filter kernel (must be odd)
     
     Returns:
         Filtered image
     """
+    if kernel_size % 2 == 0:
+        kernel_size += 1
     return cv2.medianBlur(image, kernel_size)
+
+def main(args):
+    """Main function to apply median filter and save the result."""
+    logger.info(f"Starting script: {os.path.basename(__file__)}")
+    logger.info(f"Received arguments: {args}")
+
+    try:
+        # Load image
+        img = cv2.imread(args.input_path, cv2.IMREAD_UNCHANGED)
+        if img is None:
+            logger.error(f"Failed to load image from: {args.input_path}")
+            return
+
+        logger.info(f"Successfully loaded image from: {args.input_path}")
+
+        # Process image
+        result = median_filter(img, args.kernel_size)
+        logger.info(f"Applied median filter with kernel_size={args.kernel_size}")
+
+        # Save result
+        cv2.imwrite(args.output_path, result)
+        logger.info(f"Saved processed image to: {args.output_path}")
+
+    except Exception as e:
+        logger.error(f"An error occurred: {e}", exc_info=True)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Apply median filter to an image.")
+    parser.add_argument("input_path", type=str, help="Path to the input image.")
+    parser.add_argument("--output_path", type=str, default="median_filter_output.png", help="Path to save the output image.")
+    parser.add_argument("--kernel_size", type=int, default=5, help="Size of the median filter kernel (must be odd).")
+    
+    args = parser.parse_args()
+    main(args)

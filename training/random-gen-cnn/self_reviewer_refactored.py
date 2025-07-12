@@ -9,6 +9,7 @@ import os
 import pickle
 from typing import Dict, List, Tuple, Optional
 import correlation_analyzer_refactored as ca
+from connector_interface import setup_connector, send_hivemind_status
 
 
 def load_results(results_file: str) -> Dict:
@@ -201,6 +202,11 @@ def print_review_summary(inconsistencies: Dict[str, List], changes_made: List, s
 if __name__ == "__main__":
     print("Self-Reviewer starting...")
 
+    # Setup hivemind connector
+    connector = setup_connector('self_reviewer_refactored.py')
+    connector.register_parameter('conf_threshold', 0.3, 'Confidence threshold for inconsistencies')
+    connector.register_parameter('std_threshold', 2.0, 'Standard deviation threshold for outliers')
+
     results_file = input("Results JSON file to review: ")
 
     try:
@@ -208,12 +214,22 @@ if __name__ == "__main__":
         results = load_results(results_file)
         print(f"✓ Loaded {len(results)} categorized images")
 
+        send_hivemind_status({
+            'status': 'loaded',
+            'file': results_file,
+            'images': len(results)
+        }, connector)
+
         # Group by category
         categorized = group_by_category(results)
         print(f"✓ Found {len(categorized)} categories")
 
+        # Get thresholds from hivemind
+        conf_threshold = connector.get_parameter('conf_threshold', 0.3)
+        std_threshold = connector.get_parameter('std_threshold', 2.0)
+
         # Review consistency
-        inconsistencies = review_category_consistency(categorized)
+        inconsistencies = review_category_consistency(categorized, conf_threshold, std_threshold)
 
         if inconsistencies:
             print(f"\n⚠ Found inconsistencies in {len(inconsistencies)} categories")
@@ -245,6 +261,12 @@ if __name__ == "__main__":
                         output_file = save_reviewed_results(updated_results, results_file)
                         print(f"✓ Updated results saved to {output_file}")
                         results = updated_results
+                        
+                        send_hivemind_status({
+                            'status': 're_analyzed',
+                            'changes_made': len(changes_made),
+                            'output_file': output_file
+                        }, connector)
                     else:
                         print("No changes were made during re-analysis")
         else:
@@ -254,5 +276,16 @@ if __name__ == "__main__":
         stats = calculate_review_statistics(results)
         print_review_summary(inconsistencies, [] if 'changes_made' not in locals() else changes_made, stats)
 
+        send_hivemind_status({
+            'status': 'review_complete',
+            'total_images': stats['total_images'],
+            'categories': len(stats['categories']),
+            'inconsistencies_found': len(inconsistencies)
+        }, connector)
+
     except Exception as e:
         print(f"✗ Review failed: {e}")
+        send_hivemind_status({
+            'status': 'error',
+            'message': str(e)
+        }, connector)

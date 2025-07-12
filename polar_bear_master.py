@@ -8,6 +8,92 @@ import time
 import argparse
 from pathlib import Path
 import importlib.util
+import socket
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Dict, List, Any, Optional
+
+class UnifiedConnectorInterface:
+    """Unified interface for all connector communications."""
+    
+    def __init__(self, logger):
+        self.logger = logger
+        self.connectors: Dict[str, Dict[str, Any]] = {}
+        self.active_connections: Dict[str, socket.socket] = {}
+        self.lock = threading.Lock()
+        
+    def register_connector(self, connector_id: str, path: str, port: Optional[int] = None):
+        """Register a connector in the system."""
+        with self.lock:
+            self.connectors[connector_id] = {
+                'path': path,
+                'port': port,
+                'status': 'registered',
+                'last_heartbeat': time.time(),
+                'directory': str(Path(path).parent)
+            }
+    
+    def send_command(self, connector_id: str, command: str, **kwargs) -> Optional[Dict[str, Any]]:
+        """Send a command to a specific connector."""
+        if connector_id not in self.connectors:
+            return {'error': 'Connector not found'}
+        
+        connector = self.connectors[connector_id]
+        if not connector.get('port'):
+            return {'error': 'Connector port not configured'}
+        
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(5.0)
+            sock.connect(('localhost', connector['port']))
+            
+            message = {
+                'command': command,
+                **kwargs
+            }
+            sock.send(json.dumps(message).encode())
+            
+            response = sock.recv(4096).decode()
+            sock.close()
+            
+            return json.loads(response)
+        except Exception as e:
+            self.logger.error(f"Error communicating with connector {connector_id}: {e}")
+            return {'error': str(e)}
+    
+    def broadcast_command(self, command: str, **kwargs) -> Dict[str, Any]:
+        """Broadcast a command to all registered connectors."""
+        results = {}
+        
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            future_to_connector = {
+                executor.submit(self.send_command, conn_id, command, **kwargs): conn_id 
+                for conn_id in self.connectors.keys()
+            }
+            
+            for future in as_completed(future_to_connector):
+                conn_id = future_to_connector[future]
+                try:
+                    result = future.result()
+                    results[conn_id] = result
+                except Exception as e:
+                    results[conn_id] = {'error': str(e)}
+        
+        return results
+    
+    def get_system_status(self) -> Dict[str, Any]:
+        """Get the overall system status from all connectors."""
+        status_results = self.broadcast_command('status')
+        
+        active_count = sum(1 for r in status_results.values() 
+                          if r.get('status') == 'active')
+        
+        return {
+            'total_connectors': len(self.connectors),
+            'active_connectors': active_count,
+            'inactive_connectors': len(self.connectors) - active_count,
+            'connector_details': status_results
+        }
 
 class LoggingManager:
     """Handles logging to both console and file."""
@@ -131,13 +217,136 @@ class ConnectorManager:
     def __init__(self, logger):
         self.logger = logger
         self.connectors = []
+        self.active_connections = {}
+        self.connector_status = {}
+        self.lock = threading.Lock()
 
     def find_connectors(self, root_path):
         """Finds all connector scripts in the project."""
         self.logger.info(f"Searching for connectors in {root_path}...")
-        self.connectors = list(Path(root_path).rglob("*connector.py"))
+        
+        # Find all connector.py files, excluding certain directories
+        connectors = []
+        skip_dirs = {'venv', 'env', '.env', '__pycache__', '.git', 
+                     'node_modules', '.venv', 'virtualenv', '.tox',
+                     'build', 'dist', '.pytest_cache', '.mypy_cache',
+                     'test_env', '.egg-info'}
+        
+        for path in Path(root_path).rglob("connector.py"):
+            # Skip if any parent directory is in skip_dirs
+            if not any(part in skip_dirs for part in path.parts):
+                connectors.append(path)
+        
+        self.connectors = connectors
         self.logger.info(f"Found {len(self.connectors)} connector scripts.")
         return self.connectors
+    
+    def test_connector(self, connector_path):
+        """Test a single connector by trying to connect to it."""
+        try:
+            # Try to import and check if it has the expected interface
+            spec = importlib.util.spec_from_file_location("connector", connector_path)
+            if spec and spec.loader:
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                
+                # Check if it has expected functions/classes
+                has_interface = False
+                if hasattr(module, 'ConnectorInterface'):
+                    has_interface = True
+                elif hasattr(module, 'main'):
+                    has_interface = True
+                elif hasattr(module, 'HivemindConnector'):
+                    has_interface = True
+                
+                return {
+                    'path': str(connector_path),
+                    'status': 'available',
+                    'has_interface': has_interface,
+                    'directory': str(connector_path.parent)
+                }
+        except Exception as e:
+            return {
+                'path': str(connector_path),
+                'status': 'error',
+                'error': str(e),
+                'directory': str(connector_path.parent)
+            }
+    
+    def connect_to_all(self):
+        """Attempt to connect to all discovered connectors."""
+        self.logger.info("Testing connectivity to all connectors...")
+        
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            future_to_connector = {
+                executor.submit(self.test_connector, conn): conn 
+                for conn in self.connectors
+            }
+            
+            for future in as_completed(future_to_connector):
+                connector_path = future_to_connector[future]
+                try:
+                    result = future.result()
+                    with self.lock:
+                        self.connector_status[str(connector_path)] = result
+                    
+                    if result['status'] == 'available':
+                        self.logger.debug(f"✓ Connector available: {connector_path.parent.name}/{connector_path.name}")
+                    else:
+                        self.logger.debug(f"✗ Connector error: {connector_path}: {result.get('error', 'Unknown error')}")
+                except Exception as e:
+                    self.logger.error(f"Failed to test connector {connector_path}: {e}")
+        
+        # Summary
+        available = sum(1 for s in self.connector_status.values() if s['status'] == 'available')
+        self.logger.info(f"Connector connectivity test complete: {available}/{len(self.connectors)} available")
+        
+        return self.connector_status
+    
+    def execute_connector_command(self, connector_path, command, **kwargs):
+        """Execute a command on a specific connector."""
+        try:
+            # Import the connector module
+            spec = importlib.util.spec_from_file_location("connector", connector_path)
+            if spec and spec.loader:
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                
+                # Try different interfaces
+                if hasattr(module, 'main') and callable(module.main):
+                    # Change to connector's directory before execution
+                    original_dir = os.getcwd()
+                    os.chdir(Path(connector_path).parent)
+                    try:
+                        result = module.main()
+                        return {'status': 'success', 'result': result}
+                    finally:
+                        os.chdir(original_dir)
+                
+                return {'status': 'error', 'error': 'No executable interface found'}
+        except Exception as e:
+            return {'status': 'error', 'error': str(e)}
+    
+    def get_connector_info(self):
+        """Get detailed information about all connectors."""
+        info = {
+            'total': len(self.connectors),
+            'available': sum(1 for s in self.connector_status.values() if s['status'] == 'available'),
+            'by_directory': {}
+        }
+        
+        # Group by parent directory
+        for conn_path, status in self.connector_status.items():
+            parent = Path(conn_path).parent.name
+            if parent not in info['by_directory']:
+                info['by_directory'][parent] = []
+            info['by_directory'][parent].append({
+                'path': conn_path,
+                'status': status['status'],
+                'has_interface': status.get('has_interface', False)
+            })
+        
+        return info
 
 import ast
 import hashlib
@@ -197,7 +406,8 @@ class TaskManager:
             "1": ("Analyze Project", "analyze_project"),
             "2": ("Run Diagnostics", "run_diagnostics"),
             "3": ("Manage Connectors", "manage_connectors"),
-            "4": ("Exit", "exit_program")
+            "4": ("Run Full System Scan", "run_full_system_scan"),
+            "5": ("Exit", "exit_program")
         }
 
     def display_menu(self):
@@ -309,6 +519,8 @@ class TaskManager:
     def manage_connectors(self):
         """Finds and provides options for managing connector scripts."""
         self.logger.info("--- Connector Management ---")
+        
+        # Find all connectors
         connectors = self.connectors.find_connectors(os.getcwd())
         
         if not connectors:
@@ -317,22 +529,166 @@ class TaskManager:
 
         self.logger.info(f"Found {len(connectors)} connector scripts.")
         
+        # Test connectivity to all connectors
+        self.connectors.connect_to_all()
+        
         while True:
             self.logger.info("\nConnector Options:")
             self.logger.info("  1. List all connector paths")
-            self.logger.info("  2. Return to main menu")
+            self.logger.info("  2. Show connector status summary")
+            self.logger.info("  3. Execute a connector")
+            self.logger.info("  4. Refresh connector status")
+            self.logger.info("  5. Return to main menu")
             choice = input("Select an option: ").strip()
 
             if choice == '1':
                 self.logger.info("--- Listing All Connector Paths ---")
                 for i, conn_path in enumerate(connectors):
-                    self.logger.info(f"  {i+1:03d}: {conn_path}")
+                    status = self.connectors.connector_status.get(str(conn_path), {})
+                    status_icon = "✓" if status.get('status') == 'available' else "✗"
+                    self.logger.info(f"  {status_icon} {i+1:03d}: {conn_path}")
                 self.logger.info("------------------------------------")
+                
             elif choice == '2':
+                info = self.connectors.get_connector_info()
+                self.logger.info("\n--- Connector Status Summary ---")
+                self.logger.info(f"Total Connectors: {info['total']}")
+                self.logger.info(f"Available: {info['available']}")
+                self.logger.info(f"Errors: {info['total'] - info['available']}")
+                
+                self.logger.info("\nBy Directory:")
+                for dir_name, conns in sorted(info['by_directory'].items()):
+                    available = sum(1 for c in conns if c['status'] == 'available')
+                    self.logger.info(f"  {dir_name}: {available}/{len(conns)} available")
+                self.logger.info("--------------------------------")
+                
+            elif choice == '3':
+                # List connectors with numbers
+                available_connectors = [(i, conn) for i, conn in enumerate(connectors) 
+                                       if self.connectors.connector_status.get(str(conn), {}).get('status') == 'available']
+                
+                if not available_connectors:
+                    self.logger.warning("No available connectors to execute.")
+                    continue
+                
+                self.logger.info("\nAvailable Connectors:")
+                for idx, (i, conn) in enumerate(available_connectors):
+                    self.logger.info(f"  {idx+1}. {conn.parent.name}/{conn.name}")
+                
+                try:
+                    selection = int(input("Select connector to execute (number): ")) - 1
+                    if 0 <= selection < len(available_connectors):
+                        _, selected_conn = available_connectors[selection]
+                        self.logger.info(f"Executing {selected_conn}...")
+                        result = self.connectors.execute_connector_command(selected_conn, 'execute')
+                        if result['status'] == 'success':
+                            self.logger.info("Execution completed successfully.")
+                        else:
+                            self.logger.error(f"Execution failed: {result.get('error', 'Unknown error')}")
+                    else:
+                        self.logger.warning("Invalid selection.")
+                except ValueError:
+                    self.logger.warning("Please enter a valid number.")
+                    
+            elif choice == '4':
+                self.logger.info("Refreshing connector status...")
+                self.connectors.connect_to_all()
+                
+            elif choice == '5':
                 break
             else:
                 self.logger.warning("Invalid choice. Please try again.")
+                
         self.logger.info("Exiting Connector Management.")
+    
+    def run_full_system_scan(self):
+        """Runs a comprehensive scan of all connectors and displays system status."""
+        self.logger.info("--- Running Full System Scan ---")
+        
+        # Phase 1: Discover all connectors
+        self.logger.info("Phase 1: Discovering connectors...")
+        connectors = self.connectors.find_connectors(os.getcwd())
+        
+        if not connectors:
+            self.logger.warning("No connectors found in the system.")
+            return
+        
+        # Phase 2: Test connectivity
+        self.logger.info("Phase 2: Testing connectivity to all connectors...")
+        self.connectors.connect_to_all()
+        
+        # Phase 3: Gather system information
+        self.logger.info("Phase 3: Gathering system information...")
+        info = self.connectors.get_connector_info()
+        
+        # Phase 4: Display comprehensive report
+        self.logger.info("\n=== POLAR BEAR SYSTEM REPORT ===")
+        self.logger.info(f"Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+        self.logger.info(f"Total Connectors Found: {info['total']}")
+        self.logger.info(f"Active Connectors: {info['available']}")
+        self.logger.info(f"Failed Connectors: {info['total'] - info['available']}")
+        self.logger.info(f"Success Rate: {(info['available'] / info['total'] * 100) if info['total'] > 0 else 0:.1f}%")
+        
+        # Directory breakdown
+        self.logger.info("\n--- Connector Distribution by Directory ---")
+        dir_stats = []
+        for dir_name, conns in sorted(info['by_directory'].items()):
+            available = sum(1 for c in conns if c['status'] == 'available')
+            total = len(conns)
+            percentage = (available / total * 100) if total > 0 else 0
+            dir_stats.append((dir_name, available, total, percentage))
+        
+        # Sort by percentage descending
+        dir_stats.sort(key=lambda x: x[3], reverse=True)
+        
+        for dir_name, available, total, percentage in dir_stats[:20]:  # Top 20 directories
+            bar_length = int(percentage / 5)  # 20 character bar max
+            bar = '█' * bar_length + '░' * (20 - bar_length)
+            self.logger.info(f"  {dir_name:30s} [{bar}] {available:3d}/{total:3d} ({percentage:5.1f}%)")
+        
+        if len(dir_stats) > 20:
+            self.logger.info(f"  ... and {len(dir_stats) - 20} more directories")
+        
+        # Failed connectors
+        failed_connectors = [(path, status) for path, status in self.connectors.connector_status.items() 
+                            if status['status'] != 'available']
+        
+        if failed_connectors:
+            self.logger.info("\n--- Failed Connectors ---")
+            for path, status in failed_connectors[:10]:  # Show first 10
+                error = status.get('error', 'Unknown error')
+                self.logger.info(f"  ✗ {Path(path).parent.name}/{Path(path).name}")
+                self.logger.info(f"    Error: {error[:100]}{'...' if len(error) > 100 else ''}")
+            
+            if len(failed_connectors) > 10:
+                self.logger.info(f"  ... and {len(failed_connectors) - 10} more failed connectors")
+        
+        # Summary
+        self.logger.info("\n--- System Health Summary ---")
+        if info['available'] == info['total']:
+            self.logger.info("✓ All connectors are operational!")
+        elif info['available'] > info['total'] * 0.8:
+            self.logger.info("✓ System is mostly operational (>80% connectors active)")
+        elif info['available'] > info['total'] * 0.5:
+            self.logger.info("⚠ System is partially operational (>50% connectors active)")
+        else:
+            self.logger.info("✗ System has significant issues (<50% connectors active)")
+        
+        self.logger.info("\n=== END OF SYSTEM REPORT ===")
+        
+        # Ask if user wants to save the report
+        save_report = input("\nSave detailed system report to file? (y/n): ").lower()
+        if save_report == 'y':
+            report_path = f"polar_bear_system_report_{time.strftime('%Y%m%d_%H%M%S')}.json"
+            report_data = {
+                'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
+                'summary': info,
+                'connector_status': self.connectors.connector_status,
+                'failed_connectors': failed_connectors
+            }
+            with open(report_path, 'w') as f:
+                json.dump(report_data, f, indent=4)
+            self.logger.info(f"Detailed report saved to {report_path}")
 
     def exit_program(self):
         """Exits the program."""
@@ -355,6 +711,7 @@ class PolarBearMaster:
         self.config = ConfigurationManager(self.logger)
         self.deps = DependencyManager(self.logger)
         self.connectors = ConnectorManager(self.logger)
+        self.unified_interface = UnifiedConnectorInterface(self.logger)
         self.analyzer = ScriptAnalyzer(self.logger)
         self.task_manager = TaskManager(self.logger, self.config, self.analyzer, self.connectors)
 
@@ -368,11 +725,36 @@ class PolarBearMaster:
         # Check and install dependencies
         requirements_files = [Path('polar_bear_requirements.txt'), Path('requirements_web.txt')]
         self.deps.check_and_install(requirements_files)
+        
+        # Initialize connector system
+        self.logger.info("Initializing connector system...")
+        self.initialize_connectors()
 
         if self.test_mode:
             self.run_tests()
         else:
             self.run_interactive_mode()
+    
+    def initialize_connectors(self):
+        """Initialize the connector system by discovering all connectors."""
+        try:
+            # Find all connectors
+            connectors = self.connectors.find_connectors(os.getcwd())
+            
+            if connectors:
+                self.logger.info(f"Discovered {len(connectors)} connectors in the system")
+                
+                # Optionally test connectivity in background
+                if self.config.get('auto_test_connectors', True):
+                    self.logger.info("Testing connector connectivity in background...")
+                    thread = threading.Thread(target=self.connectors.connect_to_all)
+                    thread.daemon = True
+                    thread.start()
+            else:
+                self.logger.warning("No connectors found during initialization")
+                
+        except Exception as e:
+            self.logger.error(f"Error initializing connector system: {e}")
 
     def run_tests(self):
         """Runs a non-interactive suite of tests and diagnostics."""

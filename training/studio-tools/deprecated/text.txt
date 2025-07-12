@@ -1,1 +1,0 @@
-edit the script so that it can adjust the parameters(numericals, variables, ranges etc) of the functions it uses but also make it log the parameters its changing 

@@ -8,6 +8,7 @@ import tempfile
 import numpy as np
 from PIL import Image
 import json
+from connector_interface import setup_connector, send_hivemind_status
 
 # Import refactored modules
 import pixel_sampler_refactored as ps
@@ -53,14 +54,17 @@ def create_sample_data():
     return temp_dir
 
 
-def demonstrate_pixel_sampling(ref_dir):
+def demonstrate_pixel_sampling(ref_dir, connector):
     """Demonstrate pixel database building"""
     print("\n" + "="*50)
     print("STEP 1: BUILDING PIXEL DATABASE")
     print("="*50)
 
+    # Get sample size from hivemind
+    sample_size = connector.get_parameter('sample_size', 50)
+
     # Build pixel database
-    pixel_db = ps.build_pixel_database(ref_dir, sample_size=50)
+    pixel_db = ps.build_pixel_database(ref_dir, sample_size=sample_size)
 
     # Get statistics
     stats = ps.get_database_stats(pixel_db)
@@ -77,10 +81,16 @@ def demonstrate_pixel_sampling(ref_dir):
     ps.save_pixel_database(pixel_db, db_file)
     print(f"Database saved to: {db_file}")
 
+    send_hivemind_status({
+        'status': 'pixel_db_built',
+        'categories': stats['categories'],
+        'total_pixels': stats['total_pixels']
+    }, connector)
+
     return pixel_db
 
 
-def demonstrate_single_analysis(pixel_db, temp_dir):
+def demonstrate_single_analysis(pixel_db, temp_dir, connector):
     """Demonstrate single image analysis"""
     print("\n" + "="*50)
     print("STEP 2: SINGLE IMAGE ANALYSIS")
@@ -100,16 +110,24 @@ def demonstrate_single_analysis(pixel_db, temp_dir):
     # Initialize weights
     weights = {cat: 1.0 for cat in pixel_db.keys()}
 
+    # Get comparisons from hivemind
+    comparisons = connector.get_parameter('comparisons', 100)
+
     # Analyze each test image
     results = []
     for img_path, name in test_images:
-        category, scores, confidence = ca.analyze_image(img_path, pixel_db, weights)
+        category, scores, confidence = ca.analyze_image(img_path, pixel_db, weights, comparisons)
         results.append((name, category, confidence, scores))
 
         print(f"\n{name}:")
         print(f"  Predicted: {category}")
         print(f"  Confidence: {confidence:.2%}")
         print(f"  Scores: {dict(sorted(scores.items(), key=lambda x: x[1], reverse=True))}")
+
+    send_hivemind_status({
+        'status': 'single_analysis_complete',
+        'images_analyzed': len(test_images)
+    }, connector)
 
     return results, weights
 
@@ -248,16 +266,22 @@ def main():
     print("IMAGE CATEGORIZATION SYSTEM DEMONSTRATION")
     print("="*60)
 
+    # Setup hivemind connector
+    connector = setup_connector('demo_system.py')
+    connector.register_parameter('sample_size', 50, 'Pixels to sample per image')
+    connector.register_parameter('comparisons', 100, 'Comparisons per category')
+
     try:
+        send_hivemind_status({'status': 'starting', 'mode': 'demonstration'}, connector)
         # Create sample data
         temp_dir = create_sample_data()
         ref_dir = os.path.join(temp_dir, 'references')
 
         # Step 1: Build pixel database
-        pixel_db = demonstrate_pixel_sampling(ref_dir)
+        pixel_db = demonstrate_pixel_sampling(ref_dir, connector)
 
         # Step 2: Single image analysis
-        single_results, weights = demonstrate_single_analysis(pixel_db, temp_dir)
+        single_results, weights = demonstrate_single_analysis(pixel_db, temp_dir, connector)
 
         # Step 3: Batch processing
         batch_results = demonstrate_batch_processing(pixel_db, weights, temp_dir)
@@ -279,10 +303,20 @@ def main():
         print("✅ Weight learning implemented")
         print("\nThe system is ready for production use!")
 
+        send_hivemind_status({
+            'status': 'demonstration_complete',
+            'success': True
+        }, connector)
+
     except Exception as e:
         print(f"❌ Error during demonstration: {e}")
         import traceback
         traceback.print_exc()
+        
+        send_hivemind_status({
+            'status': 'demonstration_failed',
+            'error': str(e)
+        }, connector)
 
     finally:
         # Clean up

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Hivemind Connector for: training/studio-tools/scripts
-Connector ID: 144701a3
-Depth Level: 3
+Hivemind Connector for: training/studio-tools/scripts/cleaned
+Connector ID: 8a5ff7a9
+Depth Level: 4
 """
 
 import socket
@@ -17,11 +17,11 @@ import logging
 
 class HivemindConnector:
     def __init__(self):
-        self.connector_id = "144701a3"
-        self.directory = Path("/home/jarvis/Documents/GitHub/polar-bear/training/studio-tools/scripts")
-        self.port = 10196
-        self.parent_port = 10191
-        self.depth = 3
+        self.connector_id = "8a5ff7a9"
+        self.directory = Path("/home/jarvis/Documents/GitHub/polar-bear/training/studio-tools/scripts/cleaned")
+        self.port = 10198
+        self.parent_port = 10196
+        self.depth = 4
         self.running = True
         self.socket = None
         self.parent_socket = None
@@ -98,8 +98,9 @@ class HivemindConnector:
             return {'status': 'scan_complete', 'scripts': list(self.scripts_in_directory.keys())}
         elif cmd == 'execute':
             script = message.get('script')
+            args = message.get('args', [])  # Get args, default to empty list
             if script in self.scripts_in_directory:
-                return self.execute_script(script)
+                return self.execute_script(script, args)
             return {'error': 'Script not found'}
         elif cmd == 'troubleshoot':
             return self.troubleshoot_connections()
@@ -151,14 +152,18 @@ class HivemindConnector:
         }
         return path.name.startswith('.') or path.name.lower() in skip_dirs
         
-    def execute_script(self, script_name):
+    def execute_script(self, script_name, args=None):
         """Execute a script in the directory"""
+        if args is None:
+            args = []
         if script_name not in self.scripts_in_directory:
             return {'error': 'Script not found'}
             
         try:
+            command = [sys.executable, self.scripts_in_directory[script_name]] + args
+            self.logger.info(f"Executing command: {' '.join(command)}")
             result = subprocess.run(
-                [sys.executable, self.scripts_in_directory[script_name]],
+                command,
                 capture_output=True,
                 text=True,
                 timeout=30

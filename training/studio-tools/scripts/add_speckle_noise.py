@@ -5,36 +5,60 @@ Category: noise
 """
 import cv2
 import numpy as np
+import argparse
+import os
+from logging_utils import get_logger
+import aps # Placeholder for aps.py integration
 
+# Logger setup
+logger = get_logger(__file__)
 
-def process_image(image: np.ndarray) -> np.ndarray:
+def add_speckle_noise(image: np.ndarray, intensity: float) -> np.ndarray:
     """
-    Add Speckle Noise
+    Adds speckle noise to an image.
     
     Args:
-        image: Input image (grayscale or color)
+        image: Input image.
+        intensity: Intensity of the speckle noise.
         
     Returns:
-        Processed image
+        Image with added speckle noise.
     """
     result = image.copy()
-    
-    # Add multiplicative speckle noise
-    noise = np.random.randn(*result.shape) * 0.1
-    result = result + result * noise
-    result = np.clip(result, 0, 255).astype(np.uint8)
-    
-    return result
+    noise = result * np.random.randn(*result.shape) * intensity
+    result = result + noise
+    return np.clip(result, 0, 255).astype(np.uint8)
+
+def main(args):
+    """Main function to add speckle noise and save the result."""
+    logger.info(f"Starting script: {os.path.basename(__file__)}")
+    logger.info(f"Received arguments: {args}")
+
+    try:
+        # Load image
+        img = cv2.imread(args.input_path, cv2.IMREAD_UNCHANGED)
+        if img is None:
+            logger.error(f"Failed to load image from: {args.input_path}")
+            return
+
+        logger.info(f"Successfully loaded image from: {args.input_path}")
+
+        # Process image
+        result = add_speckle_noise(img, args.intensity)
+        logger.info(f"Applied speckle noise with intensity={args.intensity}")
+
+        # Save result
+        cv2.imwrite(args.output_path, result)
+        logger.info(f"Saved processed image to: {args.output_path}")
+
+    except Exception as e:
+        logger.error(f"An error occurred: {e}", exc_info=True)
 
 if __name__ == "__main__":
-    import sys
-    if len(sys.argv) > 1:
-        img = cv2.imread(sys.argv[1], cv2.IMREAD_UNCHANGED)
-        if img is not None:
-            result = process_image(img)
-            cv2.imwrite(f"add_speckle_noise_output.png", result)
-            print(f"Saved to add_speckle_noise_output.png")
-        else:
-            print("Failed to load image")
-    else:
-        print(f"Usage: python add_speckle_noise.py <image_path>")
+    parser = argparse.ArgumentParser(description="Add speckle noise to an image.")
+    parser.add_argument("input_path", type=str, help="Path to the input image.")
+    parser.add_argument("--output_path", type=str, default="add_speckle_noise_output.png", help="Path to save the output image.")
+    parser.add_argument("--intensity", type=float, default=0.1, help="Intensity of the speckle noise.")
+    
+    args = parser.parse_args()
+    main(args)

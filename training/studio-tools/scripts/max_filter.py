@@ -1,31 +1,63 @@
-"""Processed from max_filter.py - Detected operations: morphology, grayscale"""
+#!/usr/bin/env python3
+"""
+Max Filter
+Category: filtering
+"""
 import cv2
 import numpy as np
+import argparse
+import os
+from logging_utils import get_logger
+import aps # Placeholder for aps.py integration
 
-def process_image(image: np.ndarray, kernel_size: float = 7) -> np.ndarray:
+# Logger setup
+logger = get_logger(__file__)
+
+def max_filter(image: np.ndarray, kernel_size: int) -> np.ndarray:
     """
-    Processed from max_filter.py - Detected operations: morphology, grayscale
+    Applies a max filter to an image.
     
     Args:
-        image: Input image
-        kernel_size: Kernel size
-    
+        image: Input image.
+        kernel_size: The size of the kernel.
+        
     Returns:
-        Processed image
+        Filtered image.
     """
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
+    kernel = np.ones((kernel_size, kernel_size), np.uint8)
+    return cv2.dilate(gray, kernel)
+
+def main(args):
+    """Main function to apply a max filter and save the result."""
+    logger.info(f"Starting script: {os.path.basename(__file__)}")
+    logger.info(f"Received arguments: {args}")
+
     try:
-        result = image.copy()
-        
-        # Convert to grayscale if needed
-        if len(result.shape) == 3:
-            result = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
-        
-        # Apply morphological operation
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-        result = cv2.morphologyEx(result, cv2.MORPH_CLOSE, kernel)
-        
-        return result
-        
+        # Load image
+        img = cv2.imread(args.input_path, cv2.IMREAD_UNCHANGED)
+        if img is None:
+            logger.error(f"Failed to load image from: {args.input_path}")
+            return
+
+        logger.info(f"Successfully loaded image from: {args.input_path}")
+
+        # Process image
+        result = max_filter(img, args.kernel_size)
+        logger.info(f"Applied max filter with kernel_size={args.kernel_size}")
+
+        # Save result
+        cv2.imwrite(args.output_path, result)
+        logger.info(f"Saved processed image to: {args.output_path}")
+
     except Exception as e:
-        print(f"Error in processing: {e}")
-        return image
+        logger.error(f"An error occurred: {e}", exc_info=True)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Apply a max filter to an image.")
+    parser.add_argument("input_path", type=str, help="Path to the input image.")
+    parser.add_argument("--output_path", type=str, default="max_filter_output.png", help="Path to save the output image.")
+    parser.add_argument("--kernel_size", type=int, default=5, help="The size of the kernel.")
+    
+    args = parser.parse_args()
+    main(args)

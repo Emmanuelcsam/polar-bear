@@ -1,32 +1,63 @@
-"""Processed from simpleThresholding.py - Detected operations: threshold, grayscale"""
+#!/usr/bin/env python3
+"""
+Simple Thresholding
+Category: thresholding
+"""
 import cv2
 import numpy as np
-import matplotlib
+import argparse
+import os
+from logging_utils import get_logger
+import aps # Placeholder for aps.py integration
 
-def process_image(image: np.ndarray) -> np.ndarray:
+# Logger setup
+logger = get_logger(__file__)
+
+def simple_thresholding(image: np.ndarray, threshold: int) -> np.ndarray:
     """
-    Processed from simpleThresholding.py - Detected operations: threshold, grayscale
+    Applies simple thresholding to an image.
     
     Args:
-        image: Input image
-    
+        image: Input image.
+        threshold: The threshold value.
+        
     Returns:
-        Processed image
+        Thresholded image.
     """
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
+    _, result = cv2.threshold(gray, threshold, 255, cv2.THRESH_BINARY)
+    return result
+
+def main(args):
+    """Main function to apply simple thresholding and save the result."""
+    logger.info(f"Starting script: {os.path.basename(__file__)}")
+    logger.info(f"Received arguments: {args}")
+
     try:
-        result = image.copy()
-        
-        # Convert to grayscale if needed
-        if len(result.shape) == 3:
-            result = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
-        
-        # Apply threshold
-        if len(result.shape) == 3:
-            result = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
-        _, result = cv2.threshold(result, 127, 255, cv2.THRESH_BINARY)
-        
-        return result
-        
+        # Load image
+        img = cv2.imread(args.input_path, cv2.IMREAD_UNCHANGED)
+        if img is None:
+            logger.error(f"Failed to load image from: {args.input_path}")
+            return
+
+        logger.info(f"Successfully loaded image from: {args.input_path}")
+
+        # Process image
+        result = simple_thresholding(img, args.threshold)
+        logger.info(f"Applied simple thresholding with threshold={args.threshold}")
+
+        # Save result
+        cv2.imwrite(args.output_path, result)
+        logger.info(f"Saved processed image to: {args.output_path}")
+
     except Exception as e:
-        print(f"Error in processing: {e}")
-        return image
+        logger.error(f"An error occurred: {e}", exc_info=True)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Apply simple thresholding to an image.")
+    parser.add_argument("input_path", type=str, help="Path to the input image.")
+    parser.add_argument("--output_path", type=str, default="simple_thresholding_output.png", help="Path to save the output image.")
+    parser.add_argument("--threshold", type=int, default=127, help="The threshold value.")
+    
+    args = parser.parse_args()
+    main(args)

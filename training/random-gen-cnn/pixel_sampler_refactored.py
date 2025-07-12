@@ -8,6 +8,7 @@ from PIL import Image
 import pickle
 import random
 from typing import Dict, List, Tuple, Optional
+from connector_interface import setup_connector, send_hivemind_status
 
 
 def is_image_file(filename: str) -> bool:
@@ -102,8 +103,25 @@ def get_database_stats(pixel_db: Dict[str, List[np.ndarray]]) -> Dict[str, int]:
 
 if __name__ == "__main__":
     print("Pixel Sampler starting...")
+    
+    # Setup hivemind connector
+    connector = setup_connector('pixel_sampler_refactored.py')
+    connector.register_parameter('sample_size', 100, 'Pixels to sample per image')
+    
     ref_dir = input("Reference directory path: ")
-    sample_size = int(input("Pixels per image to sample: "))
+    sample_size_input = input("Pixels per image to sample: ")
+    
+    # Get sample size from input or hivemind
+    if sample_size_input:
+        sample_size = int(sample_size_input)
+    else:
+        sample_size = connector.get_parameter('sample_size', 100)
+
+    send_hivemind_status({
+        'status': 'building',
+        'directory': ref_dir,
+        'sample_size': sample_size
+    }, connector)
 
     pixel_db = build_pixel_database(ref_dir, sample_size)
 
@@ -111,9 +129,19 @@ if __name__ == "__main__":
         stats = get_database_stats(pixel_db)
         print(f"Built database with {stats['categories']} categories and {stats['total_pixels']} pixels")
 
+        send_hivemind_status({
+            'status': 'built',
+            'categories': stats['categories'],
+            'total_pixels': stats['total_pixels'],
+            'pixels_per_category': stats['pixels_per_category']
+        }, connector)
+
         if save_pixel_database(pixel_db):
             print("✓ Pixel database saved successfully")
+            send_hivemind_status({'status': 'saved', 'file': 'pixel_db.pkl'}, connector)
         else:
             print("✗ Failed to save pixel database")
+            send_hivemind_status({'status': 'error', 'message': 'Failed to save database'}, connector)
     else:
         print("✗ Failed to build pixel database")
+        send_hivemind_status({'status': 'error', 'message': 'Failed to build database'}, connector)

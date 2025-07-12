@@ -1,12 +1,14 @@
 """
 Refactored Batch Processor Module
 Separates functions from main execution for better testability
+Now integrated with the hivemind connector system
 """
 import os
 import json
 from datetime import datetime
 from typing import Dict, List, Optional
 import correlation_analyzer_refactored as ca
+from connector_interface import setup_connector, get_hivemind_parameter, send_hivemind_status
 
 
 def get_image_files(directory: str) -> List[str]:
@@ -19,7 +21,7 @@ def get_image_files(directory: str) -> List[str]:
 
 
 def process_batch(batch_dir: str, pixel_db: Dict, weights: Dict,
-                 progress_callback=None) -> Dict[str, Dict]:
+                 progress_callback=None, connector=None) -> Dict[str, Dict]:
     """Process a batch of images and return results"""
     if not os.path.exists(batch_dir):
         raise ValueError(f"Batch directory does not exist: {batch_dir}")
@@ -28,12 +30,26 @@ def process_batch(batch_dir: str, pixel_db: Dict, weights: Dict,
     if not all_images:
         raise ValueError(f"No image files found in directory: {batch_dir}")
 
+    # Get batch size from hivemind if available
+    batch_size = get_hivemind_parameter('batch_size', len(all_images), connector)
+    all_images = all_images[:batch_size]
+    
     results = {}
 
     for i, img_file in enumerate(all_images):
         img_path = os.path.join(batch_dir, img_file)
 
         try:
+            # Send processing status to hivemind
+            if connector:
+                connector.send_status({
+                    'action': 'processing',
+                    'current': i + 1,
+                    'total': len(all_images),
+                    'file': img_file,
+                    'progress': (i + 1) / len(all_images) * 100
+                })
+            
             category, scores, confidence = ca.analyze_image(img_path, pixel_db, weights)
 
             results[img_file] = {
@@ -56,6 +72,15 @@ def process_batch(batch_dir: str, pixel_db: Dict, weights: Dict,
                 'timestamp': datetime.now().isoformat(),
                 'error': str(e)
             }
+
+    # Send completion status
+    if connector:
+        distribution = get_category_distribution(results)
+        connector.send_status({
+            'action': 'complete',
+            'processed': len(results),
+            'distribution': distribution
+        })
 
     return results
 
@@ -109,13 +134,32 @@ def default_progress_callback(current: int, total: int, filename: str, category:
         print(f"\nProgress: {current}/{total} ({current/total*100:.1f}%)")
 
 
-if __name__ == "__main__":
+def main():
+    """Main function with hivemind integration"""
     print("Batch Processor starting...")
+    
+    # Setup connector
+    connector = setup_connector("batch_processor_refactored.py")
+    
+    if connector.is_connected:
+        print("Connected to hivemind system")
+        # Register parameters
+        connector.register_parameter("batch_dir", None, "Directory containing images to process")
+        connector.register_parameter("batch_size", -1, "Number of images to process (-1 for all)")
+        connector.register_parameter("output_file", None, "Output file for results")
+        connector.register_parameter("listen_mode", False, "Whether to listen for commands")
+        
+        # Register callbacks
+        connector.register_callback("process", lambda dir: process_batch_with_connector(dir, connector))
+        connector.register_callback("get_stats", lambda: get_current_stats(connector))
+        connector.register_callback("list_images", get_image_files)
 
     # Load dependencies
     pixel_db = ca.load_pixel_database()
     if pixel_db is None:
         print("✗ Failed to load pixel database")
+        if connector.is_connected:
+            connector.send_status({'error': 'Failed to load pixel database'})
         exit(1)
 
     weights = ca.load_weights()
@@ -123,14 +167,17 @@ if __name__ == "__main__":
         weights = {cat: 1.0 for cat in pixel_db}
 
     # Get input
-    batch_dir = input("Directory with images to process: ")
+    batch_dir = connector.get_parameter('batch_dir') if connector.is_connected else None
+    if not batch_dir:
+        batch_dir = input("Directory with images to process: ")
 
     try:
         # Process batch
-        results = process_batch(batch_dir, pixel_db, weights, default_progress_callback)
+        results = process_batch(batch_dir, pixel_db, weights, default_progress_callback, connector)
 
         # Save results
-        output_file = save_results(results)
+        output_file = connector.get_parameter('output_file') if connector.is_connected else None
+        output_file = save_results(results, output_file)
         print(f"\n✓ Batch processing complete! Results saved to {output_file}")
 
         # Print final statistics
@@ -138,6 +185,33 @@ if __name__ == "__main__":
         print("\nFinal category distribution:")
         for cat, count in sorted(distribution.items(), key=lambda x: x[1], reverse=True):
             print(f"  {cat}: {count}")
+            
+        # If connected and in listen mode, start listening
+        if connector.is_connected and connector.get_parameter('listen_mode', False):
+            print("Entering listen mode for hivemind commands...")
+            connector.listen_for_commands()
 
     except Exception as e:
         print(f"✗ Batch processing failed: {e}")
+        if connector.is_connected:
+            connector.send_status({'error': str(e)})
+
+
+def process_batch_with_connector(batch_dir: str, connector) -> Dict:
+    """Wrapper function for processing batch with connector context"""
+    pixel_db = ca.load_pixel_database()
+    weights = ca.load_weights() or {cat: 1.0 for cat in pixel_db}
+    return process_batch(batch_dir, pixel_db, weights, default_progress_callback, connector)
+
+
+def get_current_stats(connector) -> Dict:
+    """Get current processing statistics"""
+    # This would normally track real-time stats
+    return {
+        'status': 'ready',
+        'capabilities': ['batch_process', 'image_analysis', 'category_distribution']
+    }
+
+
+if __name__ == "__main__":
+    main()

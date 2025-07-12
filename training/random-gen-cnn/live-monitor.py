@@ -4,8 +4,14 @@ import pickle
 import time
 from datetime import datetime
 import os
+from connector_interface import setup_connector, send_hivemind_status
 
 print("Live Monitor starting...")
+
+# Setup hivemind connector
+connector = setup_connector('live-monitor.py')
+connector.register_parameter('sample_points', 50, 'Number of sample points per image')
+connector.register_parameter('refresh_rate', 0.1, 'Refresh rate in seconds')
 with open('pixel_db.pkl', 'rb') as f:
     pixel_db = pickle.load(f)
 
@@ -23,6 +29,12 @@ processed = set()
 
 print(f"Monitoring {watch_dir}...")
 print("Press 'q' to quit, 's' to save snapshot")
+
+send_hivemind_status({
+    'status': 'monitoring_started',
+    'directory': watch_dir,
+    'categories': len(pixel_db)
+}, connector)
 
 while True:
     # Check for new images
@@ -43,9 +55,12 @@ while True:
             scores = {}
             sample_points = []
             
+            # Get sample points from hivemind
+            sample_points_count = connector.get_parameter('sample_points', 50)
+            
             for category, ref_pixels in pixel_db.items():
                 total_score = 0
-                comparisons = min(50, len(ref_pixels))
+                comparisons = min(sample_points_count, len(ref_pixels))
                 
                 for _ in range(comparisons):
                     y, x = np.random.randint(0, h-1), np.random.randint(0, w-1)
@@ -97,6 +112,15 @@ while True:
             processed.add(img_file)
             print(f"  → {best_cat} ({confidence:.1%})")
             
+            # Send status to hivemind
+            send_hivemind_status({
+                'status': 'image_processed',
+                'image': img_file,
+                'category': best_cat,
+                'confidence': confidence,
+                'processed_count': len(processed)
+            }, connector)
+            
             # Log result
             with open('live_log.txt', 'a') as f:
                 f.write(f"{datetime.now().isoformat()},{img_file},{best_cat},{confidence:.3f}\n")
@@ -110,7 +134,14 @@ while True:
             cv2.imwrite(snapshot_name, display_img)
             print(f"✓ Saved {snapshot_name}")
     
-    time.sleep(0.1)
+    # Get refresh rate from hivemind
+    refresh_rate = connector.get_parameter('refresh_rate', 0.1)
+    time.sleep(refresh_rate)
 
 cv2.destroyAllWindows()
 print(f"\n✓ Processed {len(processed)} images")
+
+send_hivemind_status({
+    'status': 'monitoring_stopped',
+    'total_processed': len(processed)
+}, connector)

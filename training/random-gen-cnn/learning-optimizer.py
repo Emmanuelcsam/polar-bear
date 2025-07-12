@@ -3,8 +3,15 @@ import numpy as np
 import json
 from datetime import datetime
 import os
+from connector_interface import setup_connector, send_hivemind_status
 
 print("Learning Optimizer starting...")
+
+# Setup hivemind connector
+connector = setup_connector('learning-optimizer.py')
+connector.register_parameter('boost_threshold', 0.7, 'Confidence threshold for boosting')
+connector.register_parameter('reduce_threshold', 0.4, 'Confidence threshold for reducing')
+connector.register_parameter('popularity_threshold', 0.1, 'Popularity threshold for boosting')
 
 # Load current state
 with open('pixel_db.pkl', 'rb') as f:
@@ -22,6 +29,12 @@ if os.path.exists('learning_history.pkl'):
 
 print(f"Current weights: {len(weights)} categories")
 print(f"Learning history: {len(history)} entries")
+
+send_hivemind_status({
+    'status': 'loaded',
+    'categories': len(weights),
+    'history_entries': len(history)
+}, connector)
 
 while True:
     print("\n" + "="*50)
@@ -53,23 +66,32 @@ while True:
             cat_stats[cat]['count'] += 1
             cat_stats[cat]['confidence'] = cat_stats[cat]['total'] / cat_stats[cat]['count']
         
+        # Get thresholds from hivemind
+        boost_threshold = connector.get_parameter('boost_threshold', 0.7)
+        reduce_threshold = connector.get_parameter('reduce_threshold', 0.4)
+        popularity_threshold = connector.get_parameter('popularity_threshold', 0.1)
+
         # Update weights based on performance
+        updates_made = 0
         for cat, stats in cat_stats.items():
             avg_conf = stats['confidence']
             count = stats['count']
             
             # Categories with higher average confidence get boosted
-            if avg_conf > 0.7:
+            if avg_conf > boost_threshold:
                 weights[cat] *= 1.05
                 print(f"  ↑ Boosting {cat} (avg conf: {avg_conf:.2f})")
-            elif avg_conf < 0.4:
+                updates_made += 1
+            elif avg_conf < reduce_threshold:
                 weights[cat] *= 0.95
                 print(f"  ↓ Reducing {cat} (avg conf: {avg_conf:.2f})")
+                updates_made += 1
             
             # Popular categories get slight boost
-            if count > len(results) * 0.1:
+            if count > len(results) * popularity_threshold:
                 weights[cat] *= 1.02
                 print(f"  + Popular category {cat} ({count} images)")
+                updates_made += 1
         
         # Normalize weights
         max_weight = max(weights.values())
@@ -89,6 +111,13 @@ while True:
             pickle.dump(history, f)
         
         print("✓ Weights updated and saved")
+        
+        send_hivemind_status({
+            'status': 'optimization_complete',
+            'updates_made': updates_made,
+            'results_file': results_file,
+            'categories_processed': len(cat_stats)
+        }, connector)
     
     elif choice == '2':
         if not history:
@@ -145,3 +174,4 @@ while True:
         break
 
 print("\nOptimizer shutting down...")
+send_hivemind_status({'status': 'shutting_down'}, connector)

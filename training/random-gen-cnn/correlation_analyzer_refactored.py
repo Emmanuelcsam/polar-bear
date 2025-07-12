@@ -8,6 +8,7 @@ import pickle
 import random
 import os
 from typing import Dict, List, Tuple, Optional
+from connector_interface import setup_connector, send_hivemind_status
 
 
 def load_pixel_database(filename: str = 'pixel_db.pkl') -> Optional[Dict[str, List[np.ndarray]]]:
@@ -156,13 +157,20 @@ def get_image_files_from_directory(directory: str) -> List[str]:
 if __name__ == "__main__":
     print("Correlation Analyzer loading...")
 
+    # Setup hivemind connector
+    connector = setup_connector('correlation_analyzer_refactored.py')
+    connector.register_parameter('comparisons', 100, 'Number of comparisons per category')
+    connector.register_parameter('learning_rate', 0.1, 'Learning rate for weight updates')
+
     # Load pixel database
     pixel_db = load_pixel_database()
     if pixel_db is None:
         print("✗ Failed to load pixel database")
+        send_hivemind_status({'status': 'error', 'message': 'Failed to load pixel database'}, connector)
         exit(1)
 
     print(f"✓ Loaded {len(pixel_db)} categories")
+    send_hivemind_status({'status': 'loaded', 'categories': len(pixel_db)}, connector)
 
     # Load weights
     weights = load_weights()
@@ -178,8 +186,15 @@ if __name__ == "__main__":
             batch_dir = input("Directory to process: ")
             image_files = get_image_files_from_directory(batch_dir)
             if image_files:
-                results = batch_analyze_images(image_files, pixel_db, weights)
+                # Get comparisons from hivemind
+                comparisons = connector.get_parameter('comparisons', 100)
+                results = batch_analyze_images(image_files, pixel_db, weights, comparisons)
                 print(f"Processed {len(results)} images")
+                send_hivemind_status({
+                    'status': 'batch_complete',
+                    'images_processed': len(results),
+                    'directory': batch_dir
+                }, connector)
                 for path, result in results.items():
                     print(f"{os.path.basename(path)}: {result['category']} ({result['confidence']:.2%})")
             else:
@@ -187,15 +202,31 @@ if __name__ == "__main__":
             break
 
         try:
-            result, scores, conf = analyze_image(img_path, pixel_db, weights)
+            # Get comparisons from hivemind
+            comparisons = connector.get_parameter('comparisons', 100)
+            result, scores, conf = analyze_image(img_path, pixel_db, weights, comparisons)
             print(f"→ Classification: {result} (confidence: {conf:.2%})")
+
+            send_hivemind_status({
+                'status': 'analyzed',
+                'image': img_path,
+                'category': result,
+                'confidence': conf
+            }, connector)
 
             feedback = input("Correct? (y/n/skip): ")
             if feedback.lower() == 'n':
                 correct = input("Correct category: ")
-                weights = update_weights_from_feedback(weights, result, correct)
+                # Get learning rate from hivemind
+                learning_rate = connector.get_parameter('learning_rate', 0.1)
+                weights = update_weights_from_feedback(weights, result, correct, learning_rate)
                 if save_weights(weights):
                     print("✓ Weights updated")
+                    send_hivemind_status({
+                        'status': 'weights_updated',
+                        'predicted': result,
+                        'correct': correct
+                    }, connector)
                 else:
                     print("✗ Failed to save weights")
 

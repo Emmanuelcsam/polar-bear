@@ -1,8 +1,12 @@
 import json
 import os
+from connector_interface import setup_connector, send_hivemind_status
 
 print("Configuration Wizard")
 print("="*40)
+
+# Setup hivemind connector
+connector = setup_connector('config-wizard.py')
 
 config = {}
 
@@ -17,6 +21,9 @@ if os.path.exists('config.json'):
         exit()
 
 print("\nLet's configure your system...")
+
+# Send status update
+send_hivemind_status({'status': 'configuring', 'step': 'reference_dir'}, connector)
 
 config['reference_dir'] = input("\nPath to reference images directory: ")
 while not os.path.exists(config['reference_dir']):
@@ -55,5 +62,12 @@ print("\n✓ Configuration saved to config.json")
 print("\nYour configuration:")
 for key, value in config.items():
     print(f"  {key}: {value}")
+
+# Send completion status
+send_hivemind_status({
+    'status': 'completed',
+    'config': config,
+    'file': 'config.json'
+}, connector)
 
 print("\nYou can now run main.py to start the system!")

@@ -1,26 +1,23 @@
-"""Processed from create_test_image.py"""
-import cv2
 import numpy as np
+import cv2
 
-def process_image(image: np.ndarray, kernel_size: float = 300) -> np.ndarray:
+def create_test_image(path="test_image.png"):
     """
-    Processed from create_test_image.py
-    
-    Args:
-        image: Input image
-        kernel_size: Kernel size
-    
-    Returns:
-        Processed image
+    Creates a simple 100x100 grayscale gradient image for testing.
     """
     try:
-        result = image.copy()
+        height, width = 100, 100
+        image = np.zeros((height, width), dtype=np.uint8)
+        for i in range(height):
+            for j in range(width):
+                image[i, j] = int((i + j) / (height + width) * 255)
         
-        # Add your processing logic here
-        # This is a placeholder - modify based on the original script
-        
-        return result
-        
+        cv2.imwrite(path, image)
+        print(f"Created test image at: {path}")
+        return path
     except Exception as e:
-        print(f"Error in processing: {e}")
-        return image
+        print(f"Failed to create test image: {e}")
+        return None
+
+if __name__ == "__main__":
+    create_test_image()

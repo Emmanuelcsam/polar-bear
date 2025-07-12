@@ -3,8 +3,12 @@ import json
 import os
 from datetime import datetime
 import numpy as np
+from connector_interface import setup_connector, send_hivemind_status
 
 print("Stats Viewer loading...")
+
+# Setup hivemind connector
+connector = setup_connector('stats-viewer.py')
 
 # Load all available data
 stats = {
@@ -53,6 +57,18 @@ print("\n" + "="*60)
 print("SYSTEM STATISTICS")
 print("="*60)
 
+# Send statistics to hivemind
+send_hivemind_status({
+    'status': 'statistics_generated',
+    'stats': {
+        'categories': stats['categories'],
+        'total_pixels': stats['total_pixels'],
+        'processed_images': stats['processed_images'],
+        'learning_iterations': stats['learning_iterations'],
+        'result_files': len(result_files)
+    }
+}, connector)
+
 print(f"\nDatabase Stats:")
 print(f"  Categories: {stats['categories']}")
 print(f"  Total reference pixels: {stats['total_pixels']:,}")
@@ -95,3 +111,6 @@ if os.path.exists('live_log.txt') and os.path.getsize('live_log.txt') > 0:
             print(f"  Total live processed: {len(lines)}")
 
 print("\n" + "="*60)
+
+# Send completion status
+send_hivemind_status({'status': 'stats_displayed'}, connector)
