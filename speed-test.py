@@ -3,6 +3,8 @@
 Optimized Fiber Optic Analysis Pipeline
 Combines preprocessing, zone separation, and defect detection with GPU acceleration and deep learning.
 Total runtime target: ~20 seconds per image.
+
+This script is integrated with the Hivemind Connector system for parameter sharing and remote control.
 """
 
 import os
@@ -27,6 +29,37 @@ from cupyx.scipy import ndimage as cp_ndimage  # GPU-accelerated ndimage
 # Configure logging
 logger = logging.getLogger('FiberAnalysis')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - [%(levelname)s] - %(message)s')
+
+# Connector-exposed parameters
+PROCESSING_CONFIG = {
+    'force_cpu': False,
+    'max_processing_time': 30,
+    'confidence_threshold': 0.8,
+    'defect_sensitivity': 0.95,
+    'enable_deep_learning': True,
+    'enable_gpu_acceleration': True,
+    'method_weights': {
+        'adaptive_intensity': 0.85,
+        'bright_core': 0.80,
+        'computational': 0.90,
+        'geometric': 0.88,
+        'gradient': 0.87,
+        'guess_approach': 0.75,
+        'hough_separation': 0.82,
+        'segmentation': 0.86,
+        'threshold_separation': 0.78,
+        'unified_detector': 0.91
+    }
+}
+
+# Shared state for connector integration
+SHARED_STATE = {
+    'last_processed_image': None,
+    'last_processing_time': 0,
+    'total_images_processed': 0,
+    'last_result': None,
+    'pipeline_instance': None
+}
 
 # GPU check
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -260,8 +293,151 @@ class UnifiedPipeline:
         
         return {'defects': defects, 'defect_mask': binary * 255}
 
+# Connector-exposed functions
+def initialize_pipeline(force_cpu=None):
+    """Initialize the pipeline with optional configuration"""
+    global SHARED_STATE
+    
+    if force_cpu is not None:
+        PROCESSING_CONFIG['force_cpu'] = force_cpu
+    
+    pipeline = UnifiedPipeline(config=PROCESSING_CONFIG, force_cpu=PROCESSING_CONFIG['force_cpu'])
+    SHARED_STATE['pipeline_instance'] = pipeline
+    logger.info("Pipeline initialized with connector configuration")
+    return True
+
+def process_single_image(image_path):
+    """Process a single image through the pipeline"""
+    global SHARED_STATE
+    
+    if SHARED_STATE['pipeline_instance'] is None:
+        initialize_pipeline()
+    
+    pipeline = SHARED_STATE['pipeline_instance']
+    
+    start_time = time.time()
+    result = pipeline.process_image(image_path)
+    processing_time = time.time() - start_time
+    
+    # Update shared state
+    SHARED_STATE['last_processed_image'] = image_path
+    SHARED_STATE['last_processing_time'] = processing_time
+    SHARED_STATE['total_images_processed'] += 1
+    SHARED_STATE['last_result'] = result
+    
+    logger.info(f"Processed {image_path} in {processing_time:.2f}s")
+    
+    return {
+        'success': result is not None,
+        'processing_time': processing_time,
+        'defect_count': len(result['detection']) if result else 0,
+        'image_path': image_path
+    }
+
+def batch_process_images(image_directory, max_images=None):
+    """Process multiple images from a directory"""
+    image_dir = Path(image_directory)
+    image_files = list(image_dir.glob("*.png")) + list(image_dir.glob("*.jpg"))
+    
+    if max_images:
+        image_files = image_files[:max_images]
+    
+    results = []
+    for img_path in image_files:
+        result = process_single_image(str(img_path))
+        results.append(result)
+    
+    return {
+        'total_processed': len(results),
+        'successful': sum(1 for r in results if r['success']),
+        'average_time': np.mean([r['processing_time'] for r in results]),
+        'results': results
+    }
+
+def get_pipeline_status():
+    """Get current pipeline status and statistics"""
+    global SHARED_STATE
+    
+    return {
+        'initialized': SHARED_STATE['pipeline_instance'] is not None,
+        'last_processed_image': SHARED_STATE['last_processed_image'],
+        'last_processing_time': SHARED_STATE['last_processing_time'],
+        'total_images_processed': SHARED_STATE['total_images_processed'],
+        'gpu_available': torch.cuda.is_available(),
+        'using_gpu': not PROCESSING_CONFIG['force_cpu'] and torch.cuda.is_available(),
+        'configuration': PROCESSING_CONFIG
+    }
+
+def update_configuration(config_updates):
+    """Update processing configuration"""
+    global PROCESSING_CONFIG
+    
+    for key, value in config_updates.items():
+        if key in PROCESSING_CONFIG:
+            PROCESSING_CONFIG[key] = value
+            logger.info(f"Updated configuration: {key} = {value}")
+    
+    # Reinitialize pipeline if needed
+    if SHARED_STATE['pipeline_instance'] is not None:
+        initialize_pipeline()
+    
+    return PROCESSING_CONFIG
+
+def get_last_result():
+    """Get the last processing result"""
+    return SHARED_STATE['last_result']
+
+def clear_cache():
+    """Clear any cached data and reset state"""
+    global SHARED_STATE
+    
+    SHARED_STATE = {
+        'last_processed_image': None,
+        'last_processing_time': 0,
+        'total_images_processed': 0,
+        'last_result': None,
+        'pipeline_instance': None
+    }
+    
+    # Clear GPU cache if available
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+    
+    logger.info("Cache cleared and state reset")
+    return True
+
+# Main execution for standalone mode
 if __name__ == "__main__":
-    pipeline = UnifiedPipeline()
-    result = pipeline.process_image("path_to_image.png")
-    if result:
-        print("Analysis complete.")
+    import sys
+    
+    if len(sys.argv) > 1:
+        # Command line mode
+        if sys.argv[1] == "--test":
+            # Test mode
+            initialize_pipeline()
+            print("Pipeline initialized successfully")
+            print(f"Status: {get_pipeline_status()}")
+        elif sys.argv[1] == "--process":
+            if len(sys.argv) > 2:
+                result = process_single_image(sys.argv[2])
+                print(f"Processing result: {result}")
+            else:
+                print("Usage: python speed-test.py --process <image_path>")
+        else:
+            # Process single image
+            result = process_single_image(sys.argv[1])
+            print(f"Processing result: {result}")
+    else:
+        # Interactive mode
+        print("Speed Test Pipeline - Connector Integrated")
+        print("Available functions:")
+        print("  - initialize_pipeline()")
+        print("  - process_single_image(image_path)")
+        print("  - batch_process_images(directory)")
+        print("  - get_pipeline_status()")
+        print("  - update_configuration(config)")
+        print("  - clear_cache()")
+        
+        # Initialize by default
+        initialize_pipeline()
+        print("\nPipeline initialized and ready for connector commands")
