@@ -1,3 +1,0 @@
-2025-07-07 14:51:52,349 - src.core.integrated_geometry_system.GeometryDetector - INFO - Detector initialized. GPU: False
-2025-07-07 14:51:52,349 - ShapeAnalysisDashboard - INFO - Shape Analysis Dashboard initialized
-2025-07-07 14:51:52,917 - ShapeAnalysisDashboard - WARNING - Alert: circle count (33) exceeded threshold (5)
