@@ -1,5 +1,0 @@
-2025-07-12 00:15:43,149 [affine_transform] [INFO] - Starting script: affine_transform.py
-2025-07-12 00:15:43,149 [affine_transform] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='affine_transform_output.png')
-2025-07-12 00:15:43,154 [affine_transform] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:15:43,154 [affine_transform] [INFO] - Applied affine transformation
-2025-07-12 00:15:43,155 [affine_transform] [INFO] - Saved processed image to: affine_transform_output.png

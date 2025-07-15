@@ -1,5 +1,0 @@
-2025-07-12 00:14:25,421 [template_matching] [INFO] - Starting script: template_matching.py
-2025-07-12 00:14:25,421 [template_matching] [INFO] - Received arguments: Namespace(input_path='test_image.png', template_path='test_image.png', output_path='template_matching_output.png', threshold=0.8)
-2025-07-12 00:14:25,425 [template_matching] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:14:25,427 [template_matching] [INFO] - Applied template matching with template_path=test_image.png and threshold=0.8
-2025-07-12 00:14:25,429 [template_matching] [INFO] - Saved processed image to: template_matching_output.png

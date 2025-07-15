@@ -1,7 +1,0 @@
-README.md
-setup.py
-iteration5_test_driven.egg-info/PKG-INFO
-iteration5_test_driven.egg-info/SOURCES.txt
-iteration5_test_driven.egg-info/dependency_links.txt
-iteration5_test_driven.egg-info/requires.txt
-iteration5_test_driven.egg-info/top_level.txt

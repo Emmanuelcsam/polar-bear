@@ -1,5 +1,0 @@
-2025-07-11 23:59:35,279 [add_gaussian_noise] [INFO] - Starting script: add_gaussian_noise.py
-2025-07-11 23:59:35,279 [add_gaussian_noise] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='add_gaussian_noise_output.png', mean=0, sigma=25)
-2025-07-11 23:59:35,284 [add_gaussian_noise] [INFO] - Successfully loaded image from: test_image.png
-2025-07-11 23:59:35,326 [add_gaussian_noise] [INFO] - Applied Gaussian noise with mean=0 and sigma=25
-2025-07-11 23:59:35,328 [add_gaussian_noise] [INFO] - Saved processed image to: add_gaussian_noise_output.png

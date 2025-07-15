@@ -1,5 +1,0 @@
-2025-07-12 00:01:36,370 [canny_edges] [INFO] - Starting script: canny_edges.py
-2025-07-12 00:01:36,370 [canny_edges] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='canny_edges_output.png', threshold1=50, threshold2=150)
-2025-07-12 00:01:36,374 [canny_edges] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:01:36,394 [canny_edges] [INFO] - Applied Canny edge detection with threshold1=50 and threshold2=150
-2025-07-12 00:01:36,394 [canny_edges] [INFO] - Saved processed image to: canny_edges_output.png

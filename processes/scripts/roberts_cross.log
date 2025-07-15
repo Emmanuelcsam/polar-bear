@@ -1,5 +1,0 @@
-2025-07-12 00:08:03,777 [roberts_cross] [INFO] - Starting script: roberts_cross.py
-2025-07-12 00:08:03,777 [roberts_cross] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='roberts_cross_output.png')
-2025-07-12 00:08:03,781 [roberts_cross] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:08:03,782 [roberts_cross] [INFO] - Applied Roberts Cross edge detection
-2025-07-12 00:08:03,783 [roberts_cross] [INFO] - Saved processed image to: roberts_cross_output.png

@@ -1,5 +1,0 @@
-2025-07-12 00:30:51,667 [threshold_truncate] [INFO] - Starting script: threshold_truncate.py
-2025-07-12 00:30:51,667 [threshold_truncate] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='threshold_truncate_output.png', threshold=127)
-2025-07-12 00:30:51,671 [threshold_truncate] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:30:51,672 [threshold_truncate] [INFO] - Applied truncate thresholding with threshold=127
-2025-07-12 00:30:51,673 [threshold_truncate] [INFO] - Saved processed image to: threshold_truncate_output.png

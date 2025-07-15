@@ -1,5 +1,0 @@
-2025-07-12 00:12:06,680 [fast_features] [INFO] - Starting script: fast_features.py
-2025-07-12 00:12:06,680 [fast_features] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='fast_features_output.png', threshold=10, nonmax_suppression=True)
-2025-07-12 00:12:06,684 [fast_features] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:12:06,697 [fast_features] [INFO] - Applied FAST feature detection with threshold=10 and nonmax_suppression=True
-2025-07-12 00:12:06,698 [fast_features] [INFO] - Saved processed image to: fast_features_output.png

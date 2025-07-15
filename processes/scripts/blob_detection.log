@@ -1,5 +1,0 @@
-2025-07-12 00:13:23,654 [blob_detection] [INFO] - Starting script: blob_detection.py
-2025-07-12 00:13:23,654 [blob_detection] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='blob_detection_output.png', min_area=100, min_circularity=0.1)
-2025-07-12 00:13:23,658 [blob_detection] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:13:23,671 [blob_detection] [INFO] - Applied blob detection with min_area=100 and min_circularity=0.1
-2025-07-12 00:13:23,673 [blob_detection] [INFO] - Saved processed image to: blob_detection_output.png

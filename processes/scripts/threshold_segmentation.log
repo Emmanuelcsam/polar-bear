@@ -1,5 +1,0 @@
-2025-07-12 00:14:43,226 [threshold_segmentation] [INFO] - Starting script: threshold_segmentation.py
-2025-07-12 00:14:43,226 [threshold_segmentation] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='threshold_segmentation_output.png', threshold_value=127)
-2025-07-12 00:14:43,230 [threshold_segmentation] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:14:43,231 [threshold_segmentation] [INFO] - Applied threshold segmentation with threshold_value=127
-2025-07-12 00:14:43,231 [threshold_segmentation] [INFO] - Saved processed image to: threshold_segmentation_output.png

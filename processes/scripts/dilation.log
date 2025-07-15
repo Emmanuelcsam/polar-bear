@@ -1,5 +1,0 @@
-2025-07-12 00:01:45,020 [dilation] [INFO] - Starting script: dilation.py
-2025-07-12 00:01:45,021 [dilation] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='dilation_output.png', kernel_size=5, iterations=1)
-2025-07-12 00:01:45,025 [dilation] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:01:45,026 [dilation] [INFO] - Applied morphological dilation with kernel_size=5 and iterations=1
-2025-07-12 00:01:45,026 [dilation] [INFO] - Saved processed image to: dilation_output.png

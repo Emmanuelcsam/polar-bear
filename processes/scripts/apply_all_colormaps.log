@@ -1,5 +1,0 @@
-2025-07-12 00:33:34,332 [apply_all_colormaps] [INFO] - Starting script: apply_all_colormaps.py
-2025-07-12 00:33:34,332 [apply_all_colormaps] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='apply_all_colormaps_output.png')
-2025-07-12 00:33:34,336 [apply_all_colormaps] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:33:34,347 [apply_all_colormaps] [INFO] - Applied all colormaps
-2025-07-12 00:33:34,356 [apply_all_colormaps] [INFO] - Saved processed image to: apply_all_colormaps_output.png

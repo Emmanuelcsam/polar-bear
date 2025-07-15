@@ -1,5 +1,0 @@
-2025-07-12 00:25:00,753 [Convolution_hpfilter] [INFO] - Starting script: Convolution_hpfilter.py
-2025-07-12 00:25:00,753 [Convolution_hpfilter] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='convolution_hpfilter_output.png')
-2025-07-12 00:25:00,758 [Convolution_hpfilter] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:25:00,758 [Convolution_hpfilter] [INFO] - Applied convolution high pass filter
-2025-07-12 00:25:00,759 [Convolution_hpfilter] [INFO] - Saved processed image to: convolution_hpfilter_output.png

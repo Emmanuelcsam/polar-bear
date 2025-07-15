@@ -1,5 +1,0 @@
-2025-07-12 00:15:51,192 [polar_transform] [INFO] - Starting script: polar_transform.py
-2025-07-12 00:15:51,193 [polar_transform] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='polar_transform_output.png')
-2025-07-12 00:15:51,197 [polar_transform] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:15:51,198 [polar_transform] [INFO] - Applied polar transformation
-2025-07-12 00:15:51,199 [polar_transform] [INFO] - Saved processed image to: polar_transform_output.png

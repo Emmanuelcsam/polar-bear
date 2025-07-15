@@ -1,5 +1,0 @@
-2025-07-12 00:05:56,132 [resize_half] [INFO] - Starting script: resize_half.py
-2025-07-12 00:05:56,133 [resize_half] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='resize_half_output.png')
-2025-07-12 00:05:56,137 [resize_half] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:05:56,149 [resize_half] [INFO] - Resized image to half size
-2025-07-12 00:05:56,150 [resize_half] [INFO] - Saved processed image to: resize_half_output.png

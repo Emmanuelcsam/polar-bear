@@ -1,5 +1,0 @@
-2025-07-12 00:23:55,636 [high_pass] [INFO] - Starting script: high_pass.py
-2025-07-12 00:23:55,637 [high_pass] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='high_pass_output.png')
-2025-07-12 00:23:55,641 [high_pass] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:23:55,641 [high_pass] [INFO] - Applied high pass filter
-2025-07-12 00:23:55,642 [high_pass] [INFO] - Saved processed image to: high_pass_output.png

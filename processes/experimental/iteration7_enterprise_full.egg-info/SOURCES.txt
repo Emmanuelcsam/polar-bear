@@ -1,6 +1,0 @@
-setup.py
-iteration7_enterprise_full.egg-info/PKG-INFO
-iteration7_enterprise_full.egg-info/SOURCES.txt
-iteration7_enterprise_full.egg-info/dependency_links.txt
-iteration7_enterprise_full.egg-info/requires.txt
-iteration7_enterprise_full.egg-info/top_level.txt

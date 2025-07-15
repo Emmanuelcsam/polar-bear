@@ -1,5 +1,0 @@
-2025-07-12 00:26:21,022 [hitmiss] [INFO] - Starting script: hitmiss.py
-2025-07-12 00:26:21,022 [hitmiss] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='hitmiss_output.png')
-2025-07-12 00:26:21,027 [hitmiss] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:26:21,027 [hitmiss] [INFO] - Applied hit-or-miss transform
-2025-07-12 00:26:21,028 [hitmiss] [INFO] - Saved processed image to: hitmiss_output.png

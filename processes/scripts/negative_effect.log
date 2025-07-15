@@ -1,5 +1,0 @@
-2025-07-12 00:21:29,528 [negative_effect] [INFO] - Starting script: negative_effect.py
-2025-07-12 00:21:29,528 [negative_effect] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='negative_effect_output.png')
-2025-07-12 00:21:29,534 [negative_effect] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:21:29,534 [negative_effect] [INFO] - Applied negative effect
-2025-07-12 00:21:29,535 [negative_effect] [INFO] - Saved processed image to: negative_effect_output.png

@@ -1,5 +1,0 @@
-2025-07-12 00:31:54,569 [threshold_tozero_inv] [INFO] - Starting script: threshold_tozero_inv.py
-2025-07-12 00:31:54,569 [threshold_tozero_inv] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='threshold_tozero_inv_output.png', threshold=127)
-2025-07-12 00:31:54,574 [threshold_tozero_inv] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:31:54,574 [threshold_tozero_inv] [INFO] - Applied 'to zero' inverse thresholding with threshold=127
-2025-07-12 00:31:54,575 [threshold_tozero_inv] [INFO] - Saved processed image to: threshold_tozero_inv_output.png

@@ -1,5 +1,0 @@
-2025-07-12 00:04:52,087 [flip_vertical] [INFO] - Starting script: flip_vertical.py
-2025-07-12 00:04:52,087 [flip_vertical] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='flip_vertical_output.png')
-2025-07-12 00:04:52,091 [flip_vertical] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:04:52,091 [flip_vertical] [INFO] - Flipped image vertically
-2025-07-12 00:04:52,092 [flip_vertical] [INFO] - Saved processed image to: flip_vertical_output.png

@@ -1,5 +1,0 @@
-2025-07-12 00:14:30,850 [watershed_segmentation] [INFO] - Starting script: watershed_segmentation.py
-2025-07-12 00:14:30,850 [watershed_segmentation] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='watershed_segmentation_output.png')
-2025-07-12 00:14:30,855 [watershed_segmentation] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:14:30,874 [watershed_segmentation] [INFO] - Applied watershed segmentation
-2025-07-12 00:14:30,875 [watershed_segmentation] [INFO] - Saved processed image to: watershed_segmentation_output.png

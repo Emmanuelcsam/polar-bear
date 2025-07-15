@@ -1,5 +1,0 @@
-2025-07-12 00:20:08,397 [inpainting] [INFO] - Starting script: inpainting.py
-2025-07-12 00:20:08,397 [inpainting] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='inpainting_output.png', radius=50)
-2025-07-12 00:20:08,402 [inpainting] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:20:08,409 [inpainting] [INFO] - Applied inpainting with radius=50
-2025-07-12 00:20:08,410 [inpainting] [INFO] - Saved processed image to: inpainting_output.png

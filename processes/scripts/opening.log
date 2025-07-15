@@ -1,5 +1,0 @@
-2025-07-12 00:03:27,983 [opening] [INFO] - Starting script: opening.py
-2025-07-12 00:03:27,984 [opening] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='opening_output.png', kernel_size=5)
-2025-07-12 00:03:27,988 [opening] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:03:27,989 [opening] [INFO] - Applied morphological opening with kernel_size=5
-2025-07-12 00:03:27,989 [opening] [INFO] - Saved processed image to: opening_output.png

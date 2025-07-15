@@ -1,5 +1,0 @@
-2025-07-12 00:27:38,907 [laplacian_pyramid] [INFO] - Starting script: laplacian_pyramid.py
-2025-07-12 00:27:38,907 [laplacian_pyramid] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='laplacian_pyramid_output.png')
-2025-07-12 00:27:38,912 [laplacian_pyramid] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:27:38,918 [laplacian_pyramid] [INFO] - Created Laplacian pyramid
-2025-07-12 00:27:38,918 [laplacian_pyramid] [INFO] - Saved processed image to: laplacian_pyramid_output.png

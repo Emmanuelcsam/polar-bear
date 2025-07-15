@@ -1,5 +1,0 @@
-2025-07-12 00:36:31,546 [find_contours] [INFO] - Starting script: find_contours.py
-2025-07-12 00:36:31,546 [find_contours] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='find_contours_output.png')
-2025-07-12 00:36:31,550 [find_contours] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:36:31,551 [find_contours] [INFO] - Found contours
-2025-07-12 00:36:31,552 [find_contours] [INFO] - Saved processed image to: find_contours_output.png

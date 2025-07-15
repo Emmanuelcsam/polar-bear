@@ -1,5 +1,0 @@
-2025-07-12 00:25:12,325 [min_filter] [INFO] - Starting script: min_filter.py
-2025-07-12 00:25:12,326 [min_filter] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='min_filter_output.png', kernel_size=5)
-2025-07-12 00:25:12,330 [min_filter] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:25:12,330 [min_filter] [INFO] - Applied min filter with kernel_size=5
-2025-07-12 00:25:12,331 [min_filter] [INFO] - Saved processed image to: min_filter_output.png

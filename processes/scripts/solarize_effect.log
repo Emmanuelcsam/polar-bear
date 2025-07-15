@@ -1,5 +1,0 @@
-2025-07-12 00:18:22,309 [solarize_effect] [INFO] - Starting script: solarize_effect.py
-2025-07-12 00:18:22,310 [solarize_effect] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='solarize_effect_output.png', threshold=128)
-2025-07-12 00:18:22,315 [solarize_effect] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:18:22,315 [solarize_effect] [INFO] - Applied solarize effect with threshold=128
-2025-07-12 00:18:22,316 [solarize_effect] [INFO] - Saved processed image to: solarize_effect_output.png

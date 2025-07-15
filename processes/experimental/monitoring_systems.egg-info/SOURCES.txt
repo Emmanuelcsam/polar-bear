@@ -1,5 +1,0 @@
-setup.py
-monitoring_systems.egg-info/PKG-INFO
-monitoring_systems.egg-info/SOURCES.txt
-monitoring_systems.egg-info/dependency_links.txt
-monitoring_systems.egg-info/top_level.txt

@@ -1,5 +1,0 @@
-2025-07-12 00:10:30,158 [gamma_correction] [INFO] - Starting script: gamma_correction.py
-2025-07-12 00:10:30,158 [gamma_correction] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='gamma_correction_output.png', gamma=1.0)
-2025-07-12 00:10:30,163 [gamma_correction] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:10:30,204 [gamma_correction] [INFO] - Applied gamma correction with gamma=1.0
-2025-07-12 00:10:30,205 [gamma_correction] [INFO] - Saved processed image to: gamma_correction_output.png

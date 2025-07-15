@@ -1,5 +1,0 @@
-2025-07-12 00:29:17,883 [niblack_threshold] [INFO] - Starting script: niblack_threshold.py
-2025-07-12 00:29:17,883 [niblack_threshold] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='niblack_threshold_output.png', window_size=25, k=0.2)
-2025-07-12 00:29:17,888 [niblack_threshold] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:29:17,888 [niblack_threshold] [INFO] - Applied Niblack's local thresholding with window_size=25 and k=0.2
-2025-07-12 00:29:17,889 [niblack_threshold] [INFO] - Saved processed image to: niblack_threshold_output.png

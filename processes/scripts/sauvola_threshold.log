@@ -1,5 +1,0 @@
-2025-07-12 00:30:32,784 [sauvola_threshold] [INFO] - Starting script: sauvola_threshold.py
-2025-07-12 00:30:32,784 [sauvola_threshold] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='sauvola_threshold_output.png', window_size=25, k=0.2, R=128)
-2025-07-12 00:30:32,788 [sauvola_threshold] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:30:32,789 [sauvola_threshold] [INFO] - Applied Sauvola's local thresholding with window_size=25, k=0.2, and R=128
-2025-07-12 00:30:32,790 [sauvola_threshold] [INFO] - Saved processed image to: sauvola_threshold_output.png

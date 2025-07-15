@@ -1,5 +1,0 @@
-2025-07-12 00:06:52,304 [add_speckle_noise] [INFO] - Starting script: add_speckle_noise.py
-2025-07-12 00:06:52,304 [add_speckle_noise] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='add_speckle_noise_output.png', intensity=0.1)
-2025-07-12 00:06:52,308 [add_speckle_noise] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:06:52,310 [add_speckle_noise] [INFO] - Applied speckle noise with intensity=0.1
-2025-07-12 00:06:52,311 [add_speckle_noise] [INFO] - Saved processed image to: add_speckle_noise_output.png

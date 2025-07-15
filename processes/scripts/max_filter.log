@@ -1,5 +1,0 @@
-2025-07-12 00:25:06,721 [max_filter] [INFO] - Starting script: max_filter.py
-2025-07-12 00:25:06,721 [max_filter] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='max_filter_output.png', kernel_size=5)
-2025-07-12 00:25:06,728 [max_filter] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:25:06,729 [max_filter] [INFO] - Applied max filter with kernel_size=5
-2025-07-12 00:25:06,730 [max_filter] [INFO] - Saved processed image to: max_filter_output.png

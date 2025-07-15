@@ -1,5 +1,0 @@
-2025-07-12 00:26:32,362 [elliptical_kernel] [INFO] - Starting script: elliptical_kernel.py
-2025-07-12 00:26:32,363 [elliptical_kernel] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='elliptical_kernel_output.png', kernel_size=5)
-2025-07-12 00:26:32,367 [elliptical_kernel] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:26:32,368 [elliptical_kernel] [INFO] - Applied morphological operation with an elliptical kernel of size 5
-2025-07-12 00:26:32,369 [elliptical_kernel] [INFO] - Saved processed image to: elliptical_kernel_output.png

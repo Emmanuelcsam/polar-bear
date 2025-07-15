@@ -1,5 +1,0 @@
-2025-07-12 00:05:40,796 [rotate_180] [INFO] - Starting script: rotate_180.py
-2025-07-12 00:05:40,796 [rotate_180] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='rotate_180_output.png')
-2025-07-12 00:05:40,801 [rotate_180] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:05:40,801 [rotate_180] [INFO] - Rotated image 180 degrees
-2025-07-12 00:05:40,802 [rotate_180] [INFO] - Saved processed image to: rotate_180_output.png

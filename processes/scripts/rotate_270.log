@@ -1,5 +1,0 @@
-2025-07-12 00:05:45,598 [rotate_270] [INFO] - Starting script: rotate_270.py
-2025-07-12 00:05:45,598 [rotate_270] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='rotate_270_output.png')
-2025-07-12 00:05:45,602 [rotate_270] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:05:45,603 [rotate_270] [INFO] - Rotated image 270 degrees clockwise
-2025-07-12 00:05:45,604 [rotate_270] [INFO] - Saved processed image to: rotate_270_output.png

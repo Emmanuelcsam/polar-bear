@@ -1,5 +1,0 @@
-2025-07-12 00:27:54,584 [crop_center] [INFO] - Starting script: crop_center.py
-2025-07-12 00:27:54,584 [crop_center] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='crop_center_output.png', crop_width=50, crop_height=50)
-2025-07-12 00:27:54,589 [crop_center] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:27:54,589 [crop_center] [INFO] - Cropped center of image with width=50 and height=50
-2025-07-12 00:27:54,590 [crop_center] [INFO] - Saved processed image to: crop_center_output.png

@@ -1,5 +1,0 @@
-2025-07-12 00:21:17,904 [kaleidoscope] [INFO] - Starting script: kaleidoscope.py
-2025-07-12 00:21:17,904 [kaleidoscope] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='kaleidoscope_output.png')
-2025-07-12 00:21:17,909 [kaleidoscope] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:21:17,909 [kaleidoscope] [INFO] - Applied kaleidoscope effect
-2025-07-12 00:21:17,910 [kaleidoscope] [INFO] - Saved processed image to: kaleidoscope_output.png

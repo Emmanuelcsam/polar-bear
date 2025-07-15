@@ -1,5 +1,0 @@
-2025-07-12 00:36:40,906 [filter_contours_area] [INFO] - Starting script: filter_contours_area.py
-2025-07-12 00:36:40,907 [filter_contours_area] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='filter_contours_area_output.png', min_area=100, max_area=1000)
-2025-07-12 00:36:40,913 [filter_contours_area] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:36:40,914 [filter_contours_area] [INFO] - Filtered contours by area with min_area=100 and max_area=1000
-2025-07-12 00:36:40,915 [filter_contours_area] [INFO] - Saved processed image to: filter_contours_area_output.png

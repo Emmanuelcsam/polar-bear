@@ -1,5 +1,0 @@
-2025-07-12 00:17:15,006 [oil_painting] [INFO] - Starting script: oil_painting.py
-2025-07-12 00:17:15,006 [oil_painting] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='oil_painting_output.png', size=7, dyn_ratio=1)
-2025-07-12 00:17:15,011 [oil_painting] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:17:15,021 [oil_painting] [INFO] - Applied oil painting effect with size=7 and dyn_ratio=1
-2025-07-12 00:17:15,022 [oil_painting] [INFO] - Saved processed image to: oil_painting_output.png

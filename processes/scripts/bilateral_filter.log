@@ -1,5 +1,0 @@
-2025-07-12 00:00:42,098 [bilateral_filter] [INFO] - Starting script: bilateral_filter.py
-2025-07-12 00:00:42,099 [bilateral_filter] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='bilateral_filter_output.png', d=9, sigma_color=75, sigma_space=75)
-2025-07-12 00:00:42,103 [bilateral_filter] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:00:42,144 [bilateral_filter] [INFO] - Applied bilateral filter with d=9, sigma_color=75, sigma_space=75
-2025-07-12 00:00:42,145 [bilateral_filter] [INFO] - Saved processed image to: bilateral_filter_output.png

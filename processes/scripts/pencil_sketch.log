@@ -1,5 +1,0 @@
-2025-07-12 00:17:01,347 [pencil_sketch] [INFO] - Starting script: pencil_sketch.py
-2025-07-12 00:17:01,347 [pencil_sketch] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='pencil_sketch_output.png')
-2025-07-12 00:17:01,352 [pencil_sketch] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:17:01,369 [pencil_sketch] [INFO] - Applied pencil sketch effect
-2025-07-12 00:17:01,370 [pencil_sketch] [INFO] - Saved processed image to: pencil_sketch_output.png

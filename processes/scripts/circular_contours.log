@@ -1,5 +1,0 @@
-2025-07-12 00:37:02,809 [circular_contours] [INFO] - Starting script: circular_contours.py
-2025-07-12 00:37:02,810 [circular_contours] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='circular_contours_output.png', min_circularity=0.8)
-2025-07-12 00:37:02,814 [circular_contours] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:37:02,815 [circular_contours] [INFO] - Found circular contours with min_circularity=0.8
-2025-07-12 00:37:02,816 [circular_contours] [INFO] - Saved processed image to: circular_contours_output.png

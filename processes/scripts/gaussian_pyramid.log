@@ -1,5 +1,0 @@
-2025-07-12 00:27:32,901 [gaussian_pyramid] [INFO] - Starting script: gaussian_pyramid.py
-2025-07-12 00:27:32,901 [gaussian_pyramid] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='gaussian_pyramid_output.png', levels=2)
-2025-07-12 00:27:32,906 [gaussian_pyramid] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:27:32,923 [gaussian_pyramid] [INFO] - Created Gaussian pyramid with 2 levels
-2025-07-12 00:27:32,923 [gaussian_pyramid] [INFO] - Saved processed image to: gaussian_pyramid_output.png

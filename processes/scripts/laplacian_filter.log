@@ -1,5 +1,0 @@
-2025-07-12 00:22:49,781 [laplacian_filter] [INFO] - Starting script: laplacian_filter.py
-2025-07-12 00:22:49,781 [laplacian_filter] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='laplacian_filter_output.png', ksize=3)
-2025-07-12 00:22:49,786 [laplacian_filter] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:22:49,786 [laplacian_filter] [INFO] - Applied Laplacian filter with ksize=3
-2025-07-12 00:22:49,787 [laplacian_filter] [INFO] - Saved processed image to: laplacian_filter_output.png

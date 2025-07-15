@@ -1,5 +1,0 @@
-2025-07-12 00:02:39,094 [laplacian_edges] [INFO] - Starting script: laplacian_edges.py
-2025-07-12 00:02:39,094 [laplacian_edges] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='laplacian_edges_output.png', ksize=3)
-2025-07-12 00:02:39,099 [laplacian_edges] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:02:39,099 [laplacian_edges] [INFO] - Applied Laplacian edge detection with ksize=3
-2025-07-12 00:02:39,100 [laplacian_edges] [INFO] - Saved processed image to: laplacian_edges_output.png

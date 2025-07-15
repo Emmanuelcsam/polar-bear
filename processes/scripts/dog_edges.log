@@ -1,5 +1,0 @@
-2025-07-12 00:22:39,575 [dog_edges] [INFO] - Starting script: dog_edges.py
-2025-07-12 00:22:39,576 [dog_edges] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='dog_edges_output.png', sigma1=1.0, sigma2=2.0)
-2025-07-12 00:22:39,580 [dog_edges] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:22:39,587 [dog_edges] [INFO] - Applied Difference of Gaussians edge detection with sigma1=1.0 and sigma2=2.0
-2025-07-12 00:22:39,587 [dog_edges] [INFO] - Saved processed image to: dog_edges_output.png

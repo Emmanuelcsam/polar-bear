@@ -1,5 +1,0 @@
-2025-07-12 00:13:18,450 [mser_regions] [INFO] - Starting script: mser_regions.py
-2025-07-12 00:13:18,450 [mser_regions] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='mser_regions_output.png')
-2025-07-12 00:13:18,454 [mser_regions] [INFO] - Successfully loaded image from: test_image.png
-2025-07-12 00:13:18,536 [mser_regions] [INFO] - Applied MSER region detection
-2025-07-12 00:13:18,537 [mser_regions] [INFO] - Saved processed image to: mser_regions_output.png
