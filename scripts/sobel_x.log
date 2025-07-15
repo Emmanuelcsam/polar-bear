@@ -1,0 +1,5 @@
+2025-07-12 00:03:34,135 [sobel_x] [INFO] - Starting script: sobel_x.py
+2025-07-12 00:03:34,135 [sobel_x] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='sobel_x_output.png', ksize=3)
+2025-07-12 00:03:34,139 [sobel_x] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:03:34,140 [sobel_x] [INFO] - Applied Sobel X with ksize=3
+2025-07-12 00:03:34,141 [sobel_x] [INFO] - Saved processed image to: sobel_x_output.png

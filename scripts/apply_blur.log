@@ -1,0 +1,5 @@
+2025-07-12 00:00:38,170 [apply_blur] [INFO] - Starting script: apply_blur.py
+2025-07-12 00:00:38,170 [apply_blur] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='blur_output.png', kernel_size=5)
+2025-07-12 00:00:38,174 [apply_blur] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:00:38,175 [apply_blur] [INFO] - Applied blur with kernel_size=5
+2025-07-12 00:00:38,175 [apply_blur] [INFO] - Saved processed image to: blur_output.png

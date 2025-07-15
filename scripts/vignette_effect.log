@@ -1,0 +1,5 @@
+2025-07-12 00:18:09,880 [vignette_effect] [INFO] - Starting script: vignette_effect.py
+2025-07-12 00:18:09,881 [vignette_effect] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='vignette_effect_output.png', sigma_x=150, sigma_y=150)
+2025-07-12 00:18:09,885 [vignette_effect] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:18:09,886 [vignette_effect] [INFO] - Applied vignette effect with sigma_x=150 and sigma_y=150
+2025-07-12 00:18:09,887 [vignette_effect] [INFO] - Saved processed image to: vignette_effect_output.png

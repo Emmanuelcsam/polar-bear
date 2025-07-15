@@ -1,0 +1,5 @@
+2025-07-12 00:04:41,281 [histogram_equalization] [INFO] - Starting script: histogram_equalization.py
+2025-07-12 00:04:41,282 [histogram_equalization] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='histogram_equalization_output.png')
+2025-07-12 00:04:41,286 [histogram_equalization] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:04:41,326 [histogram_equalization] [INFO] - Applied histogram equalization
+2025-07-12 00:04:41,327 [histogram_equalization] [INFO] - Saved processed image to: histogram_equalization_output.png

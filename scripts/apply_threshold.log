@@ -1,0 +1,5 @@
+2025-07-12 00:32:13,953 [apply_threshold] [INFO] - Starting script: apply_threshold.py
+2025-07-12 00:32:13,953 [apply_threshold] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='apply_threshold_output.png', threshold=127)
+2025-07-12 00:32:13,958 [apply_threshold] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:32:13,958 [apply_threshold] [INFO] - Applied threshold with threshold=127
+2025-07-12 00:32:13,959 [apply_threshold] [INFO] - Saved processed image to: apply_threshold_output.png

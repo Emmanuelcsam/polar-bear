@@ -1,0 +1,5 @@
+2025-07-12 00:07:57,804 [grayscale_convert] [INFO] - Starting script: grayscale_convert.py
+2025-07-12 00:07:57,804 [grayscale_convert] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='grayscale_output.png')
+2025-07-12 00:07:57,809 [grayscale_convert] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:07:57,809 [grayscale_convert] [INFO] - Converted image to grayscale
+2025-07-12 00:07:57,810 [grayscale_convert] [INFO] - Saved processed image to: grayscale_output.png

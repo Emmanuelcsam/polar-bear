@@ -1,0 +1,5 @@
+2025-07-12 00:22:44,671 [gradient_magnitude] [INFO] - Starting script: gradient_magnitude.py
+2025-07-12 00:22:44,672 [gradient_magnitude] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='gradient_magnitude_output.png')
+2025-07-12 00:22:44,677 [gradient_magnitude] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:22:44,677 [gradient_magnitude] [INFO] - Computed gradient magnitude
+2025-07-12 00:22:44,679 [gradient_magnitude] [INFO] - Saved processed image to: gradient_magnitude_output.png

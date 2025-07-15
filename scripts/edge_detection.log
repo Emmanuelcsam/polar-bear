@@ -1,0 +1,5 @@
+2025-07-12 00:09:32,501 [edge_detection] [INFO] - Starting script: edge_detection.py
+2025-07-12 00:09:32,501 [edge_detection] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='edge_detection_output.png', low_threshold=50, high_threshold=150)
+2025-07-12 00:09:32,505 [edge_detection] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:09:32,512 [edge_detection] [INFO] - Applied edge detection with low_threshold=50 and high_threshold=150
+2025-07-12 00:09:32,513 [edge_detection] [INFO] - Saved processed image to: edge_detection_output.png

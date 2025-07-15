@@ -1,0 +1,5 @@
+2025-07-12 00:04:34,939 [blackhat] [INFO] - Starting script: blackhat.py
+2025-07-12 00:04:34,939 [blackhat] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='blackhat_output.png', kernel_size=9)
+2025-07-12 00:04:34,944 [blackhat] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:04:34,944 [blackhat] [INFO] - Applied morphological blackhat with kernel_size=9
+2025-07-12 00:04:34,945 [blackhat] [INFO] - Saved processed image to: blackhat_output.png

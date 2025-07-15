@@ -1,0 +1,5 @@
+2025-07-12 00:10:36,043 [clahe] [INFO] - Starting script: clahe.py
+2025-07-12 00:10:36,043 [clahe] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='clahe_output.png', clip_limit=2.0, tile_grid_size=8)
+2025-07-12 00:10:36,047 [clahe] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:10:36,068 [clahe] [INFO] - Applied CLAHE with clip_limit=2.0 and tile_grid_size=8
+2025-07-12 00:10:36,070 [clahe] [INFO] - Saved processed image to: clahe_output.png

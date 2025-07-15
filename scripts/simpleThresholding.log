@@ -1,0 +1,5 @@
+2025-07-12 00:29:05,536 [simpleThresholding] [INFO] - Starting script: simpleThresholding.py
+2025-07-12 00:29:05,536 [simpleThresholding] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='simple_thresholding_output.png', threshold=127)
+2025-07-12 00:29:05,540 [simpleThresholding] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:29:05,541 [simpleThresholding] [INFO] - Applied simple thresholding with threshold=127
+2025-07-12 00:29:05,541 [simpleThresholding] [INFO] - Saved processed image to: simple_thresholding_output.png

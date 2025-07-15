@@ -1,0 +1,5 @@
+2025-07-12 00:10:45,835 [color_threshold] [INFO] - Starting script: color_threshold.py
+2025-07-12 00:10:45,835 [color_threshold] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='color_threshold_output.png', threshold_value=127)
+2025-07-12 00:10:45,840 [color_threshold] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:10:45,852 [color_threshold] [INFO] - Applied color thresholding with threshold_value=127
+2025-07-12 00:10:45,853 [color_threshold] [INFO] - Saved processed image to: color_threshold_output.png

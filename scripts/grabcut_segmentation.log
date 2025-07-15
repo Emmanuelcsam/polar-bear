@@ -1,0 +1,5 @@
+2025-07-12 00:14:36,136 [grabcut_segmentation] [INFO] - Starting script: grabcut_segmentation.py
+2025-07-12 00:14:36,136 [grabcut_segmentation] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='grabcut_segmentation_output.png')
+2025-07-12 00:14:36,141 [grabcut_segmentation] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:14:36,232 [grabcut_segmentation] [INFO] - Applied GrabCut segmentation
+2025-07-12 00:14:36,233 [grabcut_segmentation] [INFO] - Saved processed image to: grabcut_segmentation_output.png

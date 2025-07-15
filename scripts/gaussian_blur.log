@@ -1,0 +1,5 @@
+2025-07-12 00:02:34,678 [gaussian_blur] [INFO] - Starting script: gaussian_blur.py
+2025-07-12 00:02:34,679 [gaussian_blur] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='gaussian_blur_output.png', kernel_size=5, sigma=1.0)
+2025-07-12 00:02:34,683 [gaussian_blur] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:02:34,700 [gaussian_blur] [INFO] - Applied Gaussian blur with kernel_size=5 and sigma=1.0
+2025-07-12 00:02:34,702 [gaussian_blur] [INFO] - Saved processed image to: gaussian_blur_output.png

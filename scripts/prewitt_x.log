@@ -1,0 +1,5 @@
+2025-07-12 00:08:09,957 [prewitt_x] [INFO] - Starting script: prewitt_x.py
+2025-07-12 00:08:09,957 [prewitt_x] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='prewitt_x_output.png')
+2025-07-12 00:08:09,962 [prewitt_x] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:08:09,963 [prewitt_x] [INFO] - Applied Prewitt X operator
+2025-07-12 00:08:09,963 [prewitt_x] [INFO] - Saved processed image to: prewitt_x_output.png

@@ -1,0 +1,5 @@
+2025-07-12 00:02:43,089 [median_filter] [INFO] - Starting script: median_filter.py
+2025-07-12 00:02:43,089 [median_filter] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='median_filter_output.png', kernel_size=5)
+2025-07-12 00:02:43,093 [median_filter] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:02:43,105 [median_filter] [INFO] - Applied median filter with kernel_size=5
+2025-07-12 00:02:43,106 [median_filter] [INFO] - Saved processed image to: median_filter_output.png

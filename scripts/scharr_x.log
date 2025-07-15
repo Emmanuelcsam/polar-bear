@@ -1,0 +1,5 @@
+2025-07-12 00:23:45,392 [scharr_x] [INFO] - Starting script: scharr_x.py
+2025-07-12 00:23:45,392 [scharr_x] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='scharr_x_output.png')
+2025-07-12 00:23:45,397 [scharr_x] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:23:45,397 [scharr_x] [INFO] - Applied Scharr operator in the x-direction
+2025-07-12 00:23:45,398 [scharr_x] [INFO] - Saved processed image to: scharr_x_output.png

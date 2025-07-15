@@ -1,0 +1,5 @@
+2025-07-12 00:31:48,879 [threshold_tozero] [INFO] - Starting script: threshold_tozero.py
+2025-07-12 00:31:48,879 [threshold_tozero] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='threshold_tozero_output.png', threshold=127)
+2025-07-12 00:31:48,884 [threshold_tozero] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:31:48,884 [threshold_tozero] [INFO] - Applied 'to zero' thresholding with threshold=127
+2025-07-12 00:31:48,885 [threshold_tozero] [INFO] - Saved processed image to: threshold_tozero_output.png

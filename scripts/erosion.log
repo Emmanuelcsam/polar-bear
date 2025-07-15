@@ -1,0 +1,5 @@
+2025-07-12 00:02:30,200 [erosion] [INFO] - Starting script: erosion.py
+2025-07-12 00:02:30,200 [erosion] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='erosion_output.png', kernel_size=5, iterations=1)
+2025-07-12 00:02:30,205 [erosion] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:02:30,217 [erosion] [INFO] - Applied morphological erosion with kernel_size=5 and iterations=1
+2025-07-12 00:02:30,218 [erosion] [INFO] - Saved processed image to: erosion_output.png

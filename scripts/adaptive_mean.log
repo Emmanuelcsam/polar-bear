@@ -1,0 +1,5 @@
+2025-07-12 00:00:33,881 [adaptive_mean] [INFO] - Starting script: adaptive_mean.py
+2025-07-12 00:00:33,881 [adaptive_mean] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='adaptive_mean_output.png', block_size=11, C=2)
+2025-07-12 00:00:33,886 [adaptive_mean] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:00:33,897 [adaptive_mean] [INFO] - Applied adaptive mean thresholding with block_size=11 and C=2
+2025-07-12 00:00:33,898 [adaptive_mean] [INFO] - Saved processed image to: adaptive_mean_output.png

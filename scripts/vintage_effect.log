@@ -1,0 +1,5 @@
+2025-07-12 00:18:15,617 [vintage_effect] [INFO] - Starting script: vintage_effect.py
+2025-07-12 00:18:15,617 [vintage_effect] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='vintage_effect_output.png')
+2025-07-12 00:18:15,622 [vintage_effect] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:18:15,625 [vintage_effect] [INFO] - Applied vintage photo effect
+2025-07-12 00:18:15,627 [vintage_effect] [INFO] - Saved processed image to: vintage_effect_output.png

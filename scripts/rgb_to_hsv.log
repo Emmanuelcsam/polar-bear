@@ -1,0 +1,5 @@
+2025-07-12 00:33:19,691 [rgb_to_hsv] [INFO] - Starting script: rgb_to_hsv.py
+2025-07-12 00:33:19,691 [rgb_to_hsv] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='rgb_to_hsv_output.png')
+2025-07-12 00:33:19,696 [rgb_to_hsv] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:33:19,696 [rgb_to_hsv] [INFO] - Converted image to HSV color space
+2025-07-12 00:33:19,697 [rgb_to_hsv] [INFO] - Saved processed image to: rgb_to_hsv_output.png

@@ -1,0 +1,5 @@
+2025-07-12 00:03:44,976 [tophat] [INFO] - Starting script: tophat.py
+2025-07-12 00:03:44,976 [tophat] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='tophat_output.png', kernel_size=9)
+2025-07-12 00:03:44,980 [tophat] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:03:44,981 [tophat] [INFO] - Applied morphological tophat with kernel_size=9
+2025-07-12 00:03:44,981 [tophat] [INFO] - Saved processed image to: tophat_output.png

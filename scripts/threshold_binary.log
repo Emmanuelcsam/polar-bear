@@ -1,0 +1,5 @@
+2025-07-12 00:30:39,403 [threshold_binary] [INFO] - Starting script: threshold_binary.py
+2025-07-12 00:30:39,403 [threshold_binary] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='threshold_binary_output.png', threshold=127)
+2025-07-12 00:30:39,408 [threshold_binary] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:30:39,408 [threshold_binary] [INFO] - Applied binary thresholding with threshold=127
+2025-07-12 00:30:39,409 [threshold_binary] [INFO] - Saved processed image to: threshold_binary_output.png

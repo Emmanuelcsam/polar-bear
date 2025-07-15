@@ -1,0 +1,5 @@
+2025-07-12 00:15:57,448 [log_polar_transform] [INFO] - Starting script: log_polar_transform.py
+2025-07-12 00:15:57,449 [log_polar_transform] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='log_polar_transform_output.png')
+2025-07-12 00:15:57,453 [log_polar_transform] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:15:57,453 [log_polar_transform] [INFO] - Applied log-polar transformation
+2025-07-12 00:15:57,454 [log_polar_transform] [INFO] - Saved processed image to: log_polar_transform_output.png

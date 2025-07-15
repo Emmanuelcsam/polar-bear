@@ -1,0 +1,5 @@
+2025-07-12 00:33:25,041 [rgb_to_lab] [INFO] - Starting script: rgb_to_lab.py
+2025-07-12 00:33:25,042 [rgb_to_lab] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='rgb_to_lab_output.png')
+2025-07-12 00:33:25,046 [rgb_to_lab] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:33:25,337 [rgb_to_lab] [INFO] - Converted image to LAB color space
+2025-07-12 00:33:25,338 [rgb_to_lab] [INFO] - Saved processed image to: rgb_to_lab_output.png

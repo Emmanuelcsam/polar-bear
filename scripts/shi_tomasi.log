@@ -1,0 +1,5 @@
+2025-07-12 00:13:05,731 [shi_tomasi] [INFO] - Starting script: shi_tomasi.py
+2025-07-12 00:13:05,731 [shi_tomasi] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='shi_tomasi_output.png', max_corners=100, quality_level=0.01, min_distance=10)
+2025-07-12 00:13:05,736 [shi_tomasi] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:13:05,738 [shi_tomasi] [INFO] - Applied Shi-Tomasi corner detection with max_corners=100, quality_level=0.01, min_distance=10
+2025-07-12 00:13:05,740 [shi_tomasi] [INFO] - Saved processed image to: shi_tomasi_output.png

@@ -1,0 +1,17 @@
+2025-07-12 00:35:09,133 [comp_analysis] [INFO] - Starting script: comp_analysis.py
+2025-07-12 00:35:09,134 [comp_analysis] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='comp_analysis_output.png')
+2025-07-12 00:35:09,138 [comp_analysis] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:35:09,144 [comp_analysis] [ERROR] - An error occurred: NumPy boolean array indexing assignment cannot assign 3 input values to the 4851 output values where the mask is true
+Traceback (most recent call last):
+  File "/media/jarvis/6E7A-FA6E/GitHub/polar-bear/training/studio-tools/scripts/comp_analysis.py", line 52, in main
+    result = comp_analysis(img)
+             ^^^^^^^^^^^^^^^^^^
+  File "/media/jarvis/6E7A-FA6E/GitHub/polar-bear/training/studio-tools/scripts/comp_analysis.py", line 33, in comp_analysis
+    result[mask] = np.random.randint(0, 255, size=3)
+    ~~~~~~^^^^^^
+ValueError: NumPy boolean array indexing assignment cannot assign 3 input values to the 4851 output values where the mask is true
+2025-07-12 00:35:23,855 [comp_analysis] [INFO] - Starting script: comp_analysis.py
+2025-07-12 00:35:23,855 [comp_analysis] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='comp_analysis_output.png')
+2025-07-12 00:35:23,859 [comp_analysis] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:35:23,865 [comp_analysis] [INFO] - Performed component analysis
+2025-07-12 00:35:23,866 [comp_analysis] [INFO] - Saved processed image to: comp_analysis_output.png

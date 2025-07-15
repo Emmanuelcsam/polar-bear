@@ -1,0 +1,5 @@
+2025-07-12 00:12:00,509 [harris_corners] [INFO] - Starting script: harris_corners.py
+2025-07-12 00:12:00,509 [harris_corners] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='harris_corners_output.png', block_size=2, ksize=3, k=0.04)
+2025-07-12 00:12:00,514 [harris_corners] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:12:00,526 [harris_corners] [INFO] - Applied Harris corner detection with block_size=2, ksize=3, k=0.04
+2025-07-12 00:12:00,527 [harris_corners] [INFO] - Saved processed image to: harris_corners_output.png

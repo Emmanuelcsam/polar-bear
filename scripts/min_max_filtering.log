@@ -1,0 +1,5 @@
+2025-07-12 00:25:17,433 [min_max_filtering] [INFO] - Starting script: min_max_filtering.py
+2025-07-12 00:25:17,433 [min_max_filtering] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='min_max_filtering_output.png', kernel_size=5)
+2025-07-12 00:25:17,440 [min_max_filtering] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:25:17,441 [min_max_filtering] [INFO] - Applied min-max filtering with kernel_size=5
+2025-07-12 00:25:17,442 [min_max_filtering] [INFO] - Saved processed image to: min_max_filtering_output.png

@@ -1,0 +1,5 @@
+2025-07-12 00:28:59,119 [AdaptiveThresholding] [INFO] - Starting script: AdaptiveThresholding.py
+2025-07-12 00:28:59,120 [AdaptiveThresholding] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='adaptive_thresholding_output.png', block_size=11, C=2)
+2025-07-12 00:28:59,126 [AdaptiveThresholding] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:28:59,127 [AdaptiveThresholding] [INFO] - Applied adaptive thresholding with block_size=11 and C=2
+2025-07-12 00:28:59,128 [AdaptiveThresholding] [INFO] - Saved processed image to: adaptive_thresholding_output.png

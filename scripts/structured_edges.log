@@ -1,0 +1,5 @@
+2025-07-12 00:22:33,390 [structured_edges] [INFO] - Starting script: structured_edges.py
+2025-07-12 00:22:33,391 [structured_edges] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='structured_edges_output.png')
+2025-07-12 00:22:33,395 [structured_edges] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:22:33,612 [structured_edges] [INFO] - Applied structured edge detection
+2025-07-12 00:22:33,613 [structured_edges] [INFO] - Saved processed image to: structured_edges_output.png

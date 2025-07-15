@@ -1,0 +1,5 @@
+2025-07-12 00:26:26,441 [cross_kernel] [INFO] - Starting script: cross_kernel.py
+2025-07-12 00:26:26,441 [cross_kernel] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='cross_kernel_output.png', kernel_size=5)
+2025-07-12 00:26:26,446 [cross_kernel] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:26:26,446 [cross_kernel] [INFO] - Applied morphological operation with a cross kernel of size 5
+2025-07-12 00:26:26,447 [cross_kernel] [INFO] - Saved processed image to: cross_kernel_output.png

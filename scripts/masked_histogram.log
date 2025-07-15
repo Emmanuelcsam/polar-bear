@@ -1,0 +1,5 @@
+2025-07-12 00:34:56,155 [masked_histogram] [INFO] - Starting script: masked_histogram.py
+2025-07-12 00:34:56,155 [masked_histogram] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='masked_histogram_output.png')
+2025-07-12 00:34:56,159 [masked_histogram] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:34:56,793 [masked_histogram] [INFO] - Generated masked histogram
+2025-07-12 00:34:56,805 [masked_histogram] [INFO] - Saved processed image to: masked_histogram_output.png

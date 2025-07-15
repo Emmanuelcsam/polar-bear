@@ -1,0 +1,5 @@
+2025-07-12 00:09:13,234 [sobel_combined] [INFO] - Starting script: sobel_combined.py
+2025-07-12 00:09:13,234 [sobel_combined] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='sobel_combined_output.png', ksize=3)
+2025-07-12 00:09:13,239 [sobel_combined] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:09:13,240 [sobel_combined] [INFO] - Applied Sobel edge detection with ksize=3
+2025-07-12 00:09:13,241 [sobel_combined] [INFO] - Saved processed image to: sobel_combined_output.png

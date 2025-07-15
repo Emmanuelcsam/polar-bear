@@ -1,0 +1,5 @@
+2025-07-12 00:21:23,746 [pixelate_effect] [INFO] - Starting script: pixelate_effect.py
+2025-07-12 00:21:23,747 [pixelate_effect] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='pixelate_effect_output.png', pixel_size=10)
+2025-07-12 00:21:23,752 [pixelate_effect] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:21:23,752 [pixelate_effect] [INFO] - Applied pixelate effect with pixel_size=10
+2025-07-12 00:21:23,753 [pixelate_effect] [INFO] - Saved processed image to: pixelate_effect_output.png

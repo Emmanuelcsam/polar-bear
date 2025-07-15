@@ -1,0 +1,5 @@
+2025-07-12 00:19:34,226 [unsharp_mask] [INFO] - Starting script: unsharp_mask.py
+2025-07-12 00:19:34,226 [unsharp_mask] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='unsharp_mask_output.png', sigma=2.0, strength=0.5)
+2025-07-12 00:19:34,230 [unsharp_mask] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:19:34,236 [unsharp_mask] [INFO] - Applied unsharp mask with sigma=2.0 and strength=0.5
+2025-07-12 00:19:34,237 [unsharp_mask] [INFO] - Saved processed image to: unsharp_mask_output.png

@@ -1,0 +1,5 @@
+2025-07-12 00:09:26,130 [emboss_filter] [INFO] - Starting script: emboss_filter.py
+2025-07-12 00:09:26,131 [emboss_filter] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='emboss_filter_output.png')
+2025-07-12 00:09:26,135 [emboss_filter] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:09:26,136 [emboss_filter] [INFO] - Applied emboss filter
+2025-07-12 00:09:26,137 [emboss_filter] [INFO] - Saved processed image to: emboss_filter_output.png

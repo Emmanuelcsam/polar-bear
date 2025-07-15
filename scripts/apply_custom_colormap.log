@@ -1,0 +1,5 @@
+2025-07-12 00:33:42,275 [apply_custom_colormap] [INFO] - Starting script: apply_custom_colormap.py
+2025-07-12 00:33:42,275 [apply_custom_colormap] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='apply_custom_colormap_output.png')
+2025-07-12 00:33:42,280 [apply_custom_colormap] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:33:42,297 [apply_custom_colormap] [INFO] - Applied custom colormap
+2025-07-12 00:33:42,298 [apply_custom_colormap] [INFO] - Saved processed image to: apply_custom_colormap_output.png

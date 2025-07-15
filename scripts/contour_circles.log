@@ -1,0 +1,5 @@
+2025-07-12 00:36:47,414 [contour_circles] [INFO] - Starting script: contour_circles.py
+2025-07-12 00:36:47,414 [contour_circles] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='contour_circles_output.png')
+2025-07-12 00:36:47,419 [contour_circles] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:36:47,419 [contour_circles] [INFO] - Found circles using contours
+2025-07-12 00:36:47,420 [contour_circles] [INFO] - Saved processed image to: contour_circles_output.png

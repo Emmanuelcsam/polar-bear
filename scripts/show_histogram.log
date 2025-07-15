@@ -1,0 +1,5 @@
+2025-07-12 00:34:48,305 [show_histogram] [INFO] - Starting script: show_histogram.py
+2025-07-12 00:34:48,305 [show_histogram] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='show_histogram_output.png')
+2025-07-12 00:34:48,309 [show_histogram] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:34:48,974 [show_histogram] [INFO] - Generated histogram
+2025-07-12 00:34:48,988 [show_histogram] [INFO] - Saved processed image to: show_histogram_output.png

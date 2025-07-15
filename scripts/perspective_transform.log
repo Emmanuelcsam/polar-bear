@@ -1,0 +1,5 @@
+2025-07-12 00:15:37,944 [perspective_transform] [INFO] - Starting script: perspective_transform.py
+2025-07-12 00:15:37,944 [perspective_transform] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='perspective_transform_output.png')
+2025-07-12 00:15:37,948 [perspective_transform] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:15:37,960 [perspective_transform] [INFO] - Applied perspective transformation
+2025-07-12 00:15:37,961 [perspective_transform] [INFO] - Saved processed image to: perspective_transform_output.png

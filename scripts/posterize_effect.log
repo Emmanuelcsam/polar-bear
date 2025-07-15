@@ -1,0 +1,5 @@
+2025-07-12 00:18:28,760 [posterize_effect] [INFO] - Starting script: posterize_effect.py
+2025-07-12 00:18:28,760 [posterize_effect] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='posterize_effect_output.png', n_bits=4)
+2025-07-12 00:18:28,765 [posterize_effect] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:18:28,765 [posterize_effect] [INFO] - Applied posterize effect with n_bits=4
+2025-07-12 00:18:28,766 [posterize_effect] [INFO] - Saved processed image to: posterize_effect_output.png

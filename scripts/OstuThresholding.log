@@ -1,0 +1,5 @@
+2025-07-12 00:29:11,458 [OstuThresholding] [INFO] - Starting script: OstuThresholding.py
+2025-07-12 00:29:11,459 [OstuThresholding] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='otsu_thresholding_output.png')
+2025-07-12 00:29:11,463 [OstuThresholding] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:29:11,463 [OstuThresholding] [INFO] - Applied Otsu's thresholding
+2025-07-12 00:29:11,464 [OstuThresholding] [INFO] - Saved processed image to: otsu_thresholding_output.png

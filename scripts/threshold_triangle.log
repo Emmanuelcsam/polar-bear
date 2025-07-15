@@ -1,0 +1,5 @@
+2025-07-12 00:32:04,330 [threshold_triangle] [INFO] - Starting script: threshold_triangle.py
+2025-07-12 00:32:04,330 [threshold_triangle] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='threshold_triangle_output.png')
+2025-07-12 00:32:04,334 [threshold_triangle] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:32:04,335 [threshold_triangle] [INFO] - Applied triangle thresholding
+2025-07-12 00:32:04,335 [threshold_triangle] [INFO] - Saved processed image to: threshold_triangle_output.png

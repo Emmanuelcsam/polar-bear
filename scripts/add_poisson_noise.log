@@ -1,0 +1,5 @@
+2025-07-12 00:07:02,861 [add_poisson_noise] [INFO] - Starting script: add_poisson_noise.py
+2025-07-12 00:07:02,861 [add_poisson_noise] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='add_poisson_noise_output.png')
+2025-07-12 00:07:02,866 [add_poisson_noise] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:07:02,868 [add_poisson_noise] [INFO] - Applied Poisson noise
+2025-07-12 00:07:02,869 [add_poisson_noise] [INFO] - Saved processed image to: add_poisson_noise_output.png

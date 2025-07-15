@@ -1,0 +1,5 @@
+2025-07-12 00:01:40,840 [closing] [INFO] - Starting script: closing.py
+2025-07-12 00:01:40,840 [closing] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='closing_output.png', kernel_size=5)
+2025-07-12 00:01:40,845 [closing] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:01:40,858 [closing] [INFO] - Applied morphological closing with kernel_size=5
+2025-07-12 00:01:40,859 [closing] [INFO] - Saved processed image to: closing_output.png

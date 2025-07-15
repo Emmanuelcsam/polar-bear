@@ -1,0 +1,5 @@
+2025-07-12 00:19:41,045 [guided_filter] [INFO] - Starting script: guided_filter.py
+2025-07-12 00:19:41,045 [guided_filter] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='guided_filter_output.png', radius=8, eps=0.2)
+2025-07-12 00:19:41,050 [guided_filter] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:19:41,066 [guided_filter] [INFO] - Applied guided filter with radius=8 and eps=0.2
+2025-07-12 00:19:41,067 [guided_filter] [INFO] - Saved processed image to: guided_filter_output.png

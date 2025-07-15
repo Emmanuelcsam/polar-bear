@@ -1,0 +1,5 @@
+2025-07-12 00:00:29,388 [adaptive_gaussian] [INFO] - Starting script: adaptive_gaussian.py
+2025-07-12 00:00:29,389 [adaptive_gaussian] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='adaptive_gaussian_output.png', block_size=11, C=2)
+2025-07-12 00:00:29,394 [adaptive_gaussian] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:00:29,407 [adaptive_gaussian] [INFO] - Applied adaptive Gaussian thresholding with block_size=11 and C=2
+2025-07-12 00:00:29,408 [adaptive_gaussian] [INFO] - Saved processed image to: adaptive_gaussian_output.png

@@ -1,0 +1,5 @@
+2025-07-12 00:11:53,430 [hough_circles] [INFO] - Starting script: hough_circles.py
+2025-07-12 00:11:53,430 [hough_circles] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='hough_circles_output.png', dp=1, min_dist=50, param1=50, param2=30, min_radius=0, max_radius=0)
+2025-07-12 00:11:53,435 [hough_circles] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:11:53,442 [hough_circles] [INFO] - Applied Hough circle detection with dp=1, min_dist=50, param1=50, param2=30, min_radius=0, max_radius=0
+2025-07-12 00:11:53,444 [hough_circles] [INFO] - Saved processed image to: hough_circles_output.png

@@ -1,0 +1,5 @@
+2025-07-12 00:06:57,573 [add_uniform_noise] [INFO] - Starting script: add_uniform_noise.py
+2025-07-12 00:06:57,573 [add_uniform_noise] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='add_uniform_noise_output.png', amount=50)
+2025-07-12 00:06:57,577 [add_uniform_noise] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:06:57,578 [add_uniform_noise] [INFO] - Applied uniform noise with amount=50
+2025-07-12 00:06:57,579 [add_uniform_noise] [INFO] - Saved processed image to: add_uniform_noise_output.png

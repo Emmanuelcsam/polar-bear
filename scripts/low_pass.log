@@ -1,0 +1,5 @@
+2025-07-12 00:24:01,478 [low_pass] [INFO] - Starting script: low_pass.py
+2025-07-12 00:24:01,479 [low_pass] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='low_pass_output.png', kernel_size=5)
+2025-07-12 00:24:01,483 [low_pass] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:24:01,484 [low_pass] [INFO] - Applied low pass filter with kernel_size=5
+2025-07-12 00:24:01,485 [low_pass] [INFO] - Saved processed image to: low_pass_output.png

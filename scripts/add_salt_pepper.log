@@ -1,0 +1,5 @@
+2025-07-12 00:06:46,980 [add_salt_pepper] [INFO] - Starting script: add_salt_pepper.py
+2025-07-12 00:06:46,983 [add_salt_pepper] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='add_salt_pepper_output.png', salt_vs_pepper=0.5, amount=0.05)
+2025-07-12 00:06:46,989 [add_salt_pepper] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:06:46,990 [add_salt_pepper] [INFO] - Applied salt and pepper noise with salt_vs_pepper=0.5 and amount=0.05
+2025-07-12 00:06:46,992 [add_salt_pepper] [INFO] - Saved processed image to: add_salt_pepper_output.png

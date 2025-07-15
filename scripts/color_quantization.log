@@ -1,0 +1,5 @@
+2025-07-12 00:10:41,151 [color_quantization] [INFO] - Starting script: color_quantization.py
+2025-07-12 00:10:41,152 [color_quantization] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='color_quantization_output.png', n_colors=8)
+2025-07-12 00:10:41,157 [color_quantization] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:10:41,158 [color_quantization] [INFO] - Applied color quantization with n_colors=8
+2025-07-12 00:10:41,159 [color_quantization] [INFO] - Saved processed image to: color_quantization_output.png

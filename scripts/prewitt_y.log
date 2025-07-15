@@ -1,0 +1,5 @@
+2025-07-12 00:08:16,203 [prewitt_y] [INFO] - Starting script: prewitt_y.py
+2025-07-12 00:08:16,203 [prewitt_y] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='prewitt_y_output.png')
+2025-07-12 00:08:16,208 [prewitt_y] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:08:16,208 [prewitt_y] [INFO] - Applied Prewitt Y operator
+2025-07-12 00:08:16,209 [prewitt_y] [INFO] - Saved processed image to: prewitt_y_output.png

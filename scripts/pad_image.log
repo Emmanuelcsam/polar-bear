@@ -1,0 +1,5 @@
+2025-07-12 00:27:44,975 [pad_image] [INFO] - Starting script: pad_image.py
+2025-07-12 00:27:44,975 [pad_image] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='pad_image_output.png', top=20, bottom=20, left=20, right=20)
+2025-07-12 00:27:44,980 [pad_image] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:27:44,980 [pad_image] [INFO] - Padded image with top=20, bottom=20, left=20, right=20
+2025-07-12 00:27:44,981 [pad_image] [INFO] - Saved processed image to: pad_image_output.png

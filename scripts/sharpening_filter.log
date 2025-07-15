@@ -1,0 +1,5 @@
+2025-07-12 00:09:20,047 [sharpening_filter] [INFO] - Starting script: sharpening_filter.py
+2025-07-12 00:09:20,047 [sharpening_filter] [INFO] - Received arguments: Namespace(input_path='test_image.png', output_path='sharpening_filter_output.png')
+2025-07-12 00:09:20,052 [sharpening_filter] [INFO] - Successfully loaded image from: test_image.png
+2025-07-12 00:09:20,052 [sharpening_filter] [INFO] - Applied sharpening filter
+2025-07-12 00:09:20,053 [sharpening_filter] [INFO] - Saved processed image to: sharpening_filter_output.png

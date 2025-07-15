@@ -1,0 +1,5 @@
+2025-07-12 00:35:02,999 [compare_images] [INFO] - Starting script: compare_images.py
+2025-07-12 00:35:02,999 [compare_images] [INFO] - Received arguments: Namespace(input_path1='test_image.png', input_path2='test_image.png', output_path='compare_images_output.png')
+2025-07-12 00:35:03,004 [compare_images] [INFO] - Successfully loaded images from: test_image.png and test_image.png
+2025-07-12 00:35:03,005 [compare_images] [INFO] - Compared images
+2025-07-12 00:35:03,005 [compare_images] [INFO] - Saved processed image to: compare_images_output.png
