@@ -28,3 +28,6 @@ decrepit-versions/version732025/results/fiber_defective/2_separated/recolor_colo
 /modules/pytorch-img-gen/venv
 /modules/tutorials/data/MNIST/raw
 *.gz
+*.pyc
+*.pyc
+*.pyc

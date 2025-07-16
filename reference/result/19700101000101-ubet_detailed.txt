@@ -1,0 +1,88 @@
+================================================================================
+ULTRA-COMPREHENSIVE ANOMALY DETECTION REPORT
+================================================================================
+
+FILE INFORMATION
+----------------------------------------
+Test File: 19700101000101-ubet.jpg
+Analysis Date: 2025-07-07_22:08:18
+Image Dimensions: (864, 1152)
+
+OVERALL VERDICT
+----------------------------------------
+Status: ANOMALOUS
+Confidence: 100.0%
+
+GLOBAL STATISTICAL ANALYSIS
+----------------------------------------
+Mahalanobis Distance: 0.0256
+Comparison Scores:
+  - Mean: 99.7548
+  - Std: 4.8859
+  - Min: 2.4044
+  - Max: 100.0000
+
+TOP DEVIANT FEATURES (Z-Score > 2)
+----------------------------------------
+topo_b0_persistence_max        Z=  2.37  Test= 7561.0000  Ref= 2632.3518
+
+STRUCTURAL ANALYSIS
+----------------------------------------
+SSIM Index: 0.9116
+Luminance Similarity: 0.9969
+Contrast Similarity: 0.9539
+Structure Similarity: 0.9570
+
+LOCAL ANOMALY REGIONS
+----------------------------------------
+Total Regions Found: 104
+
+Region 1:
+  - Location: (321, 216, 469, 434)
+  - Area: 147824 pixels
+  - Confidence: 0.477
+  - Centroid: (553, 434)
+
+Region 2:
+  - Location: (87, 769, 56, 40)
+  - Area: 2130 pixels
+  - Confidence: 0.208
+  - Centroid: (116, 789)
+
+Region 3:
+  - Location: (199, 352, 46, 36)
+  - Area: 1484 pixels
+  - Confidence: 0.202
+  - Centroid: (220, 371)
+
+Region 4:
+  - Location: (780, 653, 31, 22)
+  - Area: 667 pixels
+  - Confidence: 0.189
+  - Centroid: (796, 664)
+
+Region 5:
+  - Location: (186, 703, 84, 86)
+  - Area: 4222 pixels
+  - Confidence: 0.187
+  - Centroid: (223, 749)
+
+... and 99 more regions
+
+SPECIFIC DEFECTS DETECTED
+----------------------------------------
+Scratches: 39
+Digs: 29
+Blobs: 1
+Edge Irregularities: 0
+
+ANOMALY CRITERIA SUMMARY
+----------------------------------------
+Mahalanobis Threshold Exceeded: No
+Comparison Threshold Exceeded: No
+Low Structural Similarity: No
+Multiple Local Anomalies: Yes
+
+================================================================================
+END OF REPORT
+================================================================================

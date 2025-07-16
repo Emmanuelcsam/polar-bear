@@ -1,0 +1,97 @@
+================================================================================
+ULTRA-COMPREHENSIVE ANOMALY DETECTION REPORT
+================================================================================
+
+FILE INFORMATION
+----------------------------------------
+Test File: 91_clean_20250705_0004.jpg
+Analysis Date: 2025-07-08_06:01:14
+Image Dimensions: (864, 1152)
+
+OVERALL VERDICT
+----------------------------------------
+Status: ANOMALOUS
+Confidence: 100.0%
+
+GLOBAL STATISTICAL ANALYSIS
+----------------------------------------
+Mahalanobis Distance: 0.0921
+Comparison Scores:
+  - Mean: 99.7578
+  - Std: 4.8257
+  - Min: 3.6067
+  - Max: 100.0000
+
+TOP DEVIANT FEATURES (Z-Score > 2)
+----------------------------------------
+topo_b0_persistence_sum        Z=  2.34  Test=22948.0000  Ref= 8917.7588
+glcm_d3_a135_energy            Z=  2.33  Test=    0.8363  Ref=    0.4222
+glcm_d3_a90_energy             Z=  2.32  Test=    0.8372  Ref=    0.4291
+glcm_d3_a45_energy             Z=  2.32  Test=    0.8363  Ref=    0.4224
+glcm_d2_a135_energy            Z=  2.31  Test=    0.8372  Ref=    0.4295
+glcm_d2_a45_energy             Z=  2.30  Test=    0.8373  Ref=    0.4297
+glcm_d3_a0_energy              Z=  2.30  Test=    0.8373  Ref=    0.4287
+glcm_d2_a90_energy             Z=  2.27  Test=    0.8378  Ref=    0.4429
+glcm_d2_a0_energy              Z=  2.25  Test=    0.8379  Ref=    0.4421
+glcm_d1_a135_energy            Z=  2.20  Test=    0.8387  Ref=    0.4574
+
+STRUCTURAL ANALYSIS
+----------------------------------------
+SSIM Index: 0.8984
+Luminance Similarity: 0.9952
+Contrast Similarity: 0.9459
+Structure Similarity: 0.9530
+
+LOCAL ANOMALY REGIONS
+----------------------------------------
+Total Regions Found: 94
+
+Region 1:
+  - Location: (324, 216, 464, 431)
+  - Area: 143120 pixels
+  - Confidence: 0.471
+  - Centroid: (561, 430)
+
+Region 2:
+  - Location: (832, 577, 34, 27)
+  - Area: 888 pixels
+  - Confidence: 0.246
+  - Centroid: (849, 590)
+
+Region 3:
+  - Location: (195, 457, 31, 23)
+  - Area: 681 pixels
+  - Confidence: 0.220
+  - Centroid: (210, 468)
+
+Region 4:
+  - Location: (358, 849, 29, 14)
+  - Area: 409 pixels
+  - Confidence: 0.202
+  - Centroid: (372, 856)
+
+Region 5:
+  - Location: (988, 525, 28, 21)
+  - Area: 577 pixels
+  - Confidence: 0.201
+  - Centroid: (1002, 536)
+
+... and 89 more regions
+
+SPECIFIC DEFECTS DETECTED
+----------------------------------------
+Scratches: 49
+Digs: 50
+Blobs: 2
+Edge Irregularities: 0
+
+ANOMALY CRITERIA SUMMARY
+----------------------------------------
+Mahalanobis Threshold Exceeded: No
+Comparison Threshold Exceeded: No
+Low Structural Similarity: No
+Multiple Local Anomalies: Yes
+
+================================================================================
+END OF REPORT
+================================================================================

@@ -1,0 +1,90 @@
+================================================================================
+ULTRA-COMPREHENSIVE ANOMALY DETECTION REPORT
+================================================================================
+
+FILE INFORMATION
+----------------------------------------
+Test File: 50_clean_20250705_0003_WITH_36_s.jpg
+Analysis Date: 2025-07-09_04:42:10
+Image Dimensions: (864, 1152)
+
+OVERALL VERDICT
+----------------------------------------
+Status: ANOMALOUS
+Confidence: 100.0%
+
+GLOBAL STATISTICAL ANALYSIS
+----------------------------------------
+Mahalanobis Distance: 0.3534
+Comparison Scores:
+  - Mean: 100.0000
+  - Std: 0.0000
+  - Min: 100.0000
+  - Max: 100.0000
+
+TOP DEVIANT FEATURES (Z-Score > 2)
+----------------------------------------
+shape_hu_5                     Z=  2.28  Test=  -10.0000  Ref=    4.7739
+shape_hu_0                     Z=  2.11  Test=    2.9234  Ref=    2.9840
+shape_hu_4                     Z=  2.06  Test=   10.0000  Ref=   -2.3618
+
+STRUCTURAL ANALYSIS
+----------------------------------------
+SSIM Index: 0.8781
+Luminance Similarity: 0.9562
+Contrast Similarity: 0.9486
+Structure Similarity: 0.9591
+
+LOCAL ANOMALY REGIONS
+----------------------------------------
+Total Regions Found: 10
+
+Region 1:
+  - Location: (321, 239, 472, 410)
+  - Area: 163075 pixels
+  - Confidence: 0.981
+  - Centroid: (553, 442)
+
+Region 2:
+  - Location: (141, 187, 111, 84)
+  - Area: 9149 pixels
+  - Confidence: 0.822
+  - Centroid: (197, 229)
+
+Region 3:
+  - Location: (177, 647, 147, 110)
+  - Area: 15256 pixels
+  - Confidence: 0.741
+  - Centroid: (247, 704)
+
+Region 4:
+  - Location: (1096, 525, 55, 42)
+  - Area: 2319 pixels
+  - Confidence: 0.541
+  - Centroid: (1123, 546)
+
+Region 5:
+  - Location: (612, 660, 36, 27)
+  - Area: 880 pixels
+  - Confidence: 0.441
+  - Centroid: (629, 674)
+
+... and 5 more regions
+
+SPECIFIC DEFECTS DETECTED
+----------------------------------------
+Scratches: 30
+Digs: 92
+Blobs: 4
+Edge Irregularities: 17
+
+ANOMALY CRITERIA SUMMARY
+----------------------------------------
+Mahalanobis Threshold Exceeded: No
+Comparison Threshold Exceeded: No
+Low Structural Similarity: No
+Multiple Local Anomalies: Yes
+
+================================================================================
+END OF REPORT
+================================================================================

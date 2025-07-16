@@ -1,0 +1,88 @@
+================================================================================
+ULTRA-COMPREHENSIVE ANOMALY DETECTION REPORT
+================================================================================
+
+FILE INFORMATION
+----------------------------------------
+Test File: 19700101000233-scratch.jpg
+Analysis Date: 2025-07-08_16:22:06
+Image Dimensions: (864, 1152)
+
+OVERALL VERDICT
+----------------------------------------
+Status: ANOMALOUS
+Confidence: 100.0%
+
+GLOBAL STATISTICAL ANALYSIS
+----------------------------------------
+Mahalanobis Distance: 0.0293
+Comparison Scores:
+  - Mean: 99.7578
+  - Std: 4.8257
+  - Min: 3.6066
+  - Max: 100.0000
+
+TOP DEVIANT FEATURES (Z-Score > 2)
+----------------------------------------
+entropy_local_min              Z=  2.75  Test=    0.5641  Ref=    0.1230
+
+STRUCTURAL ANALYSIS
+----------------------------------------
+SSIM Index: 0.8188
+Luminance Similarity: 0.9977
+Contrast Similarity: 0.8732
+Structure Similarity: 0.9284
+
+LOCAL ANOMALY REGIONS
+----------------------------------------
+Total Regions Found: 53
+
+Region 1:
+  - Location: (381, 189, 612, 471)
+  - Area: 98611 pixels
+  - Confidence: 0.863
+  - Centroid: (679, 405)
+
+Region 2:
+  - Location: (657, 0, 155, 113)
+  - Area: 8642 pixels
+  - Confidence: 0.852
+  - Centroid: (738, 51)
+
+Region 3:
+  - Location: (218, 81, 69, 64)
+  - Area: 3758 pixels
+  - Confidence: 0.849
+  - Centroid: (252, 112)
+
+Region 4:
+  - Location: (811, 484, 54, 42)
+  - Area: 1940 pixels
+  - Confidence: 0.848
+  - Centroid: (838, 506)
+
+Region 5:
+  - Location: (435, 0, 123, 109)
+  - Area: 8469 pixels
+  - Confidence: 0.846
+  - Centroid: (496, 62)
+
+... and 48 more regions
+
+SPECIFIC DEFECTS DETECTED
+----------------------------------------
+Scratches: 623
+Digs: 537
+Blobs: 133
+Edge Irregularities: 96
+
+ANOMALY CRITERIA SUMMARY
+----------------------------------------
+Mahalanobis Threshold Exceeded: No
+Comparison Threshold Exceeded: No
+Low Structural Similarity: No
+Multiple Local Anomalies: Yes
+
+================================================================================
+END OF REPORT
+================================================================================
