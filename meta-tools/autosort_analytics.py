@@ -79,13 +79,13 @@ class ComprehensiveAnalytics:
             'decisions': [],
             'predictions': [],
             'feature_statistics': defaultdict(list),
-            'keyword_correlations': defaultdict(lambda: defaultdict(int)),
-            'folder_statistics': defaultdict(lambda: defaultdict(int)),
+            'keyword_correlations': defaultdict(dict),
+            'folder_statistics': defaultdict(dict),
             'time_series_data': [],
             'model_performance': [],
             'user_behavior': defaultdict(list),
             'image_features': [],
-            'confusion_data': defaultdict(lambda: defaultdict(int))
+            'confusion_data': defaultdict(dict)
         }
         
         # Initialize database
@@ -204,7 +204,12 @@ class ComprehensiveAnalytics:
                 stats['contrast'] = gray_array.std()
                 
                 # Entropy (measure of information content)
-                stats['entropy'] = stats.entropy(hist_r) + stats.entropy(hist_g) + stats.entropy(hist_b)
+                def calculate_entropy(hist):
+                    hist = hist / np.sum(hist)  # Normalize
+                    hist = hist[hist > 0]  # Remove zeros
+                    return -np.sum(hist * np.log2(hist))
+                
+                stats['entropy'] = calculate_entropy(hist_r) + calculate_entropy(hist_g) + calculate_entropy(hist_b)
             
             # Edge detection statistics
             edges = self._detect_edges(gray_array)
@@ -260,9 +265,15 @@ class ComprehensiveAnalytics:
         
         # Update correlations
         for keyword in keywords:
+            if keyword not in self.session_data['keyword_correlations']:
+                self.session_data['keyword_correlations'][keyword] = {}
+            if target_folder not in self.session_data['keyword_correlations'][keyword]:
+                self.session_data['keyword_correlations'][keyword][target_folder] = 0
             self.session_data['keyword_correlations'][keyword][target_folder] += 1
         
         # Update folder statistics
+        if target_folder not in self.session_data['folder_statistics']:
+            self.session_data['folder_statistics'][target_folder] = {'count': 0, 'total_confidence': 0}
         self.session_data['folder_statistics'][target_folder]['count'] += 1
         self.session_data['folder_statistics'][target_folder]['total_confidence'] += confidence
         
@@ -778,8 +789,7 @@ def main():
     # Initialize components with analytics
     filename_analyzer = FilenameAnalyzer(analytics=analytics)
     
-    # ... (rest of the initialization code remains similar)
-    
+   
     # When creating the model:
     # model = MultiModalImageClassifier(num_classes, analytics=analytics)
     
@@ -804,7 +814,7 @@ if __name__ == "__main__":
     # This is a framework - integrate with your existing main() function
     print("Analytics module loaded. Integrate with autosort_enhanced.py")
     
-    # Example of how to use analytics standalone:
+    
     analytics = ComprehensiveAnalytics()
     
     # Simulate some decisions

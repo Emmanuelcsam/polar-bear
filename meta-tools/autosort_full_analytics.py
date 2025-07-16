@@ -176,7 +176,7 @@ class LearningHistory:
                  analytics: Optional[ComprehensiveAnalytics] = None):
         self.history_file = history_file
         self.analytics = analytics
-        self.keyword_to_folder = defaultdict(lambda: defaultdict(int))
+        self.keyword_to_folder = defaultdict(dict)
         self.folder_keywords = defaultdict(set)
         self.decisions = []
         self.load_history()
@@ -187,7 +187,10 @@ class LearningHistory:
             try:
                 with open(self.history_file, 'rb') as f:
                     data = pickle.load(f)
-                    self.keyword_to_folder = defaultdict(lambda: defaultdict(int), data['keyword_to_folder'])
+                    # Convert back to regular dict structure
+                    self.keyword_to_folder = defaultdict(dict)
+                    for k, v in data['keyword_to_folder'].items():
+                        self.keyword_to_folder[k] = v
                     self.folder_keywords = defaultdict(set, data['folder_keywords'])
                     self.decisions = data['decisions']
                 logger.info(f"Loaded learning history with {len(self.decisions)} decisions")
@@ -220,6 +223,8 @@ class LearningHistory:
         
         # Update keyword associations
         for keyword in keywords:
+            if keyword not in self.keyword_to_folder:
+                self.keyword_to_folder[keyword] = defaultdict(int)
             self.keyword_to_folder[keyword][folder_name] += 1
             self.folder_keywords[folder_name].add(keyword)
         
@@ -395,10 +400,12 @@ def main():
     # Initialize Pygame
     logger.info("Initializing Pygame.")
     pygame.init()
+    
+    # Start with a resizable window
     screen_width = 1200
     screen_height = 600
-    screen = pygame.display.set_mode((screen_width, screen_height))
-    pygame.display.set_caption("Full Analytics Image Sorter")
+    screen = pygame.display.set_mode((screen_width, screen_height), pygame.RESIZABLE)
+    pygame.display.set_caption("Full Analytics Image Sorter - Resizable")
     
     font = pygame.font.SysFont(None, 30)
     small_font = pygame.font.SysFont(None, 20)
@@ -491,13 +498,40 @@ def main():
     decision_times = []
     
     def draw():
-        """Enhanced draw function with analytics display"""
+        """Enhanced draw function with analytics display and resizable window support"""
+        nonlocal screen_width, screen_height, col_width, button_width, buttons, avail_height, auto_rect
+        
+        # Get current window size
+        current_width, current_height = screen.get_size()
+        if current_width != screen_width or current_height != screen_height:
+            # Window was resized, update variables
+            screen_width = current_width
+            screen_height = current_height
+            col_width = screen_width // 3
+            button_width = screen_width // max(1, len(target_dirs))
+            avail_height = screen_height - button_height - 80
+            auto_rect = pygame.Rect(screen_width - 150, 0, 150, 50)
+            
+            # Rebuild buttons with new dimensions
+            buttons = []
+            for idx, tdir in enumerate(target_dirs):
+                rect = pygame.Rect(idx * button_width, screen_height - button_height, button_width, button_height)
+                label = os.path.basename(tdir)
+                if len(target_dirs) <= 9:
+                    label += f" ({idx + 1})"
+                buttons.append((rect, tdir, label))
+        
         screen.fill((0, 0, 0))
         
         # Draw analytics stats
         stats_text = f"Decisions: {decision_count} | Accuracy: {correct_predictions/max(1,decision_count)*100:.1f}%"
         stats_surface = small_font.render(stats_text, True, (100, 200, 100))
         screen.blit(stats_surface, (10, 10))
+        
+        # Draw window size info
+        size_text = f"Window: {screen_width}x{screen_height}"
+        size_surface = small_font.render(size_text, True, (150, 150, 150))
+        screen.blit(size_surface, (10, 30))
         
         # Draw each image slot
         for slot in range(3):
@@ -508,7 +542,11 @@ def main():
                     img = pygame.image.load(img_path)
                     img_rect = img.get_rect()
                     
-                    scale = min(col_width * 0.9 / img_rect.w, (avail_height - 60) / img_rect.h, 1)
+                    # Calculate scale based on current window size
+                    max_image_width = col_width * 0.9
+                    max_image_height = avail_height - 100  # Leave room for text
+                    
+                    scale = min(max_image_width / img_rect.w, max_image_height / img_rect.h, 1)
                     scaled_w = int(img_rect.w * scale)
                     scaled_h = int(img_rect.h * scale)
                     scaled_image = pygame.transform.scale(img, (scaled_w, scaled_h))
@@ -520,8 +558,8 @@ def main():
                     
                     # Draw filename
                     filename = os.path.basename(img_path)
-                    filename_text = small_font.render(filename[:30] + "..." if len(filename) > 30 else filename, 
-                                                    True, (200, 200, 200))
+                    display_filename = filename[:25] + "..." if len(filename) > 25 else filename
+                    filename_text = small_font.render(display_filename, True, (200, 200, 200))
                     filename_pos = (x, y + scaled_h + 5)
                     screen.blit(filename_text, filename_pos)
                     
@@ -687,6 +725,13 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
                 break
+            
+            # Handle window resizing
+            if event.type == pygame.VIDEORESIZE:
+                screen_width, screen_height = event.w, event.h
+                screen = pygame.display.set_mode((screen_width, screen_height), pygame.RESIZABLE)
+                logger.info(f"Window resized to {screen_width}x{screen_height}")
+                continue
             
             if event.type == pygame.KEYDOWN:
                 if auto_mode:
