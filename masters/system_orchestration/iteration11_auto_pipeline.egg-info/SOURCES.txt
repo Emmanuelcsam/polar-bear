@@ -1,6 +1,0 @@
-setup.py
-iteration11_auto_pipeline.egg-info/PKG-INFO
-iteration11_auto_pipeline.egg-info/SOURCES.txt
-iteration11_auto_pipeline.egg-info/dependency_links.txt
-iteration11_auto_pipeline.egg-info/requires.txt
-iteration11_auto_pipeline.egg-info/top_level.txt

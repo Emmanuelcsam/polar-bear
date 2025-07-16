@@ -1,5 +1,0 @@
-setup.py
-fiber_analysis.egg-info/PKG-INFO
-fiber_analysis.egg-info/SOURCES.txt
-fiber_analysis.egg-info/dependency_links.txt
-fiber_analysis.egg-info/top_level.txt
