@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """
-Fast Background Removal Processor
-Uses learned data from auto-background-removal.py to process images quickly without UI
-This version uses rembg CLI to avoid library conflicts
+Fast Background Removal Processor - CLI Version
+Uses rembg CLI to avoid segmentation faults
 """
 
 import os
@@ -20,15 +19,14 @@ import logging
 from pathlib import Path
 import json
 import tempfile
-import concurrent.futures
-from typing import List, Tuple, Optional
+import shutil
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('fast_background_removal.log'),
+        logging.FileHandler('fast_background_removal_cli.log'),
         logging.StreamHandler()
     ]
 )
@@ -38,10 +36,8 @@ logger = logging.getLogger(__name__)
 MODELS_LIST = ['u2net', 'u2netp', 'u2net_human_seg']
 NUM_METHODS = len(MODELS_LIST)
 MAX_SIZE = 2048  # Max image size for processing
-BATCH_SIZE = 10  # Process images in batches
-MAX_WORKERS = 4  # Number of parallel workers
 
-class FastBackgroundRemover:
+class FastBackgroundRemoverCLI:
     def __init__(self, model_path='crop_method_classifier.pth'):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         logger.info(f"Using device: {self.device}")
@@ -104,7 +100,7 @@ class FastBackgroundRemover:
             'method_usage': {i: 0 for i in range(NUM_METHODS)}
         }
     
-    def extract_features(self, img_path: str) -> Optional[torch.Tensor]:
+    def extract_features(self, img_path: str) -> torch.Tensor:
         """Extract features from an image"""
         try:
             # Load and preprocess image
@@ -244,31 +240,7 @@ class FastBackgroundRemover:
             logger.error(f"Error processing {img_path}: {e}")
             return False
     
-    def process_batch(self, image_paths: List[Tuple[str, str]]) -> List[bool]:
-        """Process a batch of images in parallel"""
-        results = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-            futures = []
-            for img_path, output_path in image_paths:
-                future = executor.submit(self.process_image, img_path, output_path)
-                futures.append(future)
-            
-            for future in concurrent.futures.as_completed(futures):
-                try:
-                    result = future.result()
-                    results.append(result)
-                    if result:
-                        self.stats['processed'] += 1
-                    else:
-                        self.stats['failed'] += 1
-                except Exception as e:
-                    logger.error(f"Error in batch processing: {e}")
-                    results.append(False)
-                    self.stats['failed'] += 1
-        
-        return results
-    
-    def process_directory(self, input_dir: str, output_dir: str, extensions: Tuple[str, ...] = ('.png', '.jpg', '.jpeg', '.bmp', '.gif')):
+    def process_directory(self, input_dir: str, output_dir: str, extensions: tuple = ('.png', '.jpg', '.jpeg', '.bmp', '.gif')):
         """Process all images in a directory"""
         # Create output directory if needed
         os.makedirs(output_dir, exist_ok=True)
@@ -281,22 +253,20 @@ class FastBackgroundRemover:
         
         logger.info(f"Found {len(image_paths)} images to process")
         
-        # Process in batches
-        batch_paths = []
+        # Process images one by one
         for idx, img_path in enumerate(image_paths):
             output_path = os.path.join(output_dir, img_path.name)
-            batch_paths.append((str(img_path), output_path))
             
-            if len(batch_paths) >= BATCH_SIZE:
-                logger.info(f"Processing batch of {len(batch_paths)} images...")
-                self.process_batch(batch_paths)
-                batch_paths = []
-                gc.collect()  # Clean up memory between batches
-        
-        # Process remaining images
-        if batch_paths:
-            logger.info(f"Processing final batch of {len(batch_paths)} images...")
-            self.process_batch(batch_paths)
+            logger.info(f"[{idx+1}/{len(image_paths)}] Processing {img_path.name}...")
+            
+            if self.process_image(str(img_path), output_path):
+                self.stats['processed'] += 1
+            else:
+                self.stats['failed'] += 1
+            
+            # Periodic garbage collection
+            if (idx + 1) % 10 == 0:
+                gc.collect()
         
         # Print statistics
         elapsed = time.time() - self.stats['start_time']
@@ -324,10 +294,10 @@ class FastBackgroundRemover:
 
 
 def main():
-    print("Fast Background Removal Processor")
-    print("=================================")
+    print("Fast Background Removal Processor (CLI Version)")
+    print("==============================================")
     print("This tool uses the learned data from auto-background-removal.py")
-    print("to quickly process images without the UI.\n")
+    print("to quickly process images using the rembg CLI.\n")
     
     # Get input directory
     input_dir = input("Enter the full path to the directory containing images to process: ").strip()
@@ -338,53 +308,20 @@ def main():
     # Get output directory
     output_dir = input("Enter the full path to the output directory for processed images: ").strip()
     
-    # Ask about advanced settings
-    use_advanced = input("\nDo you want to configure advanced settings? (y/n) [default: n]: ").strip().lower()
+    # Ask about model path
+    use_custom_model = input("\nDo you want to use a custom model path? (y/n) [default: n]: ").strip().lower()
     
-    if use_advanced == 'y':
-        # Model path
-        model_path = input(f"Path to trained classifier model [default: crop_method_classifier.pth]: ").strip()
+    if use_custom_model == 'y':
+        model_path = input("Path to trained classifier model [default: crop_method_classifier.pth]: ").strip()
         if not model_path:
             model_path = 'crop_method_classifier.pth'
-        
-        # Batch size
-        batch_input = input(f"Batch size for processing [default: {BATCH_SIZE}]: ").strip()
-        batch_size = int(batch_input) if batch_input.isdigit() else BATCH_SIZE
-        
-        # Workers
-        workers_input = input(f"Number of parallel workers [default: {MAX_WORKERS}]: ").strip()
-        workers = int(workers_input) if workers_input.isdigit() else MAX_WORKERS
-        
-        # Max size
-        size_input = input(f"Maximum image dimension [default: {MAX_SIZE}]: ").strip()
-        max_size = int(size_input) if size_input.isdigit() else MAX_SIZE
-        
-        # Stats file
-        stats_file = input("Output file for statistics [default: processing_stats.json]: ").strip()
-        if not stats_file:
-            stats_file = 'processing_stats.json'
     else:
-        # Use defaults
         model_path = 'crop_method_classifier.pth'
-        batch_size = BATCH_SIZE
-        workers = MAX_WORKERS
-        max_size = MAX_SIZE
-        stats_file = 'processing_stats.json'
-    
-    # Update global settings
-    global BATCH_SIZE, MAX_WORKERS, MAX_SIZE
-    BATCH_SIZE = batch_size
-    MAX_WORKERS = workers
-    MAX_SIZE = max_size
     
     print(f"\nConfiguration:")
     print(f"  Input directory: {input_dir}")
     print(f"  Output directory: {output_dir}")
     print(f"  Model path: {model_path}")
-    print(f"  Batch size: {batch_size}")
-    print(f"  Workers: {workers}")
-    print(f"  Max image size: {max_size}")
-    print(f"  Stats file: {stats_file}")
     
     proceed = input("\nProceed with processing? (y/n): ").strip().lower()
     if proceed != 'y':
@@ -395,11 +332,11 @@ def main():
     
     try:
         # Create processor and run
-        processor = FastBackgroundRemover(model_path)
+        processor = FastBackgroundRemoverCLI(model_path)
         processor.process_directory(input_dir, output_dir)
-        processor.save_stats(stats_file)
+        processor.save_stats('processing_stats_cli.json')
         
-        print(f"\nProcessing complete! Check {stats_file} for detailed statistics.")
+        print(f"\nProcessing complete! Check processing_stats_cli.json for detailed statistics.")
     except Exception as e:
         logger.error(f"Processing failed: {e}")
         sys.exit(1)
