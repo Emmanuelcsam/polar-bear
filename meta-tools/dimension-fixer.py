@@ -62,13 +62,50 @@ import numpy as np
 
 # Ask user for configurations
 logger.info("Asking for user inputs.")
-dir_path = input("Enter the directory path containing images: ").strip()
-target_width = int(input("Enter the target width: ").strip())
-target_height = int(input("Enter the target height: ").strip())
+
+# Get and validate directory path
+while True:
+    dir_path = input("Enter the directory path containing images: ").strip()
+    if os.path.exists(dir_path) and os.path.isdir(dir_path):
+        break
+    else:
+        logger.error(f"Directory '{dir_path}' does not exist or is not a directory. Please try again.")
+
+# Get and validate dimensions
+while True:
+    try:
+        target_width = int(input("Enter the target width: ").strip())
+        if target_width > 0:
+            break
+        else:
+            logger.error("Width must be positive. Please try again.")
+    except ValueError:
+        logger.error("Invalid width. Please enter a number.")
+
+while True:
+    try:
+        target_height = int(input("Enter the target height: ").strip())
+        if target_height > 0:
+            break
+        else:
+            logger.error("Height must be positive. Please try again.")
+    except ValueError:
+        logger.error("Invalid height. Please enter a number.")
+
+# Get output directory
 output_dir = input("Enter the output directory (will create if not exists): ").strip()
 
-os.makedirs(output_dir, exist_ok=True)
-logger.info(f"Output directory set to: {output_dir}")
+try:
+    os.makedirs(output_dir, exist_ok=True)
+    # Test write permissions
+    test_file = os.path.join(output_dir, '.test_write')
+    with open(test_file, 'w') as f:
+        f.write('test')
+    os.remove(test_file)
+    logger.info(f"Output directory set to: {output_dir}")
+except Exception as e:
+    logger.error(f"Cannot create or write to output directory: {e}")
+    sys.exit(1)
 
 # Detect device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -78,7 +115,13 @@ if device.type == 'cpu':
 
 # Find all image files
 image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.gif'}
-image_files = [os.path.join(dir_path, f) for f in os.listdir(dir_path) if os.path.splitext(f)[1].lower() in image_extensions]
+try:
+    files_in_dir = os.listdir(dir_path)
+except Exception as e:
+    logger.error(f"Cannot read directory {dir_path}: {e}")
+    sys.exit(1)
+
+image_files = [os.path.join(dir_path, f) for f in files_in_dir if os.path.splitext(f)[1].lower() in image_extensions]
 logger.info(f"Found {len(image_files)} images in {dir_path}.")
 
 if len(image_files) == 0:
@@ -102,11 +145,17 @@ image_files = valid_image_files
 # Prepare tensors for batch processing
 to_tensor = transforms.ToTensor()
 tensors = []
-for img in images:
-    pil_img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
-    tensor = to_tensor(pil_img)
-    tensors.append(tensor)
-    logger.info(f"Converted image to tensor: shape {tensor.shape}")
+for idx, img in enumerate(images):
+    try:
+        pil_img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+        tensor = to_tensor(pil_img)
+        tensors.append(tensor)
+        logger.info(f"Converted image to tensor: shape {tensor.shape}")
+    except Exception as e:
+        logger.error(f"Failed to convert image {image_files[idx]} to tensor: {e}")
+        # Remove failed image from processing
+        images.pop(idx)
+        image_files.pop(idx)
 
 # Load detection model
 logger.info("Loading pre-trained Faster R-CNN model.")
@@ -120,11 +169,23 @@ batch_size = 4 if device.type == 'cuda' else 1
 all_preds = []
 with torch.no_grad():
     for i in range(0, len(tensors), batch_size):
-        batch = tensors[i:i+batch_size]
-        batch_on_device = [t.to(device) for t in batch]
-        preds = model(batch_on_device)
-        all_preds.extend(preds)
-        logger.info(f"Processed batch {i//batch_size + 1}/{(len(tensors)+batch_size-1)//batch_size} for object detection.")
+        try:
+            batch = tensors[i:i+batch_size]
+            batch_on_device = [t.to(device) for t in batch]
+            preds = model(batch_on_device)
+            all_preds.extend(preds)
+            logger.info(f"Processed batch {i//batch_size + 1}/{(len(tensors)+batch_size-1)//batch_size} for object detection.")
+        except RuntimeError as e:
+            if "out of memory" in str(e):
+                logger.warning("GPU out of memory, falling back to CPU for this batch")
+                torch.cuda.empty_cache()
+                batch_on_cpu = [t.to('cpu') for t in batch]
+                model_cpu = model.to('cpu')
+                preds = model_cpu(batch_on_cpu)
+                all_preds.extend(preds)
+                model = model_cpu.to(device)
+            else:
+                raise e
 
 # Function to get center from predictions or saliency
 def get_crop_center(pred, image):
@@ -223,7 +284,7 @@ for idx, (filename, image, pred) in enumerate(zip(image_files, images, all_preds
         'stds': stds.flatten().tolist(),
         'hu_moments': hu_moments,
         # Histograms are large, store summary like mean hist or skip detailed
-        'hist_means': [np.mean(hist_b), np.mean(hist_g), np.mean(hist_r)]
+        'hist_means': [float(np.mean(hist_b)), float(np.mean(hist_g)), float(np.mean(hist_r))]
     }
     stats[base_name] = image_stats
     logger.info(f"Computed stats for {base_name}: {image_stats}")
@@ -256,13 +317,22 @@ for idx, (filename, image, pred) in enumerate(zip(image_files, images, all_preds
     
     # Save resized
     output_path = os.path.join(output_dir, base_name)
-    cv2.imwrite(output_path, resized)
-    logger.info(f"Saved resized image to {output_path}")
+    try:
+        success = cv2.imwrite(output_path, resized)
+        if success:
+            logger.info(f"Saved resized image to {output_path}")
+        else:
+            logger.error(f"Failed to save image to {output_path}")
+    except Exception as e:
+        logger.error(f"Error saving image {base_name}: {e}")
 
 # Save updated stats
-with open(stats_file, 'w') as f:
-    json.dump(stats, f)
-logger.info("Saved image stats to image_stats.json")
+try:
+    with open(stats_file, 'w') as f:
+        json.dump(stats, f, indent=2)
+    logger.info("Saved image stats to image_stats.json")
+except Exception as e:
+    logger.error(f"Failed to save stats file: {e}")
 
 # Deep learning: Train autoencoder to learn representations
 class ImageDataset(Dataset):
@@ -307,9 +377,15 @@ class ConvAutoencoder(nn.Module):
         return x
 
 # Create dataset and loader
-dataset = ImageDataset(images)
-dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
-logger.info("Prepared dataset for autoencoder training.")
+if len(images) > 0:
+    dataset = ImageDataset(images)
+    # Adjust batch size based on number of images
+    batch_size = min(32, len(images))
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    logger.info("Prepared dataset for autoencoder training.")
+else:
+    logger.warning("No valid images to train autoencoder")
+    dataloader = None
 
 # Load or create autoencoder
 autoencoder = ConvAutoencoder().to(device)
@@ -324,20 +400,42 @@ else:
     logger.info("Created new autoencoder model.")
 
 # Train
-num_epochs = 10  # Adjustable, for learning
-autoencoder.train()
-for epoch in range(num_epochs):
-    for data in dataloader:
-        data = data.to(device)
-        output = autoencoder(data)
-        loss = criterion(output, data)
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-    logger.info(f"Autoencoder training epoch {epoch+1}/{num_epochs}, Loss: {loss.item():.6f}")
+if dataloader is not None:
+    num_epochs = 10  # Adjustable, for learning
+    autoencoder.train()
+    for epoch in range(num_epochs):
+        epoch_loss = 0.0
+        batch_count = 0
+        for data in dataloader:
+            try:
+                data = data.to(device)
+                output = autoencoder(data)
+                loss = criterion(output, data)
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+                epoch_loss += loss.item()
+                batch_count += 1
+            except RuntimeError as e:
+                if "out of memory" in str(e):
+                    logger.warning("GPU out of memory during training, skipping batch")
+                    torch.cuda.empty_cache()
+                    continue
+                else:
+                    raise e
+        if batch_count > 0:
+            avg_loss = epoch_loss / batch_count
+            logger.info(f"Autoencoder training epoch {epoch+1}/{num_epochs}, Avg Loss: {avg_loss:.6f}")
+        else:
+            logger.warning(f"No batches processed in epoch {epoch+1}")
 
-# Save model
-torch.save(autoencoder.state_dict(), model_path)
-logger.info("Saved updated autoencoder model after learning from current images.")
+    # Save model
+    try:
+        torch.save(autoencoder.state_dict(), model_path)
+        logger.info("Saved updated autoencoder model after learning from current images.")
+    except Exception as e:
+        logger.error(f"Failed to save model: {e}")
+else:
+    logger.info("Skipped autoencoder training due to no valid images")
 
 logger.info("Script completed successfully.")
