@@ -235,16 +235,11 @@ def remove_bg(img_path, method_idx):
         if session is None:
             return None, None, None
         
-        # Read and resize image for faster processing
+        # Read original image
         img = Image.open(img_path)
+        original_size = img.size
         
-        # Resize if image is too large
-        max_size = 1024
-        if img.width > max_size or img.height > max_size:
-            img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
-            log_message(f"Resized image from {img.size} for processing")
-        
-        # Convert to bytes
+        # Convert to bytes (preserving original size)
         from io import BytesIO
         buffer = BytesIO()
         img.save(buffer, format='PNG')
