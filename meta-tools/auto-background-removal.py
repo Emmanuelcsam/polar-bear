@@ -14,6 +14,9 @@ import torch
 import torchvision
 import concurrent.futures
 import functools
+import gc
+import platform
+import psutil
 
 log_file_path = 'feature_crop_learner.log'
 log_file = open(log_file_path, 'w')
@@ -25,13 +28,28 @@ def log_message(message):
 
 log_message("Script started. Checking for required libraries...")
 
+# Check if running on Windows
+is_windows = platform.system() == 'Windows'
+log_message(f"Running on {platform.system()} system")
+
+# Install psutil for memory monitoring
+try:
+    import psutil
+    log_message("psutil is already installed.")
+except ImportError:
+    log_message("psutil is not installed. Installing now...")
+    subprocess.call([sys.executable, '-m', 'pip', 'install', 'psutil'])
+    import psutil
+    log_message("psutil installed successfully.")
+
 # Install onnxruntime first as it's required by rembg
 try:
     import onnxruntime
     log_message("onnxruntime is already installed.")
 except ImportError:
     log_message("onnxruntime is not installed. Installing now...")
-    pkg = 'onnxruntime-gpu' if torch.cuda.is_available() else 'onnxruntime'
+    # Force CPU version on Windows with Intel
+    pkg = 'onnxruntime'
     subprocess.call([sys.executable, '-m', 'pip', 'install', pkg])
     import onnxruntime
     log_message(f"{pkg} installed successfully.")
@@ -95,36 +113,58 @@ except ImportError:
 log_message("All required libraries are installed and ready.")
 
 # Updated to use rembg sessions instead of raw models
-models_list = ['u2net', 'u2netp', 'u2net_human_seg', 'u2net_cloth_seg', 'silueta', 'isnet-general-use', 'isnet-anime']
+# Use fewer models for better performance
+models_list = ['u2net', 'u2netp', 'u2net_human_seg']
 num_methods = len(models_list)
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-log_message(f"Using device: {device}")
+# Force CPU usage on Windows for stability
+if is_windows:
+    device = torch.device('cpu')
+    torch.set_num_threads(2)  # Limit CPU threads for better stability
+    log_message("Using CPU device (optimized for Windows)")
+else:
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    log_message(f"Using device: {device}")
 
-# Initialize rembg sessions for each model
+# Lazy load models instead of loading all at startup
 models = {}
-for name in models_list:
-    try:
-        session = rembg.new_session(name)
-        models[name] = session
-        log_message(f"Loaded rembg session for {name}")
-    except Exception as e:
-        log_message(f"Error loading rembg session for {name}: {e}")
-        continue
+current_loaded_model = None
 
+def load_model(model_name):
+    global current_loaded_model
+    if model_name not in models:
+        try:
+            # Unload previous model to save memory
+            if current_loaded_model and current_loaded_model != model_name:
+                if current_loaded_model in models:
+                    del models[current_loaded_model]
+                    gc.collect()
+                    log_message(f"Unloaded model {current_loaded_model}")
+            
+            session = rembg.new_session(model_name)
+            models[model_name] = session
+            current_loaded_model = model_name
+            log_message(f"Loaded rembg session for {model_name}")
+        except Exception as e:
+            log_message(f"Error loading rembg session for {model_name}: {e}")
+            return None
+    return models.get(model_name)
+
+# Smaller image size for faster processing
 preprocess = torchvision.transforms.Compose([
-    torchvision.transforms.Resize(256),
-    torchvision.transforms.CenterCrop(224),
+    torchvision.transforms.Resize(128),
+    torchvision.transforms.CenterCrop(112),
     torchvision.transforms.ToTensor(),
     torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
 
-feature_extractor = torchvision.models.resnet50(weights=torchvision.models.ResNet50_Weights.IMAGENET1K_V2)
+# Use lighter model for feature extraction
+feature_extractor = torchvision.models.resnet18(weights=torchvision.models.ResNet18_Weights.IMAGENET1K_V1)
 feature_extractor.fc = torch.nn.Identity()
 feature_extractor = feature_extractor.to(device)
 feature_extractor.eval()
 
-input_dim = 2048 + 512 + 17  # resnet2048 + hist512 + aspect,entropy,edge(3) + mean*3,std*3(6) + skew_rgb*3,kurt_rgb*3,skew_gray,kurt_gray(8)=17
+input_dim = 512 + 512 + 17  # resnet18(512) + hist512 + aspect,entropy,edge(3) + mean*3,std*3(6) + skew_rgb*3,kurt_rgb*3,skew_gray,kurt_gray(8)=17
 classifier = torch.nn.Sequential(
     torch.nn.Linear(input_dim, 1024),
     torch.nn.ReLU(),
@@ -191,17 +231,29 @@ def get_features(img_path):
 def remove_bg(img_path, method_idx):
     try:
         model_name = models_list[method_idx]
-        session = models[model_name]
+        session = load_model(model_name)
+        if session is None:
+            return None, None, None
         
-        # Read the image
-        with open(img_path, 'rb') as f:
-            input_data = f.read()
+        # Read and resize image for faster processing
+        img = Image.open(img_path)
+        
+        # Resize if image is too large
+        max_size = 1024
+        if img.width > max_size or img.height > max_size:
+            img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+            log_message(f"Resized image from {img.size} for processing")
+        
+        # Convert to bytes
+        from io import BytesIO
+        buffer = BytesIO()
+        img.save(buffer, format='PNG')
+        input_data = buffer.getvalue()
         
         # Use rembg to remove background
         output_data = rembg.remove(input_data, session=session)
         
         # Convert to PIL Image
-        from io import BytesIO
         output_image = Image.open(BytesIO(output_data))
         
         # Convert to RGBA if not already
@@ -278,21 +330,37 @@ last_render_time = time.time()
 selected = False
 
 preloaded = {}
-preload_executor = concurrent.futures.ThreadPoolExecutor(max_workers=4)
+# Reduce workers on Windows
+max_workers = 1 if is_windows else 2
+preload_executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
 
 def preload_image(path):
+    # Check memory usage
+    memory_percent = psutil.virtual_memory().percent
+    if memory_percent > 80:
+        log_message(f"High memory usage ({memory_percent}%), skipping preload")
+        return None
+        
     features = get_features(path)
     if features is None:
         return None
     removals = [None] * num_methods
-    with concurrent.futures.ThreadPoolExecutor(max_workers=num_methods) as executor:
-        futures = {executor.submit(remove_bg, path, i): i for i in range(num_methods)}
-        for future in concurrent.futures.as_completed(futures):
-            i = futures[future]
+    # Process sequentially on Windows for stability
+    if is_windows:
+        for i in range(num_methods):
             try:
-                removals[i] = future.result()
+                removals[i] = remove_bg(path, i)
             except Exception as e:
                 log_message(f"Error in preload removal for method {i}: {e}")
+    else:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            futures = {executor.submit(remove_bg, path, i): i for i in range(num_methods)}
+            for future in concurrent.futures.as_completed(futures):
+                i = futures[future]
+                try:
+                    removals[i] = future.result()
+                except Exception as e:
+                    log_message(f"Error in preload removal for method {i}: {e}")
     return {'features': features, 'removals': removals}
 
 def set_preloaded(path, future):
@@ -304,6 +372,12 @@ def set_preloaded(path, future):
         log_message(f"Error setting preloaded for {path}: {e}")
 
 def preload_next(n):
+    # Check memory before preloading
+    memory_percent = psutil.virtual_memory().percent
+    if memory_percent > 70:
+        log_message(f"Memory usage at {memory_percent}%, reducing preload")
+        n = min(1, n)
+    
     for i in range(min(n, len(image_queue))):
         path = image_queue[i]
         if path not in preloaded:
@@ -313,6 +387,10 @@ def preload_next(n):
 def load_next_image():
     global current_image_path, current_features, current_method_idx, current_preview, current_rgb, current_alpha, mask_modified, current_removals
     mask_modified = False
+    
+    # Clean up memory before loading next image
+    gc.collect()
+    
     while image_queue:
         current_image_path = image_queue.pop(0)
         if current_image_path in preloaded:
@@ -325,18 +403,28 @@ def load_next_image():
                 log_message(f"Skipping image due to feature extraction failure: {current_image_path}")
                 continue
             current_removals = [None] * num_methods
-            with concurrent.futures.ThreadPoolExecutor(max_workers=num_methods) as executor:
-                futures = {executor.submit(remove_bg, current_image_path, i): i for i in range(num_methods)}
-                for future in concurrent.futures.as_completed(futures):
-                    i = futures[future]
+            # Process sequentially on Windows
+            if is_windows:
+                for i in range(num_methods):
                     try:
-                        current_removals[i] = future.result()
+                        current_removals[i] = remove_bg(current_image_path, i)
                     except Exception as e:
                         log_message(f"Error in removal for method {i}: {e}")
+            else:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+                    futures = {executor.submit(remove_bg, current_image_path, i): i for i in range(num_methods)}
+                    for future in concurrent.futures.as_completed(futures):
+                        i = futures[future]
+                        try:
+                            current_removals[i] = future.result()
+                        except Exception as e:
+                            log_message(f"Error in removal for method {i}: {e}")
         current_method_idx = 0
         update_preview()
         log_message(f"Loaded image: {current_image_path}")
-        preload_next(5)
+        # Reduce preload on Windows
+        preload_count = 2 if is_windows else 5
+        preload_next(preload_count)
         return
     current_image_path = None
     current_features = None
@@ -524,6 +612,10 @@ while running:
     else:
         last_paint_pos = None
 
+    # Add small delay to reduce CPU usage
+    if is_windows:
+        pygame.time.wait(10)
+    
     current_time = time.time()
     if not auto_mode or (current_time - last_render_time > 1):
         screen.fill((0, 0, 0))
