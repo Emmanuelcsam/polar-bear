@@ -313,9 +313,9 @@ class ComprehensiveAnalytics:
             img_stats.get('file_size', 0),
             img_stats.get('width', 0),
             img_stats.get('height', 0),
-            json.dumps([img_stats.get('dominant_r', 0), 
-                       img_stats.get('dominant_g', 0), 
-                       img_stats.get('dominant_b', 0)]),
+            json.dumps([int(img_stats.get('dominant_r', 0)), 
+                       int(img_stats.get('dominant_g', 0)), 
+                       int(img_stats.get('dominant_b', 0))]),
             img_stats.get('brightness', 0),
             img_stats.get('contrast', 0),
             img_stats.get('entropy', 0)
