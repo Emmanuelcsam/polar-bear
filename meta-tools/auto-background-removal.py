@@ -12,6 +12,8 @@ from PIL import Image
 import pygame
 import torch
 import torchvision
+import concurrent.futures
+import functools
 
 log_file_path = 'feature_crop_learner.log'
 log_file = open(log_file_path, 'w')
@@ -29,9 +31,10 @@ try:
     log_message("onnxruntime is already installed.")
 except ImportError:
     log_message("onnxruntime is not installed. Installing now...")
-    subprocess.call([sys.executable, '-m', 'pip', 'install', 'onnxruntime'])
+    pkg = 'onnxruntime-gpu' if torch.cuda.is_available() else 'onnxruntime'
+    subprocess.call([sys.executable, '-m', 'pip', 'install', pkg])
     import onnxruntime
-    log_message("onnxruntime installed successfully.")
+    log_message(f"{pkg} installed successfully.")
 
 try:
     import rembg
@@ -268,28 +271,79 @@ current_method_idx = 0
 current_preview = None
 current_rgb = None
 current_alpha = None
+current_removals = None
 last_paint_pos = None
 last_refresh_time = 0
+last_render_time = time.time()
 selected = False
 
+preloaded = {}
+preload_executor = concurrent.futures.ThreadPoolExecutor(max_workers=4)
+
+def preload_image(path):
+    features = get_features(path)
+    if features is None:
+        return None
+    removals = [None] * num_methods
+    with concurrent.futures.ThreadPoolExecutor(max_workers=num_methods) as executor:
+        futures = {executor.submit(remove_bg, path, i): i for i in range(num_methods)}
+        for future in concurrent.futures.as_completed(futures):
+            i = futures[future]
+            try:
+                removals[i] = future.result()
+            except Exception as e:
+                log_message(f"Error in preload removal for method {i}: {e}")
+    return {'features': features, 'removals': removals}
+
+def set_preloaded(path, future):
+    try:
+        data = future.result()
+        if data:
+            preloaded[path] = data
+    except Exception as e:
+        log_message(f"Error setting preloaded for {path}: {e}")
+
+def preload_next(n):
+    for i in range(min(n, len(image_queue))):
+        path = image_queue[i]
+        if path not in preloaded:
+            future = preload_executor.submit(preload_image, path)
+            future.add_done_callback(functools.partial(set_preloaded, path))
+
 def load_next_image():
-    global current_image_path, current_features, current_method_idx, current_preview, current_rgb, current_alpha, mask_modified
+    global current_image_path, current_features, current_method_idx, current_preview, current_rgb, current_alpha, mask_modified, current_removals
     mask_modified = False
     while image_queue:
         current_image_path = image_queue.pop(0)
-        current_features = get_features(current_image_path)
-        if current_features is not None:
-            current_method_idx = 0
-            update_preview()
-            log_message(f"Loaded image: {current_image_path}")
-            return
+        if current_image_path in preloaded:
+            data = preloaded.pop(current_image_path)
+            current_features = data['features']
+            current_removals = data['removals']
         else:
-            log_message(f"Skipping image due to feature extraction failure: {current_image_path}")
+            current_features = get_features(current_image_path)
+            if current_features is None:
+                log_message(f"Skipping image due to feature extraction failure: {current_image_path}")
+                continue
+            current_removals = [None] * num_methods
+            with concurrent.futures.ThreadPoolExecutor(max_workers=num_methods) as executor:
+                futures = {executor.submit(remove_bg, current_image_path, i): i for i in range(num_methods)}
+                for future in concurrent.futures.as_completed(futures):
+                    i = futures[future]
+                    try:
+                        current_removals[i] = future.result()
+                    except Exception as e:
+                        log_message(f"Error in removal for method {i}: {e}")
+        current_method_idx = 0
+        update_preview()
+        log_message(f"Loaded image: {current_image_path}")
+        preload_next(5)
+        return
     current_image_path = None
     current_features = None
     current_preview = None
     current_rgb = None
     current_alpha = None
+    current_removals = None
 
 def update_preview():
     global current_method_idx, current_preview, current_rgb, current_alpha
@@ -299,13 +353,16 @@ def update_preview():
     with torch.no_grad():
         logits = classifier(current_features.unsqueeze(0))[0]
         sorted_indices = torch.argsort(logits, descending=True)
+    found = False
     for idx in sorted_indices:
-        temp_idx = idx.item()
-        current_preview, current_rgb, current_alpha = remove_bg(current_image_path, temp_idx)
-        if current_preview is not None:
-            current_method_idx = temp_idx
+        idx = idx.item()
+        res = current_removals[idx]
+        if res is not None and res[0] is not None:
+            current_preview, current_rgb, current_alpha = res
+            current_method_idx = idx
+            found = True
             break
-    if current_preview is None:
+    if not found:
         log_message(f"Warning: No background removal method worked for {current_image_path}")
 
 def refresh_preview():
@@ -327,8 +384,9 @@ def refresh_preview():
         temp_idx = idx.item()
         if temp_idx == current_method_idx:
             continue
-        current_preview, current_rgb, current_alpha = remove_bg(current_image_path, temp_idx)
-        if current_preview is not None:
+        res = current_removals[temp_idx]
+        if res is not None and res[0] is not None:
+            current_preview, current_rgb, current_alpha = res
             current_method_idx = temp_idx
             found = True
             break
@@ -367,18 +425,9 @@ def accept_and_train():
 
 def save_cropped():
     if current_preview and current_image_path:
-        output_cv = cv2.cvtColor(np.array(current_preview), cv2.COLOR_RGBA2BGRA)
-        alpha = output_cv[:, :, 3]
-        y, x = np.where(alpha > 0)
-        if len(y) == 0:
-            return
-        min_y, max_y = np.min(y), np.max(y)
-        min_x, max_x = np.min(x), np.max(x)
-        cropped = output_cv[min_y:max_y+1, min_x:max_x+1]
-        cropped_img = Image.fromarray(cv2.cvtColor(cropped, cv2.COLOR_BGRA2RGBA))
         output_path = os.path.join(output_dir, os.path.basename(current_image_path))
-        cropped_img.save(output_path, 'PNG')
-        log_message(f"Saved cropped image to {output_path}")
+        current_preview.save(output_path, 'PNG')
+        log_message(f"Saved image to {output_path}")
 
 def recalculate_layout():
     global button_height, button_width, accept_rect, refresh_rect, lock_rect, auto_rect, paint_rect, invert_rect
@@ -475,62 +524,66 @@ while running:
     else:
         last_paint_pos = None
 
-    screen.fill((0, 0, 0))
+    current_time = time.time()
+    if not auto_mode or (current_time - last_render_time > 1):
+        screen.fill((0, 0, 0))
 
-    if current_image_path:
-        try:
-            orig_surf = pygame.image.load(current_image_path)
-            orig_rect = orig_surf.get_rect()
-            scale = min((screen.get_width() // 2 - 20) / orig_rect.w, (screen.get_height() - button_height - 20) / orig_rect.h)
-            scaled_orig = pygame.transform.scale(orig_surf, (int(orig_rect.w * scale), int(orig_rect.h * scale)))
-            screen.blit(scaled_orig, (10, 10))
+        if current_image_path:
+            try:
+                orig_surf = pygame.image.load(current_image_path)
+                orig_rect = orig_surf.get_rect()
+                scale = min((screen.get_width() // 2 - 20) / orig_rect.w, (screen.get_height() - button_height - 20) / orig_rect.h)
+                scaled_orig = pygame.transform.scale(orig_surf, (int(orig_rect.w * scale), int(orig_rect.h * scale)))
+                screen.blit(scaled_orig, (10, 10))
 
-            if current_preview:
-                prev_surf = pygame.image.fromstring(current_preview.tobytes(), current_preview.size, current_preview.mode)
-                prev_rect = prev_surf.get_rect()
-                scale_prev = min((screen.get_width() // 2 - 20) / prev_rect.w, (screen.get_height() - button_height - 20) / prev_rect.h)
-                scaled_prev = pygame.transform.scale(prev_surf, (int(prev_rect.w * scale_prev), int(prev_rect.h * scale_prev)))
-                screen.blit(scaled_prev, (screen.get_width() // 2 + 10, 10))
+                if current_preview:
+                    prev_surf = pygame.image.fromstring(current_preview.tobytes(), current_preview.size, current_preview.mode)
+                    prev_rect = prev_surf.get_rect()
+                    scale_prev = min((screen.get_width() // 2 - 20) / prev_rect.w, (screen.get_height() - button_height - 20) / prev_rect.h)
+                    scaled_prev = pygame.transform.scale(prev_surf, (int(prev_rect.w * scale_prev), int(prev_rect.h * scale_prev)))
+                    screen.blit(scaled_prev, (screen.get_width() // 2 + 10, 10))
 
-                if paint_mode:
-                    mouse_pos = pygame.mouse.get_pos()
-                    if prev_rect.move(screen.get_width() // 2 + 10, 10).collidepoint(mouse_pos):
-                        pygame.draw.circle(screen, (0, 255, 255), mouse_pos, brush_radius * scale_prev, 2)
-        except Exception as e:
-            log_message(f"Error displaying image: {e}")
+                    if paint_mode:
+                        mouse_pos = pygame.mouse.get_pos()
+                        if prev_rect.move(screen.get_width() // 2 + 10, 10).collidepoint(mouse_pos):
+                            pygame.draw.circle(screen, (0, 255, 255), mouse_pos, brush_radius * scale_prev, 2)
+            except Exception as e:
+                log_message(f"Error displaying image: {e}")
 
-    pygame.draw.rect(screen, (0, 255, 0), accept_rect)
-    accept_text = font.render("Accept (A)", True, (0, 0, 0))
-    screen.blit(accept_text, (accept_rect.centerx - accept_text.get_width() // 2, accept_rect.centery - accept_text.get_height() // 2))
+        pygame.draw.rect(screen, (0, 255, 0), accept_rect)
+        accept_text = font.render("Accept (A)", True, (0, 0, 0))
+        screen.blit(accept_text, (accept_rect.centerx - accept_text.get_width() // 2, accept_rect.centery - accept_text.get_height() // 2))
 
-    pygame.draw.rect(screen, (255, 165, 0), refresh_rect)
-    refresh_text = font.render("Refresh (R)", True, (0, 0, 0))
-    screen.blit(refresh_text, (refresh_rect.centerx - refresh_text.get_width() // 2, refresh_rect.centery - refresh_text.get_height() // 2))
+        pygame.draw.rect(screen, (255, 165, 0), refresh_rect)
+        refresh_text = font.render("Refresh (R)", True, (0, 0, 0))
+        screen.blit(refresh_text, (refresh_rect.centerx - refresh_text.get_width() // 2, refresh_rect.centery - refresh_text.get_height() // 2))
 
-    lock_color = (255, 0, 0) if refresh_lock else (0, 0, 255)
-    pygame.draw.rect(screen, lock_color, lock_rect)
-    lock_text = font.render("Unlock Refresh (L)" if refresh_lock else "Lock Refresh (L)", True, (255, 255, 255))
-    screen.blit(lock_text, (lock_rect.centerx - lock_text.get_width() // 2, lock_rect.centery - lock_text.get_height() // 2))
+        lock_color = (255, 0, 0) if refresh_lock else (0, 0, 255)
+        pygame.draw.rect(screen, lock_color, lock_rect)
+        lock_text = font.render("Unlock Refresh (L)" if refresh_lock else "Lock Refresh (L)", True, (255, 255, 255))
+        screen.blit(lock_text, (lock_rect.centerx - lock_text.get_width() // 2, lock_rect.centery - lock_text.get_height() // 2))
 
-    auto_color = (0, 0, 255) if not auto_mode else (255, 0, 0)
-    pygame.draw.rect(screen, auto_color, auto_rect)
-    auto_text = font.render("Auto (T)" if not auto_mode else "Manual (T)", True, (255, 255, 255))
-    screen.blit(auto_text, (auto_rect.centerx - auto_text.get_width() // 2, auto_rect.centery - auto_text.get_height() // 2))
+        auto_color = (0, 0, 255) if not auto_mode else (255, 0, 0)
+        pygame.draw.rect(screen, auto_color, auto_rect)
+        auto_text = font.render("Auto (T)" if not auto_mode else "Manual (T)", True, (255, 255, 255))
+        screen.blit(auto_text, (auto_rect.centerx - auto_text.get_width() // 2, auto_rect.centery - auto_text.get_height() // 2))
 
-    paint_color = (255, 255, 0) if paint_mode else (128, 128, 128)
-    pygame.draw.rect(screen, paint_color, paint_rect)
-    paint_text = font.render("Exit Paint (P)" if paint_mode else "Paint (P)", True, (0, 0, 0))
-    screen.blit(paint_text, (paint_rect.centerx - paint_text.get_width() // 2, paint_rect.centery - paint_text.get_height() // 2))
+        paint_color = (255, 255, 0) if paint_mode else (0, 0, 255)
+        pygame.draw.rect(screen, paint_color, paint_rect)
+        paint_text = font.render("Exit Paint (P)" if paint_mode else "Paint (P)", True, (0, 255, 255))
+        screen.blit(paint_text, (paint_rect.centerx - paint_text.get_width() // 2, paint_rect.centery - paint_text.get_height() // 2))
 
-    pygame.draw.rect(screen, (128, 0, 128), invert_rect)
-    invert_text = font.render("Invert (I)", True, (255, 255, 255))
-    screen.blit(invert_text, (invert_rect.centerx - invert_text.get_width() // 2, invert_rect.centery - invert_text.get_height() // 2))
+        pygame.draw.rect(screen, (128, 0, 128), invert_rect)
+        invert_text = font.render("Invert (I)", True, (255, 255,255))
+        screen.blit(invert_text, (invert_rect.centerx - invert_text.get_width() // 2, invert_rect.centery - invert_text.get_height() // 2))
 
-    pygame.display.flip()
+        pygame.display.flip()
+        last_render_time = current_time
 
     if not current_image_path and not image_queue:
         running = False
 
+preload_executor.shutdown(wait=True)
 pygame.quit()
 save_model()
 log_message("Script completed.")
