@@ -110,6 +110,13 @@ except ImportError:
     from scipy import stats
     log_message("scipy installed successfully.")
 
+# tkinter is usually included with Python, but check anyway
+try:
+    import tkinter as tk
+    log_message("tkinter is available.")
+except ImportError:
+    log_message("tkinter is not available. File dialog functionality may be limited.")
+
 log_message("All required libraries are installed and ready.")
 
 # Updated to use rembg sessions instead of raw models
@@ -324,6 +331,12 @@ last_refresh_time = 0
 last_render_time = time.time()
 selected = False
 
+# Reference image variables
+reference_mode = False
+reference_image_path = None
+reference_mask = None
+reference_features = None
+
 preloaded = {}
 # Reduce workers on Windows
 max_workers = 1 if is_windows else 2
@@ -512,16 +525,194 @@ def save_cropped():
         current_preview.save(output_path, 'PNG')
         log_message(f"Saved image to {output_path}")
 
+def select_reference_image():
+    """Open file dialog to select a reference image"""
+    global reference_image_path, reference_mask, reference_features
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+        
+        root = tk.Tk()
+        root.withdraw()  # Hide the main window
+        
+        file_path = filedialog.askopenfilename(
+            title="Select Reference Image",
+            filetypes=[
+                ("Image files", "*.png *.jpg *.jpeg *.bmp *.gif"),
+                ("All files", "*.*")
+            ]
+        )
+        
+        root.destroy()
+        
+        if file_path:
+            reference_image_path = file_path
+            reference_features = extract_reference_features(file_path)
+            reference_mask = create_reference_mask(file_path)
+            log_message(f"Selected reference image: {file_path}")
+            return True
+        return False
+    except Exception as e:
+        log_message(f"Error selecting reference image: {e}")
+        # Fallback: ask for manual input
+        try:
+            log_message("Please enter the full path to the reference image:")
+            file_path = input().strip()
+            if file_path and os.path.exists(file_path):
+                reference_image_path = file_path
+                reference_features = extract_reference_features(file_path)
+                reference_mask = create_reference_mask(file_path)
+                log_message(f"Selected reference image: {file_path}")
+                return True
+        except Exception as e2:
+            log_message(f"Error with manual input: {e2}")
+        return False
+
+def extract_reference_features(img_path):
+    """Extract features from reference image for similarity matching"""
+    try:
+        img = cv2.imread(img_path)
+        if img is None:
+            return None
+            
+        # Convert to grayscale for feature detection
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        
+        # Extract various features
+        features = {}
+        
+        # Color histograms
+        hist_b = cv2.calcHist([img], [0], None, [256], [0, 256])
+        hist_g = cv2.calcHist([img], [1], None, [256], [0, 256])
+        hist_r = cv2.calcHist([img], [2], None, [256], [0, 256])
+        features['color_hist'] = np.concatenate([hist_b, hist_g, hist_r]).flatten()
+        
+        # Edge features
+        edges = cv2.Canny(gray, 50, 150)
+        features['edge_density'] = np.sum(edges) / (edges.shape[0] * edges.shape[1])
+        
+        # Contour features
+        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if contours:
+            largest_contour = max(contours, key=cv2.contourArea)
+            features['contour_area'] = cv2.contourArea(largest_contour)
+            features['contour_perimeter'] = cv2.arcLength(largest_contour, True)
+        else:
+            features['contour_area'] = 0
+            features['contour_perimeter'] = 0
+            
+        return features
+    except Exception as e:
+        log_message(f"Error extracting reference features: {e}")
+        return None
+
+def create_reference_mask(img_path):
+    """Create a mask from reference image (assuming it's already cropped/processed)"""
+    try:
+        img = Image.open(img_path)
+        if img.mode == 'RGBA':
+            # Use alpha channel as mask
+            alpha = np.array(img)[:, :, 3]
+            return alpha > 0
+        else:
+            # For RGB images, create mask based on background detection
+            img_array = np.array(img)
+            # Simple background detection - assume corners are background
+            corner_samples = [
+                img_array[0, 0],
+                img_array[0, -1], 
+                img_array[-1, 0],
+                img_array[-1, -1]
+            ]
+            bg_color = np.mean(corner_samples, axis=0)
+            
+            # Create mask where pixels are significantly different from background
+            diff = np.linalg.norm(img_array - bg_color, axis=2)
+            threshold = np.std(diff) * 2
+            return diff > threshold
+    except Exception as e:
+        log_message(f"Error creating reference mask: {e}")
+        return None
+
+def apply_reference_based_crop(img_path):
+    """Apply cropping based on reference image similarity"""
+    global current_preview, current_rgb, current_alpha
+    
+    if reference_features is None:
+        log_message("No reference image selected")
+        return None, None, None
+        
+    try:
+        # Extract features from current image
+        current_features_ref = extract_reference_features(img_path)
+        if current_features_ref is None:
+            return None, None, None
+            
+        # Load current image
+        img = Image.open(img_path)
+        img_array = np.array(img.convert('RGB'))
+        
+        # Simple similarity-based segmentation
+        # This is a basic implementation - can be enhanced with more sophisticated methods
+        
+        # Compare color histograms
+        ref_hist = reference_features['color_hist']
+        curr_hist = current_features_ref['color_hist']
+        hist_similarity = cv2.compareHist(ref_hist.astype(np.float32), curr_hist.astype(np.float32), cv2.HISTCMP_CORREL)
+        
+        # Create mask based on color similarity and reference mask pattern
+        gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+        
+        # Use adaptive thresholding and morphological operations
+        if reference_mask is not None:
+            # Analyze reference mask properties
+            ref_is_bright = np.mean(reference_mask) > 0.5
+            
+            if ref_is_bright:
+                # Looking for bright objects
+                _, mask = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            else:
+                # Looking for dark objects  
+                _, mask = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+        else:
+            # Default: use edge-based segmentation
+            edges = cv2.Canny(gray, 50, 150)
+            mask = cv2.dilate(edges, np.ones((5,5), np.uint8), iterations=2)
+            mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((10,10), np.uint8))
+        
+        # Clean up the mask
+        kernel = np.ones((3,3), np.uint8)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+        
+        # Convert mask to alpha channel
+        alpha_array = mask.astype(np.uint8)
+        
+        # Create RGBA image
+        rgba_array = np.dstack((img_array, alpha_array))
+        output_image = Image.fromarray(rgba_array, 'RGBA')
+        
+        # Check if mask is valid
+        if np.all(alpha_array == 0):
+            return None, None, None
+            
+        return output_image, img_array, alpha_array
+        
+    except Exception as e:
+        log_message(f"Error applying reference-based crop: {e}")
+        return None, None, None
+
 def recalculate_layout():
-    global button_height, button_width, accept_rect, refresh_rect, lock_rect, auto_rect, paint_rect, invert_rect
+    global button_height, button_width, accept_rect, refresh_rect, lock_rect, auto_rect, paint_rect, invert_rect, reference_rect
     button_height = 50
-    button_width = screen.get_width() // 6
+    button_width = screen.get_width() // 7  # Changed from 6 to 7 to accommodate new button
     accept_rect = pygame.Rect(0, screen.get_height() - button_height, button_width, button_height)
     refresh_rect = pygame.Rect(button_width, screen.get_height() - button_height, button_width, button_height)
     lock_rect = pygame.Rect(2 * button_width, screen.get_height() - button_height, button_width, button_height)
     auto_rect = pygame.Rect(3 * button_width, screen.get_height() - button_height, button_width, button_height)
     paint_rect = pygame.Rect(4 * button_width, screen.get_height() - button_height, button_width, button_height)
     invert_rect = pygame.Rect(5 * button_width, screen.get_height() - button_height, button_width, button_height)
+    reference_rect = pygame.Rect(6 * button_width, screen.get_height() - button_height, button_width, button_height)
 
 load_next_image()
 recalculate_layout()
@@ -554,6 +745,10 @@ while running:
                 log_message(f"Paint mode toggled to {paint_mode}")
             elif event.key == pygame.K_i:
                 invert_mask()
+            elif event.key == pygame.K_s:
+                if select_reference_image():
+                    reference_mode = not reference_mode
+                    log_message(f"Reference mode toggled to {reference_mode}")
         elif event.type == pygame.MOUSEBUTTONDOWN:
             pos = pygame.mouse.get_pos()
             if accept_rect.collidepoint(pos):
@@ -563,7 +758,17 @@ while running:
                     load_next_image()
             elif refresh_rect.collidepoint(pos):
                 if current_image_path:
-                    refresh_preview()
+                    if reference_mode and reference_image_path:
+                        # Use reference-based cropping
+                        result = apply_reference_based_crop(current_image_path)
+                        if result[0] is not None:
+                            current_preview, current_rgb, current_alpha = result
+                            mask_modified = True
+                            log_message("Applied reference-based cropping")
+                        else:
+                            refresh_preview()
+                    else:
+                        refresh_preview()
             elif lock_rect.collidepoint(pos):
                 refresh_lock = not refresh_lock
                 log_message(f"Refresh lock toggled to {refresh_lock}")
@@ -575,6 +780,10 @@ while running:
                 log_message(f"Paint mode toggled to {paint_mode}")
             elif invert_rect.collidepoint(pos):
                 invert_mask()
+            elif reference_rect.collidepoint(pos):
+                if select_reference_image():
+                    reference_mode = not reference_mode
+                    log_message(f"Reference mode toggled to {reference_mode}")
 
     if auto_mode and current_image_path:
         if current_preview:
@@ -597,6 +806,11 @@ while running:
             rel_y = int((pos[1] - prev_start_y) / scale_prev)
             if 0 <= rel_x < current_alpha.shape[1] and 0 <= rel_y < current_alpha.shape[0]:
                 value = 255 if pressed[0] else 0
+                
+                # Ensure current_alpha is in the correct format for OpenCV
+                if not current_alpha.flags.c_contiguous:
+                    current_alpha = np.ascontiguousarray(current_alpha)
+                
                 if last_paint_pos is not None:
                     cv2.line(current_alpha, last_paint_pos, (rel_x, rel_y), (value,), thickness=brush_radius * 2)
                 else:
@@ -663,6 +877,11 @@ while running:
         pygame.draw.rect(screen, (128, 0, 128), invert_rect)
         invert_text = font.render("Invert (I)", True, (255, 255,255))
         screen.blit(invert_text, (invert_rect.centerx - invert_text.get_width() // 2, invert_rect.centery - invert_text.get_height() // 2))
+
+        reference_color = (255, 0, 255) if reference_mode else (128, 128, 128)
+        pygame.draw.rect(screen, reference_color, reference_rect)
+        reference_text = font.render("Ref Mode (S)" if not reference_mode else "Exit Ref (S)", True, (255, 255, 255))
+        screen.blit(reference_text, (reference_rect.centerx - reference_text.get_width() // 2, reference_rect.centery - reference_text.get_height() // 2))
 
         pygame.display.flip()
         last_render_time = current_time
