@@ -277,7 +277,7 @@ class LearningScreenAgent:
             logging.info("Starting initial model training...")
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(self.model.parameters(), lr=0.001)
-        scheduler = ReduceLROnPlateau(optimizer, mode='loss', factor=0.1, patience=3)
+        scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=3)
         images, labels = self.get_training_data()
         dataset = ClickDataset(images, labels, transform=self.aug_transform)
         dataloader = DataLoader(dataset, batch_size=64, shuffle=True)
