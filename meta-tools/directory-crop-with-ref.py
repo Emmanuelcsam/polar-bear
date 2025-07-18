@@ -17,13 +17,14 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, List, Any, Optional, Tuple
 from pathlib import Path
 import traceback
+import importlib
 
 # Configure logging before any output
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('advanced_crop_learner.log'),
+        logging.FileHandler('advanced_crop_learner.log', encoding='utf-8'),
         logging.StreamHandler()
     ]
 )
@@ -47,15 +48,16 @@ def install_requirements():
     
     for package, module in required_packages.items():
         try:
-            __import__(module)
-            logger.info(f"✓ {package} is installed")
+            importlib.import_module(module)
+            logger.info(f"[OK] {package} is installed")
         except ImportError:
-            logger.warning(f"✗ {package} not found. Installing...")
+            logger.warning(f"[FAIL] {package} not found. Installing...")
             try:
                 subprocess.check_call([sys.executable, '-m', 'pip', 'install', package])
-                logger.info(f"✓ {package} installed successfully")
-            except subprocess.CalledProcessError as e:
-                logger.error(f"Failed to install {package}: {e}")
+                importlib.import_module(module)  # Verify import after installation
+                logger.info(f"[OK] {package} installed successfully")
+            except (subprocess.CalledProcessError, ImportError) as e:
+                logger.error(f"Failed to install or import {package}: {e}")
                 sys.exit(1)
 
 # Install requirements before importing
@@ -307,11 +309,14 @@ def aggregate_features(features_list: List[Dict[str, Any]]) -> Dict[str, Any]:
         elif isinstance(values[0], list):
             # List values - average element-wise
             try:
-                values_arr = np.array(values)
+                max_len = max(len(v) for v in values)
+                padded = [v + [0.0] * (max_len - len(v)) if len(v) < max_len else v for v in values]
+                values_arr = np.array(padded)
                 aggregated[f'{key}_mean'] = np.mean(values_arr, axis=0).tolist()
                 aggregated[f'{key}_std'] = np.std(values_arr, axis=0).tolist()
-            except:
-                # If can't convert to array, just store first value
+            except Exception as e:
+                logger.warning(f"Failed to aggregate list feature {key}: {e}")
+                # Fallback: store first value
                 aggregated[key] = values[0]
         elif isinstance(values[0], bool):
             # Boolean values - count ratio
@@ -332,7 +337,7 @@ def analyze_reference_directory(ref_dir: Path, cache_file: str = 'ref_features.j
     cache_path = Path(cache_file)
     if cache_path.exists():
         try:
-            with open(cache_path, 'r') as f:
+            with open(cache_path, 'r', encoding='utf-8') as f:
                 cached_data = json.load(f)
             logger.info(f"Loaded cached features from {cache_file}")
             return cached_data
@@ -364,7 +369,7 @@ def analyze_reference_directory(ref_dir: Path, cache_file: str = 'ref_features.j
     
     # Save cache
     try:
-        with open(cache_path, 'w') as f:
+        with open(cache_path, 'w', encoding='utf-8') as f:
             json.dump(aggregated, f, indent=2)
         logger.info(f"Saved aggregated features to {cache_file}")
     except Exception as e:
@@ -390,23 +395,28 @@ def generate_mask(image: np.ndarray, ref_features: Dict[str, Any], params: Dict[
         v_mean = ref_features.get('hsv_v_mean_mean', 128)
         v_std = ref_features.get('hsv_v_std_mean', 50) * color_mult
         
-        # Handle hue wraparound
-        h_low = h_mean - h_std
-        h_high = h_mean + h_std
+        # Cast to int for cv2.inRange
+        h_low = int(h_mean - h_std)
+        h_high = int(h_mean + h_std)
+        s_low = int(max(0, s_mean - s_std))
+        s_high = int(min(255, s_mean + s_std))
+        v_low = int(max(0, v_mean - v_std))
+        v_high = int(min(255, v_mean + v_std))
         
+        # Handle hue wraparound
         if h_low < 0 or h_high > 179:
             # Hue wraps around
             mask1 = cv2.inRange(hsv, 
-                               np.array([0, max(0, s_mean - s_std), max(0, v_mean - v_std)]),
-                               np.array([h_high % 180, min(255, s_mean + s_std), min(255, v_mean + v_std)]))
+                                np.array([0, s_low, v_low]),
+                                np.array([h_high % 180, s_high, v_high]))
             mask2 = cv2.inRange(hsv,
-                               np.array([(h_low + 180) % 180, max(0, s_mean - s_std), max(0, v_mean - v_std)]),
-                               np.array([179, min(255, s_mean + s_std), min(255, v_mean + v_std)]))
+                                np.array([(h_low + 180) % 180, s_low, v_low]),
+                                np.array([179, s_high, v_high]))
             color_mask = cv2.bitwise_or(mask1, mask2)
         else:
             color_mask = cv2.inRange(hsv,
-                                   np.array([h_low, max(0, s_mean - s_std), max(0, v_mean - v_std)]),
-                                   np.array([h_high, min(255, s_mean + s_std), min(255, v_mean + v_std)]))
+                                     np.array([h_low, s_low, v_low]),
+                                     np.array([h_high, s_high, v_high]))
         
         # Morphological operations
         kernel_size = max(3, int(params.get('morph_kernel', 5)))
