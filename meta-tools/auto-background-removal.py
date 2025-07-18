@@ -463,31 +463,61 @@ def update_preview():
 
 def refresh_preview():
     global current_method_idx, current_preview, current_rgb, current_alpha, mask_modified
-    if current_features is not None:
-        output = classifier(current_features.unsqueeze(0))
-        target = torch.full((1, num_methods), 1.0 / (num_methods - 1), device=device)
-        target[0, current_method_idx] = 0
+    original_method = current_method_idx
+    
+    # Only apply negative training if we have features and we're not in reference mode
+    if current_features is not None and not reference_mode:
+        # Create target that reduces probability of current method
+        target = torch.zeros(1, num_methods, device=device)
+        # Set all other methods to have higher probability
+        for i in range(num_methods):
+            if i != current_method_idx:
+                target[0, i] = 1.0 / (num_methods - 1)
+        # Current method gets zero probability (negative feedback)
+        target[0, current_method_idx] = 0.0
+        
         optimizer.zero_grad()
+        output = classifier(current_features.unsqueeze(0))
         loss = soft_cross_entropy(output, target)
         loss.backward()
         optimizer.step()
-        log_message(f"Rejected method {current_method_idx}, trained with loss {loss.item()}")
-    with torch.no_grad():
-        logits = classifier(current_features.unsqueeze(0))[0]
-        sorted_indices = torch.argsort(logits, descending=True)
+        log_message(f"NEGATIVE FEEDBACK: Rejected method {models_list[current_method_idx]}, loss: {loss.item():.4f}")
+        
+        # Save the updated model after negative feedback
+        save_model()
+    
+    # Find the next best method that actually works
+    if current_features is not None:
+        with torch.no_grad():
+            logits = classifier(current_features.unsqueeze(0))[0]
+            sorted_indices = torch.argsort(logits, descending=True)
+    else:
+        # Fallback: try methods in order
+        sorted_indices = list(range(num_methods))
+    
     found = False
     for idx in sorted_indices:
-        temp_idx = idx.item()
-        if temp_idx == current_method_idx:
+        temp_idx = idx.item() if hasattr(idx, 'item') else idx
+        # Skip the current method that we just rejected
+        if temp_idx == original_method:
             continue
         res = current_removals[temp_idx]
         if res is not None and res[0] is not None:
             current_preview, current_rgb, current_alpha = res
             current_method_idx = temp_idx
             found = True
+            log_message(f"Switched to method {models_list[current_method_idx]}")
             break
+    
     if not found:
         log_message(f"Warning: No alternative background removal method worked for {current_image_path}")
+        # If no alternative worked, try the original method again
+        if original_method < len(current_removals) and current_removals[original_method] is not None:
+            res = current_removals[original_method]
+            if res[0] is not None:
+                current_preview, current_rgb, current_alpha = res
+                current_method_idx = original_method
+    
     mask_modified = False
 
 def invert_mask():
@@ -503,14 +533,22 @@ def accept_and_train():
     if current_features is None:
         log_message("Error: No features available for training")
         return
-    label = torch.tensor([current_method_idx]).to(device)
-    optimizer.zero_grad()
-    output = classifier(current_features.unsqueeze(0))
-    loss = criterion(output, label)
-    loss.backward()
-    optimizer.step()
-    log_message(f"Trained on method {current_method_idx} for image {current_image_path}, loss: {loss.item()}")
-    save_model()
+    
+    # Positive feedback: train the classifier to prefer this method for this type of image
+    if not reference_mode:
+        label = torch.tensor([current_method_idx]).to(device)
+        optimizer.zero_grad()
+        output = classifier(current_features.unsqueeze(0))
+        loss = criterion(output, label)
+        loss.backward()
+        optimizer.step()
+        
+        # Log with method name for clarity
+        method_name = models_list[current_method_idx] if current_method_idx < len(models_list) else f"method_{current_method_idx}"
+        log_message(f"POSITIVE FEEDBACK: Accepted method {method_name} for image {os.path.basename(current_image_path)}, loss: {loss.item():.4f}")
+        save_model()
+    else:
+        log_message(f"Accepted result from reference-based cropping for image {os.path.basename(current_image_path)}")
     
     # Note: Fine-tuning of rembg models is not supported in this version
     # The original fine-tuning code has been removed as it's not compatible with rembg sessions
@@ -733,7 +771,18 @@ while running:
                     load_next_image()
             elif event.key == pygame.K_r:
                 if current_image_path:
-                    refresh_preview()
+                    if reference_mode and reference_image_path:
+                        # Use reference-based cropping
+                        result = apply_reference_based_crop(current_image_path)
+                        if result[0] is not None:
+                            current_preview, current_rgb, current_alpha = result
+                            mask_modified = True
+                            log_message("Applied reference-based cropping")
+                        else:
+                            log_message("Reference-based cropping failed, trying normal refresh")
+                            refresh_preview()
+                    else:
+                        refresh_preview()
             elif event.key == pygame.K_l:
                 refresh_lock = not refresh_lock
                 log_message(f"Refresh lock toggled to {refresh_lock}")
@@ -746,9 +795,17 @@ while running:
             elif event.key == pygame.K_i:
                 invert_mask()
             elif event.key == pygame.K_s:
-                if select_reference_image():
-                    reference_mode = not reference_mode
-                    log_message(f"Reference mode toggled to {reference_mode}")
+                if reference_mode:
+                    # Exit reference mode
+                    reference_mode = False
+                    log_message("Exited reference mode")
+                else:
+                    # Enter reference mode by selecting a reference image
+                    if select_reference_image():
+                        reference_mode = True
+                        log_message("Entered reference mode")
+                    else:
+                        log_message("Reference mode not activated - no image selected")
         elif event.type == pygame.MOUSEBUTTONDOWN:
             pos = pygame.mouse.get_pos()
             if accept_rect.collidepoint(pos):
@@ -781,9 +838,17 @@ while running:
             elif invert_rect.collidepoint(pos):
                 invert_mask()
             elif reference_rect.collidepoint(pos):
-                if select_reference_image():
-                    reference_mode = not reference_mode
-                    log_message(f"Reference mode toggled to {reference_mode}")
+                if reference_mode:
+                    # Exit reference mode
+                    reference_mode = False
+                    log_message("Exited reference mode")
+                else:
+                    # Enter reference mode by selecting a reference image
+                    if select_reference_image():
+                        reference_mode = True
+                        log_message("Entered reference mode")
+                    else:
+                        log_message("Reference mode not activated - no image selected")
 
     if auto_mode and current_image_path:
         if current_preview:
