@@ -7,7 +7,6 @@ Learns from user demonstration, follows event sequence, and uses deep learning f
 import time
 import numpy as np
 import cv2
-from PIL import ImageGrab, Image
 import pyautogui
 import logging
 import sys
@@ -27,10 +26,47 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 import psutil
 import pickle
 import datetime
+import platform
+
+# Cross-platform screenshot handling
+if platform.system() == 'Darwin':  # macOS
+    import subprocess
+    from PIL import Image
+    
+    class ImageGrab:
+        @staticmethod
+        def grab():
+            # Use screencapture command on macOS
+            import tempfile
+            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+                tmp_path = tmp.name
+            subprocess.run(['screencapture', '-x', tmp_path], check=True)
+            img = Image.open(tmp_path)
+            os.unlink(tmp_path)
+            return img
+elif platform.system() == 'Linux':
+    from PIL import Image
+    import mss
+    
+    class ImageGrab:
+        @staticmethod
+        def grab():
+            with mss.mss() as sct:
+                monitor = sct.monitors[0]
+                sct_img = sct.grab(monitor)
+                img = Image.frombytes('RGB', sct_img.size, sct_img.bgra, 'raw', 'BGRX')
+                return img
+else:  # Windows
+    from PIL import ImageGrab, Image
 
 if os.name == 'nt':
-    import win32gui
-    import win32process
+    try:
+        import win32gui
+        import win32process
+    except ImportError:
+        win32gui = None
+        win32process = None
+        logging.warning("pywin32 not installed. Window focus features disabled on Windows.")
 
 # Configure logging
 logging.basicConfig(
@@ -61,7 +97,14 @@ class ClickDataset(Dataset):
 class ClickDetector(nn.Module):
     def __init__(self, num_classes):
         super(ClickDetector, self).__init__()
-        self.resnet = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
+        try:
+            # Try to use pretrained weights if available
+            self.resnet = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
+        except:
+            # Fall back to random initialization if weights not available
+            logging.warning("Pre-trained weights not available. Using random initialization.")
+            self.resnet = models.resnet50(weights=None)
+        
         for param in self.resnet.parameters():
             param.requires_grad = False
         for param in self.resnet.layer4.parameters():
@@ -124,18 +167,74 @@ class LearningScreenAgent:
         self.create_ui()
 
     def create_ui(self):
-        self.ui_window = tk.Tk()
-        self.ui_window.title("Screen Agent")
-        self.ui_window.geometry("200x150")
-        self.ui_window.attributes('-topmost', True)
-        self.record_button = tk.Button(self.ui_window, text="New Run", command=self.toggle_recording_ui)
-        self.record_button.pack()
+        try:
+            self.ui_window = tk.Tk()
+            self.ui_window.title("Screen Agent")
+            self.ui_window.geometry("200x150")
+            
+            # Handle window manager attributes safely
+            try:
+                self.ui_window.attributes('-topmost', True)
+            except tk.TclError:
+                logging.warning("Could not set window to topmost")
+            
+            self.record_button = tk.Button(self.ui_window, text="New Run", command=self.toggle_recording_ui)
+            self.record_button.pack()
+            
+            if self.past_runs:
+                tk.Label(self.ui_window, text="Past Runs:").pack()
+                self.selected_run = tk.StringVar(value=self.past_runs[0])
+                tk.OptionMenu(self.ui_window, self.selected_run, *self.past_runs).pack()
+                tk.Button(self.ui_window, text="Replay Run", command=self.replay_run).pack()
+            
+            # Set up proper window close handling
+            self.ui_window.protocol("WM_DELETE_WINDOW", self.on_window_close)
+            
+            self.ui_window.mainloop()
+        except Exception as e:
+            logging.error(f"Failed to create UI: {e}")
+            # Fallback to command line mode
+            self.command_line_mode()
+    
+    def on_window_close(self):
+        """Handle window close event gracefully"""
+        self.running = False
+        if self.recording:
+            self.stop_recording()
+        if self.ui_window:
+            self.ui_window.destroy()
+        sys.exit(0)
+    
+    def command_line_mode(self):
+        """Fallback command line interface when GUI fails"""
+        print("\nScreen Agent - Command Line Mode")
+        print("1. New Recording")
         if self.past_runs:
-            tk.Label(self.ui_window, text="Past Runs:").pack()
-            self.selected_run = tk.StringVar(value=self.past_runs[0])
-            tk.OptionMenu(self.ui_window, self.selected_run, *self.past_runs).pack()
-            tk.Button(self.ui_window, text="Replay Run", command=self.replay_run).pack()
-        self.ui_window.mainloop()
+            print("2. Replay Past Run")
+            print("3. Exit")
+            choice = input("\nSelect option: ")
+            if choice == '1':
+                self.reset()
+                self.start_recording()
+                input("\nPress Enter to stop recording...")
+                self.stop_recording()
+            elif choice == '2' and self.past_runs:
+                print("\nAvailable runs:")
+                for i, run in enumerate(self.past_runs[:10]):
+                    print(f"{i+1}. {run}")
+                run_idx = int(input("Select run number: ")) - 1
+                if 0 <= run_idx < len(self.past_runs):
+                    self.load_run(self.past_runs[run_idx])
+                    self.start_clicking()
+            else:
+                sys.exit(0)
+        else:
+            choice = input("\nPress Enter to start recording or 'q' to quit: ")
+            if choice.lower() != 'q':
+                self.reset()
+                self.start_recording()
+                input("\nPress Enter to stop recording...")
+                self.stop_recording()
 
     def toggle_recording_ui(self):
         if not self.recording:
@@ -171,11 +270,21 @@ class LearningScreenAgent:
             self.mouse_listener.stop()
         if self.keyboard_listener:
             self.keyboard_listener.stop()
+        
         logging.info("Stopped recording. Processing data...")
+        
+        if not self.events:
+            logging.warning("No events recorded. Please record some actions first.")
+            return
+        
         self.events.sort(key=lambda e: e['time'])
         self.process_recorded_data()
-        self.save_run()
-        self.show_config_ui()
+        
+        if self.click_patches:
+            self.save_run()
+            self.show_config_ui()
+        else:
+            logging.warning("No mouse clicks recorded. Agent needs at least one click target.")
 
     def on_click(self, x, y, button, pressed):
         if self.recording:
@@ -186,14 +295,27 @@ class LearningScreenAgent:
             if pressed and button == mouse.Button.left:
                 logging.info(f"Recorded click at ({x}, {y})")
                 self.click_positions.append((x, y))
-                screenshot = ImageGrab.grab()
-                crop_left = max(0, x - self.crop_size // 2)
-                crop_top = max(0, y - self.crop_size // 2)
-                crop_right = min(self.screen_width, x + self.crop_size // 2)
-                crop_bottom = min(self.screen_height, y + self.crop_size // 2)
-                pos_crop = screenshot.crop((crop_left, crop_top, crop_right, crop_bottom)).resize((self.crop_size, self.crop_size))
-                self.click_patches.append(pos_crop)
-                self.additional_positives.append([])
+                try:
+                    screenshot = ImageGrab.grab()
+                    if screenshot:
+                        # Validate coordinates
+                        crop_left = max(0, x - self.crop_size // 2)
+                        crop_top = max(0, y - self.crop_size // 2)
+                        crop_right = min(self.screen_width, x + self.crop_size // 2)
+                        crop_bottom = min(self.screen_height, y + self.crop_size // 2)
+                        
+                        # Ensure valid crop dimensions
+                        if crop_right > crop_left and crop_bottom > crop_top:
+                            pos_crop = screenshot.crop((crop_left, crop_top, crop_right, crop_bottom))
+                            pos_crop = pos_crop.resize((self.crop_size, self.crop_size))
+                            self.click_patches.append(pos_crop)
+                            self.additional_positives.append([])
+                        else:
+                            logging.warning(f"Invalid crop dimensions at ({x}, {y})")
+                    else:
+                        logging.error("Failed to capture screenshot")
+                except Exception as e:
+                    logging.error(f"Error capturing click image: {e}")
         return True
 
     def on_keyboard_press(self, key):
@@ -219,16 +341,27 @@ class LearningScreenAgent:
 
     def capture_background(self):
         while self.recording:
-            screenshot = ImageGrab.grab()
-            for _ in range(20):
-                rand_x = random.randint(0, self.screen_width - self.crop_size)
-                rand_y = random.randint(0, self.screen_height - self.crop_size)
-                neg_crop = screenshot.crop((rand_x, rand_y, rand_x + self.crop_size, rand_y + self.crop_size)).resize((self.crop_size, self.crop_size))
-                self.negative_samples.append(neg_crop)
-            time.sleep(0.3)
+            try:
+                screenshot = ImageGrab.grab()
+                if screenshot:
+                    for _ in range(20):
+                        # Ensure coordinates are within valid range
+                        max_x = max(0, self.screen_width - self.crop_size)
+                        max_y = max(0, self.screen_height - self.crop_size)
+                        if max_x > 0 and max_y > 0:
+                            rand_x = random.randint(0, max_x)
+                            rand_y = random.randint(0, max_y)
+                            neg_crop = screenshot.crop((rand_x, rand_y, rand_x + self.crop_size, rand_y + self.crop_size))
+                            neg_crop = neg_crop.resize((self.crop_size, self.crop_size))
+                            self.negative_samples.append(neg_crop)
+                time.sleep(0.3)
+            except Exception as e:
+                logging.error(f"Error in background capture: {e}")
+                time.sleep(1)  # Wait longer on error
 
     def get_focused_info(self):
-        if os.name != 'nt':
+        if os.name != 'nt' or not win32gui:
+            # For non-Windows or when pywin32 not available
             return {'title': '', 'exe': ''}
         try:
             hwnd = win32gui.GetForegroundWindow()
@@ -269,67 +402,130 @@ class LearningScreenAgent:
         return images, labels
 
     def train_model(self, retrain=False):
-        num_classes = len(self.click_patches) + 1
-        if retrain:
-            logging.info("Retraining model with new data...")
-        else:
-            self.model = ClickDetector(num_classes).to(self.device)
-            logging.info("Starting initial model training...")
-        criterion = nn.CrossEntropyLoss()
-        optimizer = optim.Adam(self.model.parameters(), lr=0.001)
-        scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=3)
-        images, labels = self.get_training_data()
-        dataset = ClickDataset(images, labels, transform=self.aug_transform)
-        dataloader = DataLoader(dataset, batch_size=64, shuffle=True)
-        self.model.train()
-        epochs = 20 if retrain else 15
-        for epoch in range(epochs):
-            running_loss = 0.0
-            for inputs, targets in dataloader:
-                inputs = inputs.to(self.device)
-                targets = targets.to(self.device)
-                optimizer.zero_grad()
-                outputs = self.model(inputs)
-                loss = criterion(outputs, targets)
-                loss.backward()
-                optimizer.step()
-                running_loss += loss.item()
-            avg_loss = running_loss / len(dataloader)
-            scheduler.step(avg_loss)
-            logging.info(f"Epoch {epoch+1}/{epochs}, Loss: {avg_loss:.4f}")
-        logging.info("Model training completed.")
+        try:
+            num_classes = len(self.click_patches) + 1
+            if retrain:
+                logging.info("Retraining model with new data...")
+            else:
+                self.model = ClickDetector(num_classes).to(self.device)
+                logging.info("Starting initial model training...")
+            
+            if not self.model:
+                logging.error("Failed to initialize model")
+                return
+            
+            criterion = nn.CrossEntropyLoss()
+            optimizer = optim.Adam(self.model.parameters(), lr=0.001)
+            scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=3)
+            
+            images, labels = self.get_training_data()
+            if not images:
+                logging.warning("No training data available")
+                return
+            
+            dataset = ClickDataset(images, labels, transform=self.aug_transform)
+            dataloader = DataLoader(dataset, batch_size=min(64, len(dataset)), shuffle=True)
+            
+            self.model.train()
+            epochs = 20 if retrain else 15
+            
+            for epoch in range(epochs):
+                running_loss = 0.0
+                batch_count = 0
+                
+                for inputs, targets in dataloader:
+                    try:
+                        inputs = inputs.to(self.device)
+                        targets = targets.to(self.device)
+                        optimizer.zero_grad()
+                        outputs = self.model(inputs)
+                        loss = criterion(outputs, targets)
+                        loss.backward()
+                        optimizer.step()
+                        running_loss += loss.item()
+                        batch_count += 1
+                    except Exception as e:
+                        logging.error(f"Error in training batch: {e}")
+                        continue
+                
+                if batch_count > 0:
+                    avg_loss = running_loss / batch_count
+                    scheduler.step(avg_loss)
+                    logging.info(f"Epoch {epoch+1}/{epochs}, Loss: {avg_loss:.4f}")
+                else:
+                    logging.warning(f"Epoch {epoch+1}/{epochs} - No successful batches")
+            
+            logging.info("Model training completed.")
+        except Exception as e:
+            logging.error(f"Error in train_model: {e}")
+            self.model = None
 
     def detect_target(self, target_class):
-        self.scans += 1
-        screenshot = ImageGrab.grab()
-        max_prob = 0
-        best_pos = None
-        self.model.eval()
-        with torch.no_grad():
-            for y in range(0, self.screen_height - self.crop_size, self.scan_step):
-                for x in range(0, self.screen_width - self.crop_size, self.scan_step):
-                    crop = screenshot.crop((x, y, x + self.crop_size, y + self.crop_size))
-                    input_tensor = self.test_transform(crop).unsqueeze(0).to(self.device)
-                    outputs = self.model(input_tensor)
-                    probs = torch.softmax(outputs, dim=1)[0]
-                    prob = probs[target_class].item()
-                    if prob > max_prob and prob > 0.75:
-                        max_prob = prob
-                        best_pos = (x + self.crop_size // 2, y + self.crop_size // 2)
-        if best_pos:
-            self.detections += 1
-            crop_left = max(0, best_pos[0] - self.crop_size // 2)
-            crop_top = max(0, best_pos[1] - self.crop_size // 2)
-            crop_right = min(self.screen_width, best_pos[0] + self.crop_size // 2)
-            crop_bottom = min(self.screen_height, best_pos[1] + self.crop_size // 2)
-            pos_crop = screenshot.crop((crop_left, crop_top, crop_right, crop_bottom)).resize((self.crop_size, self.crop_size))
-            self.additional_positives[target_class - 1].append(pos_crop)
-            for _ in range(5):
-                rand_x = random.randint(0, self.screen_width - self.crop_size)
-                rand_y = random.randint(0, self.screen_height - self.crop_size)
-                neg_crop = screenshot.crop((rand_x, rand_y, rand_x + self.crop_size, rand_y + self.crop_size)).resize((self.crop_size, self.crop_size))
-                self.additional_negatives.append(neg_crop)
-        return best_pos, max_prob
+        try:
+            self.scans += 1
+            screenshot = ImageGrab.grab()
+            if not screenshot:
+                logging.error("Failed to capture screenshot for detection")
+                return None, 0
+            
+            max_prob = 0
+            best_pos = None
+            
+            if not self.model:
+                logging.error("Model not initialized")
+                return None, 0
+            
+            self.model.eval()
+            with torch.no_grad():
+                for y in range(0, self.screen_height - self.crop_size, self.scan_step):
+                    for x in range(0, self.screen_width - self.crop_size, self.scan_step):
+                        try:
+                            crop = screenshot.crop((x, y, x + self.crop_size, y + self.crop_size))
+                            input_tensor = self.test_transform(crop).unsqueeze(0).to(self.device)
+                            outputs = self.model(input_tensor)
+                            probs = torch.softmax(outputs, dim=1)[0]
+                            
+                            if target_class < len(probs):
+                                prob = probs[target_class].item()
+                                if prob > max_prob and prob > 0.75:
+                                    max_prob = prob
+                                    best_pos = (x + self.crop_size // 2, y + self.crop_size // 2)
+                        except Exception as e:
+                            logging.debug(f"Error processing crop at ({x}, {y}): {e}")
+                            continue
+            
+            if best_pos:
+                self.detections += 1
+                try:
+                    # Capture positive sample
+                    crop_left = max(0, best_pos[0] - self.crop_size // 2)
+                    crop_top = max(0, best_pos[1] - self.crop_size // 2)
+                    crop_right = min(self.screen_width, best_pos[0] + self.crop_size // 2)
+                    crop_bottom = min(self.screen_height, best_pos[1] + self.crop_size // 2)
+                    
+                    if crop_right > crop_left and crop_bottom > crop_top:
+                        pos_crop = screenshot.crop((crop_left, crop_top, crop_right, crop_bottom))
+                        pos_crop = pos_crop.resize((self.crop_size, self.crop_size))
+                        if target_class - 1 < len(self.additional_positives):
+                            self.additional_positives[target_class - 1].append(pos_crop)
+                    
+                    # Capture negative samples
+                    for _ in range(5):
+                        max_x = max(0, self.screen_width - self.crop_size)
+                        max_y = max(0, self.screen_height - self.crop_size)
+                        if max_x > 0 and max_y > 0:
+                            rand_x = random.randint(0, max_x)
+                            rand_y = random.randint(0, max_y)
+                            neg_crop = screenshot.crop((rand_x, rand_y, rand_x + self.crop_size, rand_y + self.crop_size))
+                            neg_crop = neg_crop.resize((self.crop_size, self.crop_size))
+                            self.additional_negatives.append(neg_crop)
+                except Exception as e:
+                    logging.error(f"Error processing detection result: {e}")
+            
+            return best_pos, max_prob
+        except Exception as e:
+            logging.error(f"Error in detect_target: {e}")
+            return None, 0
 
     def show_config_ui(self):
         config_window = tk.Tk()
@@ -355,84 +551,164 @@ class LearningScreenAgent:
         config_window.mainloop()
 
     def start_clicking(self):
-        self.running = True
-        self.ui_window.withdraw()
-        logging.info("Starting agent sequence. Press ESC to stop.")
-        self.esc_listener = keyboard.Listener(on_press=self.on_key_press)
-        self.esc_listener.start()
-        while self.running:
-            click_count = 0
-            self.last_click_pos = None
-            for idx, event in enumerate(self.events):
-                if not self.running:
-                    break
-                time.sleep(self.diffs[idx])
-                self.handle_focus(event['focused'])
-                event_type = event['type']
-                if event_type == 'mouse_press':
-                    click_count += 1 if event['button'] == 'Button.left' else 0
-                    button = event['button'].replace('Button.', '')
-                    if self.is_moving and event['button'] == 'Button.left':
-                        pos, _ = self.detect_target(click_count)
-                        if pos:
-                            pyautogui.mouseDown(pos[0], pos[1], button=button)
-                            self.last_click_pos = pos
-                            self.clicks += 1
-                    else:
-                        pos = event['pos']
-                        pyautogui.mouseDown(pos[0], pos[1], button=button)
-                        self.last_click_pos = pos
-                        self.clicks += 1
-                elif event_type == 'mouse_release':
-                    button = event['button'].replace('Button.', '')
-                    pos = self.last_click_pos if self.is_moving and event['button'] == 'Button.left' else event['pos']
-                    if pos:
-                        pyautogui.mouseUp(pos[0], pos[1], button=button)
-                elif event_type == 'key_press':
-                    pyautogui.keyDown(event['key'])
-                elif event_type == 'key_release':
-                    pyautogui.keyUp(event['key'])
-            self.cycle_count += 1
-            if self.cycle_count % self.retrain_interval == 0 and (any(self.additional_positives) or self.additional_negatives):
-                self.train_model(retrain=True)
-            if math.floor(time.time() - self.start_time) % 30 == 0:
-                self.print_stats()
-        self.ui_window.deiconify()
+        try:
+            self.running = True
+            if hasattr(self, 'ui_window') and self.ui_window:
+                self.ui_window.withdraw()
+            
+            logging.info("Starting agent sequence. Press ESC to stop.")
+            
+            # Reset statistics
+            self.scans = 0
+            self.detections = 0
+            self.clicks = 0
+            self.start_time = time.time()
+            
+            self.esc_listener = keyboard.Listener(on_press=self.on_key_press)
+            self.esc_listener.start()
+            
+            last_stats_time = time.time()
+            
+            while self.running:
+                try:
+                    click_count = 0
+                    self.last_click_pos = None
+                    
+                    for idx, event in enumerate(self.events):
+                        if not self.running:
+                            break
+                        
+                        # Handle timing
+                        if idx < len(self.diffs):
+                            time.sleep(self.diffs[idx])
+                        
+                        # Handle window focus
+                        if 'focused' in event:
+                            self.handle_focus(event['focused'])
+                        
+                        event_type = event.get('type', '')
+                        
+                        try:
+                            if event_type == 'mouse_press':
+                                if event.get('button') == 'Button.left':
+                                    click_count += 1
+                                button = event.get('button', 'Button.left').replace('Button.', '')
+                                
+                                if self.is_moving and event.get('button') == 'Button.left' and self.model:
+                                    pos, prob = self.detect_target(click_count)
+                                    if pos:
+                                        pyautogui.mouseDown(pos[0], pos[1], button=button)
+                                        self.last_click_pos = pos
+                                        self.clicks += 1
+                                        logging.info(f"Clicked detected target at {pos} with confidence {prob:.2f}")
+                                else:
+                                    pos = event.get('pos', (0, 0))
+                                    pyautogui.mouseDown(pos[0], pos[1], button=button)
+                                    self.last_click_pos = pos
+                                    self.clicks += 1
+                            
+                            elif event_type == 'mouse_release':
+                                button = event.get('button', 'Button.left').replace('Button.', '')
+                                if self.is_moving and event.get('button') == 'Button.left' and self.last_click_pos:
+                                    pos = self.last_click_pos
+                                else:
+                                    pos = event.get('pos', (0, 0))
+                                if pos:
+                                    pyautogui.mouseUp(pos[0], pos[1], button=button)
+                            
+                            elif event_type == 'key_press':
+                                key = event.get('key', '')
+                                if key:
+                                    pyautogui.keyDown(key)
+                            
+                            elif event_type == 'key_release':
+                                key = event.get('key', '')
+                                if key:
+                                    pyautogui.keyUp(key)
+                        
+                        except Exception as e:
+                            logging.error(f"Error executing event {event_type}: {e}")
+                            continue
+                    
+                    self.cycle_count += 1
+                    
+                    # Retrain periodically if we have new data
+                    if (self.cycle_count % self.retrain_interval == 0 and 
+                        self.model and 
+                        (any(self.additional_positives) or self.additional_negatives)):
+                        logging.info("Retraining model with accumulated data...")
+                        self.train_model(retrain=True)
+                    
+                    # Print stats every 30 seconds
+                    current_time = time.time()
+                    if current_time - last_stats_time >= 30:
+                        self.print_stats()
+                        last_stats_time = current_time
+                
+                except Exception as e:
+                    logging.error(f"Error in main loop: {e}")
+                    time.sleep(1)  # Prevent rapid error loops
+            
+            # Restore UI window
+            if hasattr(self, 'ui_window') and self.ui_window:
+                self.ui_window.deiconify()
+        
+        except Exception as e:
+            logging.error(f"Critical error in start_clicking: {e}")
+            self.running = False
+        finally:
+            if self.esc_listener:
+                self.esc_listener.stop()
 
     def handle_focus(self, expected_focused):
-        if os.name != 'nt' or not expected_focused['exe']:
+        if os.name != 'nt' or not expected_focused['exe'] or not win32gui:
             return
-        running = any(p.info['exe'] == expected_focused['exe'] for p in psutil.process_iter(['exe']))
-        if not running:
-            logging.info(f"Launching {expected_focused['exe']}")
-            try:
-                os.startfile(expected_focused['exe'])
-                wait_start = time.time()
-                found = False
-                while time.time() - wait_start < 10:
-                    hwnds = []
-                    def enum_cb(hwnd, results):
-                        if win32gui.GetWindowText(hwnd) == expected_focused['title']:
-                            results.append(hwnd)
-                    win32gui.EnumWindows(enum_cb, hwnds)
-                    if hwnds:
-                        found = True
-                        break
-                    time.sleep(0.5)
-                if not found:
-                    logging.warning("Window not found after launch")
+        
+        try:
+            # Check if process is running
+            running = any(p.info.get('exe', '') == expected_focused['exe'] 
+                         for p in psutil.process_iter(['exe']) 
+                         if p.info.get('exe'))
+            
+            if not running:
+                logging.info(f"Launching {expected_focused['exe']}")
+                try:
+                    os.startfile(expected_focused['exe'])
+                    wait_start = time.time()
+                    found = False
+                    while time.time() - wait_start < 10:
+                        hwnds = []
+                        def enum_cb(hwnd, results):
+                            try:
+                                if win32gui.GetWindowText(hwnd) == expected_focused['title']:
+                                    results.append(hwnd)
+                            except:
+                                pass
+                        win32gui.EnumWindows(enum_cb, hwnds)
+                        if hwnds:
+                            found = True
+                            break
+                        time.sleep(0.5)
+                    if not found:
+                        logging.warning("Window not found after launch")
+                        return
+                except Exception as e:
+                    logging.warning(f"Failed to launch {expected_focused['exe']}: {e}")
                     return
-            except Exception as e:
-                logging.warning(f"Failed to launch {expected_focused['exe']}: {e}")
-                return
-        # Activate window
-        def activate_cb(hwnd, _):
-            if win32gui.GetWindowText(hwnd) == expected_focused['title']:
-                win32gui.SetForegroundWindow(hwnd)
-                return False  # stop enum
-            return True
-        win32gui.EnumWindows(activate_cb, None)
-        time.sleep(0.5)
+            
+            # Activate window
+            def activate_cb(hwnd, _):
+                try:
+                    if win32gui.GetWindowText(hwnd) == expected_focused['title']:
+                        win32gui.SetForegroundWindow(hwnd)
+                        return False  # stop enum
+                except:
+                    pass
+                return True
+            win32gui.EnumWindows(activate_cb, None)
+            time.sleep(0.5)
+        except Exception as e:
+            logging.warning(f"Error in handle_focus: {e}")
 
     def on_key_press(self, key):
         if key == keyboard.Key.esc:
@@ -449,33 +725,69 @@ class LearningScreenAgent:
         logging.info(f"Scans: {self.scans}")
         logging.info(f"Detections: {self.detections}")
         logging.info(f"Clicks: {self.clicks}")
-        logging.info(f"Success rate: {(self.clicks / max(1, self.detections) * 100):.1f}%")
+        if self.detections > 0:
+            success_rate = (self.clicks / self.detections * 100)
+            logging.info(f"Success rate: {success_rate:.1f}%")
+        else:
+            logging.info(f"Success rate: N/A (no detections)")
 
     def save_run(self):
-        ts = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        run_dir = os.path.join(self.runs_dir, ts)
-        os.makedirs(run_dir)
-        with open(os.path.join(run_dir, "events.pkl"), "wb") as f:
-            pickle.dump(self.events, f)
-        if self.model:
-            torch.save(self.model.state_dict(), os.path.join(run_dir, "model.pth"))
-        with open(os.path.join(run_dir, "settings.pkl"), "wb") as f:
-            pickle.dump({
-                "uniform_interval": self.uniform_interval,
-                "use_recorded_duration": self.use_recorded_duration,
-                "is_moving": self.is_moving,
-            }, f)
-        for i, patch in enumerate(self.click_patches):
-            patch.save(os.path.join(run_dir, f"patch_{i}.png"))
-        add_pos_dir = os.path.join(run_dir, "additional_positives")
-        os.makedirs(add_pos_dir)
-        for j, lst in enumerate(self.additional_positives):
-            for k, p in enumerate(lst):
-                p.save(os.path.join(add_pos_dir, f"{j}_{k}.png"))
-        add_neg_dir = os.path.join(run_dir, "additional_negatives")
-        os.makedirs(add_neg_dir)
-        for k, p in enumerate(self.additional_negatives):
-            p.save(os.path.join(add_neg_dir, f"{k}.png"))
+        try:
+            ts = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            run_dir = os.path.join(self.runs_dir, ts)
+            os.makedirs(run_dir)
+            
+            # Save events
+            with open(os.path.join(run_dir, "events.pkl"), "wb") as f:
+                pickle.dump(self.events, f)
+            
+            # Save model if exists
+            if self.model:
+                try:
+                    torch.save(self.model.state_dict(), os.path.join(run_dir, "model.pth"))
+                except Exception as e:
+                    logging.error(f"Failed to save model: {e}")
+            
+            # Save settings
+            with open(os.path.join(run_dir, "settings.pkl"), "wb") as f:
+                pickle.dump({
+                    "uniform_interval": self.uniform_interval,
+                    "use_recorded_duration": self.use_recorded_duration,
+                    "is_moving": self.is_moving,
+                }, f)
+            
+            # Save click patches
+            for i, patch in enumerate(self.click_patches):
+                try:
+                    patch.save(os.path.join(run_dir, f"patch_{i}.png"))
+                except Exception as e:
+                    logging.error(f"Failed to save patch {i}: {e}")
+            
+            # Save additional positives
+            add_pos_dir = os.path.join(run_dir, "additional_positives")
+            os.makedirs(add_pos_dir)
+            for j, lst in enumerate(self.additional_positives):
+                for k, p in enumerate(lst):
+                    try:
+                        p.save(os.path.join(add_pos_dir, f"{j}_{k}.png"))
+                    except Exception as e:
+                        logging.error(f"Failed to save additional positive {j}_{k}: {e}")
+            
+            # Save additional negatives
+            add_neg_dir = os.path.join(run_dir, "additional_negatives")
+            os.makedirs(add_neg_dir)
+            for k, p in enumerate(self.additional_negatives):
+                try:
+                    p.save(os.path.join(add_neg_dir, f"{k}.png"))
+                except Exception as e:
+                    logging.error(f"Failed to save additional negative {k}: {e}")
+            
+            logging.info(f"Run saved to {run_dir}")
+            # Update past runs list
+            self.past_runs = sorted([d for d in os.listdir(self.runs_dir) 
+                                   if os.path.isdir(os.path.join(self.runs_dir, d))], reverse=True)
+        except Exception as e:
+            logging.error(f"Error saving run: {e}")
 
     def load_run(self, ts):
         self.reset()
@@ -491,7 +803,20 @@ class LearningScreenAgent:
         if self.click_patches:
             num_classes = len(self.click_patches) + 1
             self.model = ClickDetector(num_classes).to(self.device)
-            self.model.load_state_dict(torch.load(os.path.join(run_dir, "model.pth")))
+            model_path = os.path.join(run_dir, "model.pth")
+            if os.path.exists(model_path):
+                try:
+                    # Load with map_location for CPU/GPU compatibility
+                    state_dict = torch.load(model_path, map_location=self.device)
+                    self.model.load_state_dict(state_dict)
+                    logging.info("Model loaded successfully")
+                except Exception as e:
+                    logging.error(f"Failed to load model: {e}")
+                    logging.info("Training new model instead")
+                    self.train_model()
+            else:
+                logging.warning("Model file not found. Training new model.")
+                self.train_model()
         with open(os.path.join(run_dir, "settings.pkl"), "rb") as f:
             settings = pickle.load(f)
             self.uniform_interval = settings["uniform_interval"]
@@ -525,24 +850,85 @@ class LearningScreenAgent:
 
 def main():
     try:
-        import torch
-        import torchvision
-        import cv2
-        import numpy
-        import pyautogui
-        import pynput
-        import tkinter
-        import psutil
+        # Check core dependencies
+        missing_deps = []
+        
+        try:
+            import torch
+            import torchvision
+        except ImportError:
+            missing_deps.append("torch torchvision")
+        
+        try:
+            import cv2
+        except ImportError:
+            missing_deps.append("opencv-python")
+        
+        try:
+            import numpy
+        except ImportError:
+            missing_deps.append("numpy")
+        
+        try:
+            import pyautogui
+        except ImportError:
+            missing_deps.append("pyautogui")
+        
+        try:
+            import pynput
+        except ImportError:
+            missing_deps.append("pynput")
+        
+        try:
+            import tkinter
+        except ImportError:
+            missing_deps.append("tkinter (usually comes with Python)")
+        
+        try:
+            import psutil
+        except ImportError:
+            missing_deps.append("psutil")
+        
+        try:
+            import PIL
+        except ImportError:
+            missing_deps.append("pillow")
+        
+        if platform.system() == 'Linux':
+            try:
+                import mss
+            except ImportError:
+                missing_deps.append("mss")
+        
         if os.name == 'nt':
-            import win32gui
-            import win32process
-    except ImportError as e:
-        print(f"Missing dependency: {e}")
-        print("\nInstall required packages:")
-        print("  pip install torch torchvision opencv-python numpy pillow pyautogui pynput psutil pywin32")
-        return
-
-    agent = LearningScreenAgent()
+            try:
+                import win32gui
+                import win32process
+            except ImportError:
+                missing_deps.append("pywin32")
+        
+        if missing_deps:
+            print("Missing dependencies detected!")
+            print("\nInstall required packages:")
+            base_cmd = "pip install torch torchvision opencv-python numpy pillow pyautogui pynput psutil"
+            if platform.system() == 'Linux':
+                base_cmd += " mss"
+            if os.name == 'nt':
+                base_cmd += " pywin32"
+            print(f"  {base_cmd}")
+            print(f"\nSpecifically missing: {', '.join(missing_deps)}")
+            return
+        
+        # Disable pyautogui failsafe for continuous operation
+        pyautogui.FAILSAFE = False
+        
+        # Create and run agent
+        agent = LearningScreenAgent()
+        
+    except Exception as e:
+        print(f"Error starting agent: {e}")
+        import traceback
+        traceback.print_exc()
 
 if __name__ == "__main__":
     main()
