@@ -1,0 +1,43 @@
+Image Clustering Summary
+==============================
+
+Total images: 351
+Groups created: 35
+Unique images: 273
+
+Unique images: 273 files
+Group 1: 2 files
+Group 2: 2 files
+Group 3: 2 files
+Group 4: 2 files
+Group 5: 2 files
+Group 6: 2 files
+Group 7: 2 files
+Group 8: 2 files
+Group 9: 2 files
+Group 10: 2 files
+Group 11: 2 files
+Group 12: 3 files
+Group 13: 2 files
+Group 14: 2 files
+Group 15: 2 files
+Group 16: 2 files
+Group 17: 2 files
+Group 18: 2 files
+Group 19: 2 files
+Group 20: 2 files
+Group 21: 2 files
+Group 22: 2 files
+Group 23: 2 files
+Group 24: 4 files
+Group 25: 4 files
+Group 26: 2 files
+Group 27: 2 files
+Group 28: 2 files
+Group 29: 2 files
+Group 30: 2 files
+Group 31: 2 files
+Group 32: 4 files
+Group 33: 3 files
+Group 34: 2 files
+Group 35: 2 files

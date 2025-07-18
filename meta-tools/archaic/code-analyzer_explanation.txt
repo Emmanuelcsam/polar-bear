@@ -1,0 +1,184 @@
+CODE-ANALYZER.PY - CODE DEPENDENCY ANALYZER
+===========================================
+
+QUICK DEBRIEF (First 5 Points):
+1. Multi-language code dependency analyzer that maps imports, functions, and relationships
+2. Supports Python, JavaScript, Java, C++, C, and Go with language-specific analysis
+3. Uses AST parsing for accurate code structure analysis and complexity metrics
+4. Interactive configuration system with customizable project settings
+5. Generates detailed reports of code organization, dependencies, and statistics
+
+DETAILED DESCRIPTION:
+====================
+
+PURPOSE:
+--------
+Professional code analysis tool designed for software developers and architects who need comprehensive insights into codebase structure, dependencies, and complexity. Essential for understanding large projects, refactoring planning, and dependency management.
+
+KEY FEATURES:
+-------------
+• Multi-Language Support: Analyzes Python, JavaScript, Java, C++, C, and Go codebases
+• Dependency Mapping: Tracks imports, includes, and module relationships
+• Function Analysis: Identifies function definitions, calls, and usage patterns
+• Class Detection: Maps class hierarchies and object-oriented structures
+• Complexity Metrics: Calculates code complexity and maintainability indicators
+• Interactive Configuration: Customizable analysis parameters via ConfigLoader
+• Comprehensive Statistics: Detailed metrics on lines of code, comments, and structure
+
+TECHNICAL IMPLEMENTATION:
+------------------------
+• AST Parsing: Uses Abstract Syntax Tree analysis for accurate code understanding
+• Language Detection: File extension-based routing to appropriate analyzers
+• Pattern Matching: Regex patterns for languages without full AST support
+• Dependency Graphs: Builds relationship maps between code components
+• Statistical Analysis: Aggregates metrics across entire project structures
+• Configuration Management: Integrated with project configuration systems
+
+SUPPORTED LANGUAGES:
+-------------------
+
+1. PYTHON (.py):
+   - Full AST parsing with ast module
+   - Import detection (import, from...import)
+   - Function and class definitions
+   - Complexity analysis
+   - Docstring extraction
+
+2. JAVASCRIPT (.js):
+   - Regex-based analysis for imports/requires
+   - Function declaration detection
+   - Class and object analysis
+   - Module dependency tracking
+
+3. JAVA (.java):
+   - Package and import analysis
+   - Class and method detection
+   - Interface mapping
+   - Inheritance tracking
+
+4. C++ (.cpp, .hpp):
+   - Include directive analysis
+   - Function and class detection
+   - Namespace tracking
+   - Header dependency mapping
+
+5. C (.c, .h):
+   - Include analysis
+   - Function definitions
+   - Macro detection
+   - Structure mapping
+
+6. GO (.go):
+   - Package and import analysis
+   - Function and type detection
+   - Interface mapping
+   - Module dependency tracking
+
+ANALYSIS METRICS:
+----------------
+• Code Statistics:
+  - Total lines of code across all files
+  - Code lines (excluding comments and blanks)
+  - Comment lines and documentation coverage
+  - Blank lines and formatting analysis
+  - Files analyzed and language distribution
+
+• Dependency Analysis:
+  - Import/include relationships
+  - Cross-module dependencies
+  - Circular dependency detection
+  - External library usage
+  - Internal module coupling
+
+• Structural Analysis:
+  - Function definitions and call patterns
+  - Class hierarchies and inheritance
+  - Interface implementations
+  - Code organization patterns
+
+• Complexity Metrics:
+  - File-level complexity scores
+  - Function complexity analysis
+  - Maintainability indicators
+  - Technical debt assessment
+
+WORKFLOW:
+---------
+1. Interactive configuration gathering or ConfigLoader integration
+2. Project directory traversal with language detection
+3. File-by-file analysis using appropriate language analyzer
+4. Dependency relationship building and mapping
+5. Statistical aggregation and complexity calculation
+6. Report generation with detailed findings
+7. Optional visualization of dependency graphs
+
+INPUT/OUTPUT:
+-------------
+• Input: Project directory path and configuration parameters
+• Output: Comprehensive analysis reports in multiple formats
+• Dependencies: Detailed dependency maps and relationship graphs
+• Statistics: Aggregated metrics and complexity scores
+• Recommendations: Code organization and improvement suggestions
+
+CONFIGURATION OPTIONS:
+---------------------
+• Analysis Scope: Select directories and file types to analyze
+• Language Settings: Enable/disable specific language analyzers
+• Complexity Thresholds: Configure complexity scoring parameters
+• Ignore Patterns: Exclude certain files or directories from analysis
+• Output Formats: Choose report formats and detail levels
+• Dependency Depth: Control how deep dependency analysis goes
+
+DEPENDENCIES:
+-------------
+• Core: Python ast module for Python code analysis
+• Utilities: pathlib, collections for data management
+• Configuration: utils.config_loader for project configuration
+• Interaction: utils.interactive_config for user input
+• Pattern Matching: re module for regex-based language analysis
+• Data Structures: defaultdict, Counter for efficient data handling
+
+USE CASES:
+----------
+• Codebase Assessment: Understand structure of unfamiliar projects
+• Refactoring Planning: Identify tightly coupled components
+• Dependency Management: Map external and internal dependencies
+• Technical Debt Analysis: Assess code complexity and maintainability
+• Architecture Review: Evaluate overall code organization
+• Migration Planning: Understand dependencies before major changes
+• Code Quality Metrics: Track complexity trends over time
+
+PERFORMANCE CHARACTERISTICS:
+---------------------------
+• Processing Speed: ~1000-5000 lines per minute (varies by language)
+• Memory Usage: Scales with project size and complexity
+• Accuracy: High precision through AST parsing where available
+• Scalability: Handles projects from small scripts to large applications
+• Language Coverage: Comprehensive analysis for supported languages
+
+ADVANCED FEATURES:
+-----------------
+• Interactive Configuration: Guided setup for analysis parameters
+• Multi-Project Analysis: Can analyze multiple codebases simultaneously
+• Custom Analyzers: Extensible framework for additional languages
+• Integration Ready: Designed to work with larger development workflows
+• Detailed Reporting: Multiple output formats for different audiences
+• Error Recovery: Robust handling of malformed or incomplete code files
+
+OUTPUT FORMATS:
+--------------
+• Statistical Summary: High-level metrics and key findings
+• Dependency Maps: Visual or textual relationship representations
+• Complexity Reports: File and function-level complexity analysis
+• Import Analysis: Detailed dependency trees and external library usage
+• Recommendations: Actionable insights for code improvement
+
+INTEGRATION CAPABILITIES:
+------------------------
+• CI/CD Pipelines: Automated code quality assessment
+• IDE Integration: Can be called from development environments
+• Build Systems: Integration with make, gradle, maven, etc.
+• Code Review: Provides objective metrics for review processes
+• Project Management: Supports technical decision-making with data
+
+This tool serves as a comprehensive code intelligence platform, providing the deep insights needed for effective software development, maintenance, and architectural decision-making across multiple programming languages.
