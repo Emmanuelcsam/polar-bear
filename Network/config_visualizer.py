@@ -31,7 +31,7 @@ class SystemArchitectureVisualizer:
     Visualizes the entire Fiber Optics Neural Network system architecture
     Shows data flow, component relationships, and processing pipeline
     """
-    
+
     def __init__(self):
         self.components = {
             'data_loader': {'inputs': [], 'outputs': ['tensor_processor']},
@@ -48,12 +48,12 @@ class SystemArchitectureVisualizer:
             'similarity_calculator': {'inputs': ['integrated_network'], 'outputs': ['results']},
             'results': {'inputs': ['segmentation', 'anomaly_detector', 'similarity_calculator'], 'outputs': []}
         }
-    
+
     def generate_architecture_diagram(self) -> Figure:
         """Generate system architecture diagram"""
         fig = Figure(figsize=(14, 10))
         ax = fig.add_subplot(111)
-        
+
         # Position components
         positions = {
             'data_loader': (1, 5),
@@ -67,16 +67,16 @@ class SystemArchitectureVisualizer:
             'similarity_calculator': (9, 3),
             'results': (11, 5)
         }
-        
+
         # Draw components
         for comp, pos in positions.items():
             rect = plt.Rectangle((pos[0]-0.4, pos[1]-0.3), 0.8, 0.6,
                                fill=True, facecolor='lightblue',
                                edgecolor='darkblue', linewidth=2)
             ax.add_patch(rect)
-            ax.text(pos[0], pos[1], comp.replace('_', '\n'), 
+            ax.text(pos[0], pos[1], comp.replace('_', '\n'),
                    ha='center', va='center', fontsize=9, weight='bold')
-        
+
         # Draw connections
         for comp, connections in self.components.items():
             if comp in positions:
@@ -84,17 +84,17 @@ class SystemArchitectureVisualizer:
                     if output in positions:
                         start = positions[comp]
                         end = positions[output]
-                        ax.arrow(start[0]+0.4, start[1], 
+                        ax.arrow(start[0]+0.4, start[1],
                                end[0]-start[0]-0.8, end[1]-start[1],
                                head_width=0.1, head_length=0.1,
                                fc='green', ec='green', alpha=0.7)
-        
+
         ax.set_xlim(0, 12)
         ax.set_ylim(2, 8)
         ax.set_aspect('equal')
         ax.axis('off')
         ax.set_title('Fiber Optics Neural Network System Architecture', fontsize=16, weight='bold')
-        
+
         return fig
 
 
@@ -103,11 +103,11 @@ class ConfigSignalGenerator:
     Generates oscillating signals based on configuration parameters
     Maps config values to signal characteristics
     """
-    
+
     def __init__(self):
         self.time_points = np.linspace(0, 10, 1000)
         self.system_visualizer = SystemArchitectureVisualizer()
-        
+
     def generate_config_signal(self, config: Dict) -> np.ndarray:
         """
         Generate signal based on configuration parameters
@@ -115,87 +115,87 @@ class ConfigSignalGenerator:
         """
         # Base frequency from learning rate
         base_freq = 1.0 / (config['optimizer']['learning_rate'] * 100)
-        
+
         # Amplitude from loss weights balance
         loss_weights = config['loss']['weights']
         weight_variance = np.var(list(loss_weights.values()))
         amplitude = 1.0 / (1.0 + weight_variance * 10)
-        
+
         # Phase shifts from thresholds
         sim_threshold = config['similarity']['threshold']
         anomaly_threshold = config['anomaly']['threshold']
         phase_shift = (sim_threshold - 0.7) * np.pi + (0.3 - anomaly_threshold) * np.pi
-        
+
         # Noise level from regularization
         weight_decay = config['optimizer']['weight_decay']
         noise_level = weight_decay * 5
-        
+
         # Damping from momentum parameters
         betas = config['optimizer']['betas']
         damping = (1 - betas[0]) * 0.5
-        
+
         # Generate base signal
         signal = amplitude * np.exp(-damping * self.time_points) * \
                 np.sin(2 * np.pi * base_freq * self.time_points + phase_shift)
-        
+
         # Add harmonics based on architecture complexity
         if config['model']['use_se_blocks']:
             signal += 0.1 * amplitude * np.sin(4 * np.pi * base_freq * self.time_points)
-        
+
         if config['model']['use_deformable_conv']:
             signal += 0.15 * amplitude * np.sin(6 * np.pi * base_freq * self.time_points)
-        
+
         # Add noise
         signal += np.random.normal(0, noise_level, len(self.time_points))
-        
+
         # Apply stability factor from SAM/Lookahead
         if config['optimizer']['type'] == 'sam_lookahead':
             stability = 1.0 - config['optimizer']['sam_rho'] * 2
             signal *= stability
-        
+
         return signal
-    
+
     def generate_ideal_signal(self) -> np.ndarray:
         """Generate ideal reference signal (perfect configuration)"""
         # Perfect sine wave with optimal characteristics
         frequency = 2.0  # Optimal frequency
         amplitude = 0.9  # Near maximum amplitude
-        
+
         signal = amplitude * np.sin(2 * np.pi * frequency * self.time_points)
-        
+
         # Add slight exponential envelope for realism
         envelope = 0.9 + 0.1 * np.exp(-0.1 * self.time_points)
         signal *= envelope
-        
+
         return signal
-    
+
     def calculate_signal_metrics(self, signal: np.ndarray) -> Dict[str, float]:
         """Calculate performance metrics from signal"""
         # RMS (stability)
         rms = np.sqrt(np.mean(signal**2))
-        
+
         # Peak-to-peak (dynamic range)
         peak_to_peak = np.max(signal) - np.min(signal)
-        
+
         # Frequency stability (via FFT)
         fft = np.fft.fft(signal)
         freqs = np.fft.fftfreq(len(signal))
         dominant_freq_idx = np.argmax(np.abs(fft[1:len(fft)//2])) + 1
         dominant_freq = abs(freqs[dominant_freq_idx])
-        
+
         # Signal-to-noise ratio
         signal_power = np.mean(signal**2)
         noise = signal - np.mean(signal)
         noise_power = np.mean(noise**2)
         snr = 10 * np.log10(signal_power / (noise_power + 1e-10))
-        
+
         # Convergence rate (decay factor)
         envelope = np.abs(signal)
         if len(envelope) > 100:
             decay_rate = -np.polyfit(self.time_points[:100], np.log(envelope[:100] + 1e-10), 1)[0]
         else:
             decay_rate = 0
-        
+
         return {
             'rms': rms,
             'peak_to_peak': peak_to_peak,
@@ -208,15 +208,15 @@ class ConfigSignalGenerator:
 
 class ConfigParameterWidget(QWidget):
     """Base widget for configuration parameters"""
-    
+
     valueChanged = pyqtSignal(str, object)  # key, value
-    
+
     def __init__(self, key: str, value: Any, parent=None):
         super().__init__(parent)
         self.key = key
         self.value = value
         self.setup_ui()
-    
+
     def setup_ui(self):
         """Override in subclasses"""
         pass
@@ -224,22 +224,22 @@ class ConfigParameterWidget(QWidget):
 
 class SliderWidget(ConfigParameterWidget):
     """Draggable slider for numeric parameters"""
-    
-    def __init__(self, key: str, value: float, min_val: float, max_val: float, 
+
+    def __init__(self, key: str, value: float, min_val: float, max_val: float,
                  step: float = 0.01, parent=None):
         self.min_val = min_val
         self.max_val = max_val
         self.step = step
         super().__init__(key, value, parent)
-    
+
     def setup_ui(self):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(6)
-        
+
         # Header row with label and current value
         header_layout = QHBoxLayout()
-        
+
         # Label with better formatting
         label = QLabel(self.key.replace('_', ' ').title())
         label.setStyleSheet("""
@@ -251,9 +251,9 @@ class SliderWidget(ConfigParameterWidget):
             }
         """)
         header_layout.addWidget(label)
-        
+
         header_layout.addStretch()
-        
+
         # Current value display (larger and more prominent)
         self.value_label = QLabel(f"{self.value:.4f}")
         self.value_label.setStyleSheet("""
@@ -270,12 +270,12 @@ class SliderWidget(ConfigParameterWidget):
         """)
         self.value_label.setAlignment(Qt.AlignCenter)
         header_layout.addWidget(self.value_label)
-        
+
         layout.addLayout(header_layout)
-        
+
         # Slider row with range indicators
         slider_layout = QHBoxLayout()
-        
+
         # Min value indicator
         min_label = QLabel(f"{self.min_val:.3f}")
         min_label.setStyleSheet("""
@@ -287,7 +287,7 @@ class SliderWidget(ConfigParameterWidget):
         """)
         min_label.setFixedWidth(50)
         slider_layout.addWidget(min_label)
-        
+
         # Slider
         self.slider = QSlider(Qt.Horizontal)
         self.slider.setMinimum(int(self.min_val / self.step))
@@ -296,7 +296,7 @@ class SliderWidget(ConfigParameterWidget):
         self.slider.valueChanged.connect(self.on_slider_changed)
         self.slider.setMinimumHeight(30)
         slider_layout.addWidget(self.slider, 1)
-        
+
         # Max value indicator
         max_label = QLabel(f"{self.max_val:.3f}")
         max_label.setStyleSheet("""
@@ -309,12 +309,12 @@ class SliderWidget(ConfigParameterWidget):
         max_label.setFixedWidth(50)
         max_label.setAlignment(Qt.AlignRight)
         slider_layout.addWidget(max_label)
-        
+
         layout.addLayout(slider_layout)
-        
+
         # Bottom row with precise input
         input_layout = QHBoxLayout()
-        
+
         # Description label
         desc_label = QLabel("Precise value:")
         desc_label.setStyleSheet("""
@@ -325,9 +325,9 @@ class SliderWidget(ConfigParameterWidget):
             }
         """)
         input_layout.addWidget(desc_label)
-        
+
         input_layout.addStretch()
-        
+
         # Input box for precise values
         self.spin_box = QDoubleSpinBox()
         self.spin_box.setMinimum(self.min_val)
@@ -338,9 +338,9 @@ class SliderWidget(ConfigParameterWidget):
         self.spin_box.valueChanged.connect(self.on_spin_changed)
         self.spin_box.setMinimumWidth(100)
         input_layout.addWidget(self.spin_box)
-        
+
         layout.addLayout(input_layout)
-        
+
         # Add separator line
         separator = QFrame()
         separator.setFrameShape(QFrame.HLine)
@@ -354,7 +354,7 @@ class SliderWidget(ConfigParameterWidget):
             }
         """)
         layout.addWidget(separator)
-    
+
     def on_slider_changed(self, value):
         self.value = value * self.step
         self.value_label.setText(f"{self.value:.4f}")
@@ -362,7 +362,7 @@ class SliderWidget(ConfigParameterWidget):
         self.spin_box.setValue(self.value)
         self.spin_box.blockSignals(False)
         self.valueChanged.emit(self.key, self.value)
-    
+
     def on_spin_changed(self, value):
         self.value = value
         self.value_label.setText(f"{self.value:.4f}")
@@ -374,15 +374,15 @@ class SliderWidget(ConfigParameterWidget):
 
 class SwitchWidget(ConfigParameterWidget):
     """Toggle switch for boolean parameters"""
-    
+
     def setup_ui(self):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(6)
-        
+
         # Header row with label
         header_layout = QHBoxLayout()
-        
+
         # Label with better formatting
         label = QLabel(self.key.replace('_', ' ').title())
         label.setStyleSheet("""
@@ -394,9 +394,9 @@ class SwitchWidget(ConfigParameterWidget):
             }
         """)
         header_layout.addWidget(label)
-        
+
         header_layout.addStretch()
-        
+
         # Status indicator (larger and more prominent)
         self.status_label = QLabel("ENABLED" if self.value else "DISABLED")
         status_color = "#20c997" if self.value else "#dc3545"
@@ -415,12 +415,12 @@ class SwitchWidget(ConfigParameterWidget):
         """)
         self.status_label.setAlignment(Qt.AlignCenter)
         header_layout.addWidget(self.status_label)
-        
+
         layout.addLayout(header_layout)
-        
+
         # Switch control row
         switch_layout = QHBoxLayout()
-        
+
         # Description
         desc_label = QLabel("Toggle setting:")
         desc_label.setStyleSheet("""
@@ -431,9 +431,9 @@ class SwitchWidget(ConfigParameterWidget):
             }
         """)
         switch_layout.addWidget(desc_label)
-        
+
         switch_layout.addStretch()
-        
+
         # Enhanced switch
         self.switch = QCheckBox()
         self.switch.setChecked(self.value)
@@ -465,9 +465,9 @@ class SwitchWidget(ConfigParameterWidget):
             }
         """)
         switch_layout.addWidget(self.switch)
-        
+
         layout.addLayout(switch_layout)
-        
+
         # Add separator line
         separator = QFrame()
         separator.setFrameShape(QFrame.HLine)
@@ -481,15 +481,15 @@ class SwitchWidget(ConfigParameterWidget):
             }
         """)
         layout.addWidget(separator)
-    
+
     def on_switch_changed(self, state):
         self.value = bool(state)
-        
+
         # Update status label with new styling
         status_text = "ENABLED" if self.value else "DISABLED"
         status_color = "#20c997" if self.value else "#dc3545"
         bg_color = "#1a4c42" if self.value else "#4c1a1a"
-        
+
         self.status_label.setText(status_text)
         self.status_label.setStyleSheet(f"""
             QLabel {{
@@ -503,26 +503,26 @@ class SwitchWidget(ConfigParameterWidget):
                 min-width: 80px;
             }}
         """)
-        
+
         self.valueChanged.emit(self.key, self.value)
 
 
 class SystemArchitectureWidget(QWidget):
     """Widget for displaying system architecture"""
-    
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.visualizer = SystemArchitectureVisualizer()
         self.setup_ui()
-    
+
     def setup_ui(self):
         layout = QVBoxLayout(self)
-        
+
         # Create matplotlib figure
         self.figure = self.visualizer.generate_architecture_diagram()
         self.canvas = FigureCanvas(self.figure)
         layout.addWidget(self.canvas)
-        
+
         # Add description
         description = QTextEdit()
         description.setReadOnly(True)
@@ -558,61 +558,61 @@ class SystemArchitectureWidget(QWidget):
 
 class EquationVisualizationWidget(QWidget):
     """Widget for visualizing the main equation I=Ax1+Bx2+Cx3...=S(R)"""
-    
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setup_ui()
-    
+
     def setup_ui(self):
         layout = QVBoxLayout(self)
-        
+
         # Create matplotlib figure
         self.figure = Figure(figsize=(12, 8))
         self.canvas = FigureCanvas(self.figure)
         layout.addWidget(self.canvas)
-        
+
         # Initialize visualization
         self.update_equation_visualization()
-    
+
     def update_equation_visualization(self, coefficients=None):
         """Update equation visualization with current coefficients"""
         self.figure.clear()
-        
+
         if coefficients is None:
             coefficients = {'A': 1.0, 'B': 1.0, 'C': 1.0, 'D': 1.0, 'E': 1.0}
-        
+
         # Create subplots
         gs = self.figure.add_gridspec(2, 2, hspace=0.3, wspace=0.3)
         ax_eq = self.figure.add_subplot(gs[0, :])
         ax_weights = self.figure.add_subplot(gs[1, 0])
         ax_contrib = self.figure.add_subplot(gs[1, 1])
-        
+
         # Display equation
         ax_eq.text(0.5, 0.7, r'$I = A \cdot x_1 + B \cdot x_2 + C \cdot x_3 + D \cdot x_4 + E \cdot x_5 = S(R)$',
-                   fontsize=20, ha='center', va='center', 
-                   bbox=dict(boxstyle="round,pad=0.5", facecolor='lightblue'))
-        
+                fontsize=20, ha='center', va='center',
+                bbox=dict(boxstyle="round,pad=0.5", facecolor='lightblue'))
+
         # Show current coefficients
         coeff_text = '\n'.join([f'{k} = {v:.3f}' for k, v in coefficients.items()])
         ax_eq.text(0.5, 0.3, coeff_text, fontsize=14, ha='center', va='center',
-                   family='monospace', bbox=dict(boxstyle="round,pad=0.3", facecolor='lightyellow'))
-        
+                family='monospace', bbox=dict(boxstyle="round,pad=0.3", facecolor='lightyellow'))
+
         ax_eq.set_xlim(0, 1)
         ax_eq.set_ylim(0, 1)
         ax_eq.axis('off')
         ax_eq.set_title('Fiber Optics Analysis Equation', fontsize=16, weight='bold')
-        
+
         # Visualize coefficient weights
         labels = list(coefficients.keys())
         values = list(coefficients.values())
         colors = plt.cm.viridis(np.linspace(0.2, 0.8, len(labels)))
-        
+
         bars = ax_weights.bar(labels, values, color=colors, edgecolor='black', linewidth=2)
         ax_weights.set_ylabel('Coefficient Value', fontsize=12)
         ax_weights.set_title('Coefficient Weights', fontsize=14)
         ax_weights.grid(True, alpha=0.3)
         ax_weights.axhline(y=0, color='black', linewidth=0.5)
-        
+
         # Show component contributions
         components = {
             'x₁': 'Reference Similarity',
@@ -621,21 +621,30 @@ class EquationVisualizationWidget(QWidget):
             'x₄': 'Segmentation Confidence',
             'x₅': 'Reconstruction Quality'
         }
-        
+
+        # Subscript mapping for digits 1-5 (Unicode characters)
+        subscript_map = {
+            1: '\u2081',
+            2: '\u2082',
+            3: '\u2083',
+            4: '\u2084',
+            5: '\u2085',
+        }
+
         contributions = [v * 0.8 for v in values]  # Simulated contributions
         pie_data = [abs(c) for c in contributions]
-        
-        wedges, texts, autotexts = ax_contrib.pie(pie_data, labels=[f'{components[f"x{i+1}"]}\n({labels[i]})' 
-                                                                     for i in range(len(labels))],
-                                                   autopct='%1.1f%%', colors=colors)
+
+        wedges, texts, autotexts = ax_contrib.pie(pie_data, labels=[f'{components["x" + subscript_map[i+1]]}\n({labels[i]})'
+                                                                    for i in range(len(labels))],
+                                                autopct='%1.1f%%', colors=colors)
         ax_contrib.set_title('Component Contributions to Final Score', fontsize=14)
-        
+
         self.canvas.draw()
 
 
 class PerformanceMetricsWidget(QWidget):
     """Widget for displaying real-time performance metrics"""
-    
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setup_ui()
@@ -645,28 +654,28 @@ class PerformanceMetricsWidget(QWidget):
             'memory_usage': [],
             'accuracy': []
         }
-    
+
     def setup_ui(self):
         layout = QVBoxLayout(self)
-        
+
         # Create matplotlib figure
         self.figure = Figure(figsize=(12, 8))
         self.canvas = FigureCanvas(self.figure)
         layout.addWidget(self.canvas)
-        
+
         # Control buttons
         control_layout = QHBoxLayout()
-        
+
         self.clear_btn = QPushButton("🗑️ Clear History")
         self.clear_btn.clicked.connect(self.clear_history)
         control_layout.addWidget(self.clear_btn)
-        
+
         control_layout.addStretch()
         layout.addLayout(control_layout)
-        
+
         # Initialize plots
         self.update_metrics()
-    
+
     def update_metrics(self, new_metrics=None):
         """Update performance metrics visualization"""
         if new_metrics:
@@ -676,34 +685,34 @@ class PerformanceMetricsWidget(QWidget):
                     # Keep only last 100 points
                     if len(self.metric_history[key]) > 100:
                         self.metric_history[key].pop(0)
-        
+
         self.figure.clear()
-        
+
         # Create subplots
         gs = self.figure.add_gridspec(2, 2, hspace=0.3, wspace=0.3)
         ax_sim = self.figure.add_subplot(gs[0, 0])
         ax_time = self.figure.add_subplot(gs[0, 1])
         ax_mem = self.figure.add_subplot(gs[1, 0])
         ax_acc = self.figure.add_subplot(gs[1, 1])
-        
+
         axes = [ax_sim, ax_time, ax_mem, ax_acc]
         titles = ['Similarity Score', 'Inference Time (ms)', 'Memory Usage (MB)', 'Accuracy']
         keys = ['similarity', 'inference_time', 'memory_usage', 'accuracy']
         colors = ['blue', 'green', 'red', 'purple']
         thresholds = [0.7, None, None, None]  # Similarity must be > 0.7
-        
+
         for ax, title, key, color, threshold in zip(axes, titles, keys, colors, thresholds):
             data = self.metric_history[key]
             if data:
                 ax.plot(data, color=color, linewidth=2, marker='o', markersize=4)
                 ax.fill_between(range(len(data)), data, alpha=0.3, color=color)
-                
+
                 # Add threshold line if applicable
                 if threshold:
                     ax.axhline(y=threshold, color='red', linestyle='--', linewidth=2,
                              label=f'Threshold ({threshold})')
                     ax.legend()
-                
+
                 # Add statistics
                 if len(data) > 0:
                     mean_val = np.mean(data)
@@ -711,15 +720,15 @@ class PerformanceMetricsWidget(QWidget):
                     ax.text(0.02, 0.98, f'μ={mean_val:.3f}\nσ={std_val:.3f}',
                            transform=ax.transAxes, va='top', ha='left',
                            bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
-            
+
             ax.set_title(title, fontsize=12)
             ax.grid(True, alpha=0.3)
             ax.set_xlabel('Sample')
             ax.set_ylabel('Value')
-        
+
         self.figure.suptitle('Real-time Performance Metrics', fontsize=16, weight='bold')
         self.canvas.draw()
-    
+
     def clear_history(self):
         """Clear metric history"""
         for key in self.metric_history:
@@ -729,50 +738,50 @@ class PerformanceMetricsWidget(QWidget):
 
 class SignalVisualizationWidget(QWidget):
     """Widget for displaying oscillating signals"""
-    
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.signal_generator = ConfigSignalGenerator()
         self.setup_ui()
-        
+
         # Animation timer
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_animation)
         self.animation_offset = 0
-        
+
     def setup_ui(self):
         layout = QVBoxLayout(self)
-        
+
         # Create matplotlib figure
         self.figure = Figure(figsize=(12, 8))
         self.canvas = FigureCanvas(self.figure)
         layout.addWidget(self.canvas)
-        
+
         # Create subplots
         gs = self.figure.add_gridspec(2, 2, hspace=0.3, wspace=0.3)
         self.ax_config = self.figure.add_subplot(gs[0, :])
         self.ax_ideal = self.figure.add_subplot(gs[1, 0])
         self.ax_metrics = self.figure.add_subplot(gs[1, 1])
-        
+
         # Initialize plots
         self.ax_config.set_title("Configuration Signal (Current Settings)", fontsize=14)
         self.ax_config.set_xlabel("Time")
         self.ax_config.set_ylabel("Amplitude")
         self.ax_config.grid(True, alpha=0.3)
-        
+
         self.ax_ideal.set_title("Ideal Reference Signal", fontsize=12)
         self.ax_ideal.set_xlabel("Time")
         self.ax_ideal.set_ylabel("Amplitude")
         self.ax_ideal.grid(True, alpha=0.3)
-        
+
         self.ax_metrics.set_title("Performance Metrics", fontsize=12)
         self.ax_metrics.axis('off')
-        
+
         # Control buttons with enhanced styling
         control_layout = QHBoxLayout()
         control_layout.setSpacing(12)
         control_layout.setContentsMargins(16, 8, 16, 8)
-        
+
         self.animate_btn = QPushButton("▶️ Start Animation")
         self.animate_btn.setStyleSheet("""
             QPushButton {
@@ -794,7 +803,7 @@ class SignalVisualizationWidget(QWidget):
         """)
         self.animate_btn.clicked.connect(self.toggle_animation)
         control_layout.addWidget(self.animate_btn)
-        
+
         self.reset_btn = QPushButton("🔄 Reset View")
         self.reset_btn.setStyleSheet("""
             QPushButton {
@@ -816,24 +825,24 @@ class SignalVisualizationWidget(QWidget):
         """)
         self.reset_btn.clicked.connect(self.reset_view)
         control_layout.addWidget(self.reset_btn)
-        
+
         control_layout.addStretch()
         layout.addLayout(control_layout)
-    
+
     def update_signals(self, config: Dict):
         """Update signal visualizations based on configuration"""
         # Clear previous plots
         self.ax_config.clear()
         self.ax_ideal.clear()
         self.ax_metrics.clear()
-        
+
         # Generate signals
         config_signal = self.signal_generator.generate_config_signal(config)
         ideal_signal = self.signal_generator.generate_ideal_signal()
-        
+
         # Apply animation offset
         time_points = self.signal_generator.time_points + self.animation_offset
-        
+
         # Plot configuration signal
         self.ax_config.plot(time_points, config_signal, 'b-', linewidth=2, label='Config Signal')
         self.ax_config.plot(time_points, ideal_signal, 'g--', alpha=0.5, linewidth=1, label='Ideal Reference')
@@ -843,7 +852,7 @@ class SignalVisualizationWidget(QWidget):
         self.ax_config.grid(True, alpha=0.3)
         self.ax_config.legend()
         self.ax_config.set_ylim(-2, 2)
-        
+
         # Plot ideal signal
         self.ax_ideal.plot(time_points, ideal_signal, 'g-', linewidth=2)
         self.ax_ideal.set_title("Ideal Reference Signal", fontsize=12)
@@ -851,21 +860,21 @@ class SignalVisualizationWidget(QWidget):
         self.ax_ideal.set_ylabel("Amplitude")
         self.ax_ideal.grid(True, alpha=0.3)
         self.ax_ideal.set_ylim(-1.5, 1.5)
-        
+
         # Calculate and display metrics
         config_metrics = self.signal_generator.calculate_signal_metrics(config_signal)
         ideal_metrics = self.signal_generator.calculate_signal_metrics(ideal_signal)
-        
+
         # Create metrics comparison
         metrics_text = "Performance Metrics Comparison\n" + "="*30 + "\n\n"
         metrics_text += f"{'Metric':<20} {'Current':<10} {'Ideal':<10} {'Ratio':<10}\n"
         metrics_text += "-"*50 + "\n"
-        
+
         for key in config_metrics:
             current = config_metrics[key]
             ideal = ideal_metrics[key]
             ratio = current / (ideal + 1e-10)
-            
+
             # Color code based on performance
             if ratio > 0.9:
                 status = "✓"
@@ -873,15 +882,15 @@ class SignalVisualizationWidget(QWidget):
                 status = "~"
             else:
                 status = "✗"
-            
+
             metrics_text += f"{key.replace('_', ' ').title():<20} "
             metrics_text += f"{current:>10.3f} {ideal:>10.3f} {ratio:>10.2f} {status}\n"
-        
+
         # Overall performance score
         overall_score = config_metrics['stability_score'] / ideal_metrics['stability_score']
         metrics_text += "\n" + "="*50 + "\n"
         metrics_text += f"Overall Performance Score: {overall_score:.2%}\n"
-        
+
         if overall_score > 0.9:
             metrics_text += "Status: EXCELLENT - Configuration is well optimized"
         elif overall_score > 0.7:
@@ -890,13 +899,13 @@ class SignalVisualizationWidget(QWidget):
             metrics_text += "Status: FAIR - Significant tuning needed"
         else:
             metrics_text += "Status: POOR - Major configuration issues"
-        
+
         self.ax_metrics.text(0.05, 0.95, metrics_text, transform=self.ax_metrics.transAxes,
                            fontfamily='monospace', fontsize=10, verticalalignment='top')
         self.ax_metrics.axis('off')
-        
+
         self.canvas.draw()
-    
+
     def toggle_animation(self):
         """Toggle signal animation"""
         if self.timer.isActive():
@@ -905,19 +914,19 @@ class SignalVisualizationWidget(QWidget):
         else:
             self.timer.start(50)  # 20 FPS
             self.animate_btn.setText("⏸️ Stop Animation")
-    
+
     def update_animation(self):
         """Update animation frame"""
         self.animation_offset += 0.1
         if hasattr(self, 'current_config'):
             self.update_signals(self.current_config)
-    
+
     def reset_view(self):
         """Reset animation and view"""
         self.animation_offset = 0
         if hasattr(self, 'current_config'):
             self.update_signals(self.current_config)
-    
+
     def set_config(self, config: Dict):
         """Set current configuration"""
         self.current_config = config
@@ -926,29 +935,29 @@ class SignalVisualizationWidget(QWidget):
 
 class ConfigVisualizerMainWindow(QMainWindow):
     """Main window for configuration visualizer"""
-    
+
     def __init__(self):
         super().__init__()
         self.config_path = Path("config.yaml")
         self.config = {}
         self.parameter_widgets = {}
-        
+
         self.setWindowTitle("Fiber Optics Configuration Visualizer")
         self.setGeometry(100, 100, 1600, 900)
-        
+
         # Set enhanced dark theme for better readability
         self.setStyleSheet("""
             QMainWindow {
                 background-color: #1e1e1e;
                 color: #ffffff;
             }
-            
+
             QLabel {
                 color: #ffffff;
                 font-size: 12px;
                 font-weight: 500;
             }
-            
+
             QPushButton {
                 background-color: #404040;
                 color: #ffffff;
@@ -968,7 +977,7 @@ class ConfigVisualizerMainWindow(QMainWindow):
                 background-color: #0a5a5e;
                 border-color: #0d7377;
             }
-            
+
             QSlider::groove:horizontal {
                 height: 12px;
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
@@ -994,7 +1003,7 @@ class ConfigVisualizerMainWindow(QMainWindow):
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                     stop:0 #0d7377, stop:1 #0a5a5e);
             }
-            
+
             QGroupBox {
                 color: #ffffff;
                 border: 2px solid #606060;
@@ -1017,7 +1026,7 @@ class ConfigVisualizerMainWindow(QMainWindow):
                 color: #ffffff;
                 font-weight: bold;
             }
-            
+
             QTabWidget::pane {
                 border: 2px solid #606060;
                 background-color: #1e1e1e;
@@ -1047,14 +1056,14 @@ class ConfigVisualizerMainWindow(QMainWindow):
                 background-color: #505050;
                 border-color: #707070;
             }
-            
+
             QScrollArea {
                 background-color: #1e1e1e;
                 border: 1px solid #404040;
                 border-radius: 6px;
                 padding: 4px;
             }
-            
+
             QSpinBox, QDoubleSpinBox {
                 background-color: #404040;
                 color: #ffffff;
@@ -1073,7 +1082,7 @@ class ConfigVisualizerMainWindow(QMainWindow):
                 border-color: #808080;
                 background-color: #4a4a4a;
             }
-            
+
             QCheckBox {
                 color: #ffffff;
                 font-size: 12px;
@@ -1096,7 +1105,7 @@ class ConfigVisualizerMainWindow(QMainWindow):
                 border-color: #808080;
                 background-color: #4a4a4a;
             }
-            
+
             QStatusBar {
                 background-color: #2a2a2a;
                 color: #ffffff;
@@ -1104,7 +1113,7 @@ class ConfigVisualizerMainWindow(QMainWindow):
                 font-size: 11px;
                 padding: 4px;
             }
-            
+
             QMenuBar {
                 background-color: #2a2a2a;
                 color: #ffffff;
@@ -1119,7 +1128,7 @@ class ConfigVisualizerMainWindow(QMainWindow):
             QMenuBar::item:selected {
                 background-color: #0d7377;
             }
-            
+
             QMenu {
                 background-color: #2a2a2a;
                 color: #ffffff;
@@ -1134,7 +1143,7 @@ class ConfigVisualizerMainWindow(QMainWindow):
             QMenu::item:selected {
                 background-color: #0d7377;
             }
-            
+
             QSplitter::handle {
                 background-color: #606060;
                 width: 3px;
@@ -1144,29 +1153,29 @@ class ConfigVisualizerMainWindow(QMainWindow):
                 background-color: #808080;
             }
         """)
-        
+
         self.setup_ui()
         self.load_config()
-    
+
     def setup_ui(self):
         """Setup main UI layout"""
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
-        
+
         # Main horizontal layout
         main_layout = QHBoxLayout(central_widget)
-        
+
         # Left panel - Configuration controls (40% width)
         left_panel = QWidget()
         left_panel.setMaximumWidth(600)
         left_layout = QVBoxLayout(left_panel)
-        
+
         # Title with enhanced styling
         title = QLabel("⚙️ Configuration Parameters")
         title.setStyleSheet("""
             QLabel {
-                font-size: 20px; 
-                font-weight: bold; 
+                font-size: 20px;
+                font-weight: bold;
                 padding: 16px;
                 color: #ffffff;
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
@@ -1177,15 +1186,15 @@ class ConfigVisualizerMainWindow(QMainWindow):
         """)
         title.setAlignment(Qt.AlignCenter)
         left_layout.addWidget(title)
-        
+
         # Create tab widget for parameter categories
         self.tab_widget = QTabWidget()
         left_layout.addWidget(self.tab_widget)
-        
+
         # Control buttons with enhanced styling
         button_layout = QHBoxLayout()
         button_layout.setSpacing(12)
-        
+
         # Load button
         load_btn = QPushButton("📁 Load Config")
         load_btn.setStyleSheet("""
@@ -1208,7 +1217,7 @@ class ConfigVisualizerMainWindow(QMainWindow):
         """)
         load_btn.clicked.connect(self.load_config_dialog)
         button_layout.addWidget(load_btn)
-        
+
         # Save button
         save_btn = QPushButton("💾 Save Config")
         save_btn.setStyleSheet("""
@@ -1231,7 +1240,7 @@ class ConfigVisualizerMainWindow(QMainWindow):
         """)
         save_btn.clicked.connect(self.save_config)
         button_layout.addWidget(save_btn)
-        
+
         # Reset button
         reset_btn = QPushButton("🔄 Reset Default")
         reset_btn.setStyleSheet("""
@@ -1254,9 +1263,9 @@ class ConfigVisualizerMainWindow(QMainWindow):
         """)
         reset_btn.clicked.connect(self.reset_config)
         button_layout.addWidget(reset_btn)
-        
+
         left_layout.addLayout(button_layout)
-        
+
         # Right panel - Create tabbed view for multiple visualizations
         right_panel = QTabWidget()
         right_panel.setStyleSheet("""
@@ -1286,94 +1295,94 @@ class ConfigVisualizerMainWindow(QMainWindow):
                 color: #ffffff;
             }
         """)
-        
+
         # Add signal visualization tab
         self.signal_widget = SignalVisualizationWidget()
         right_panel.addTab(self.signal_widget, "📊 Signal Analysis")
-        
+
         # Add system architecture tab
         self.architecture_widget = SystemArchitectureWidget()
         right_panel.addTab(self.architecture_widget, "🔧 System Architecture")
-        
+
         # Add equation visualization tab
         self.equation_widget = EquationVisualizationWidget()
         right_panel.addTab(self.equation_widget, "📐 Equation I=Ax1+Bx2+...")
-        
+
         # Add performance metrics tab
         self.metrics_widget = PerformanceMetricsWidget()
         right_panel.addTab(self.metrics_widget, "📈 Performance Metrics")
-        
+
         # Add panels to main layout
         splitter = QSplitter(Qt.Horizontal)
         splitter.addWidget(left_panel)
         splitter.addWidget(right_panel)
         splitter.setStretchFactor(1, 2)  # Right panel gets more space
-        
+
         main_layout.addWidget(splitter)
-        
+
         # Create menu bar
         self.create_menu_bar()
-        
+
         # Status bar
         self.status_bar = QStatusBar()
         self.setStatusBar(self.status_bar)
         self.status_bar.showMessage("Ready")
-    
+
     def create_menu_bar(self):
         """Create application menu bar"""
         menubar = self.menuBar()
-        
+
         # File menu
         file_menu = menubar.addMenu('File')
-        
+
         load_action = QAction('Load Configuration', self)
         load_action.triggered.connect(self.load_config_dialog)
         file_menu.addAction(load_action)
-        
+
         save_action = QAction('Save Configuration', self)
         save_action.triggered.connect(self.save_config)
         file_menu.addAction(save_action)
-        
+
         file_menu.addSeparator()
-        
+
         exit_action = QAction('Exit', self)
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
-        
+
         # View menu
         view_menu = menubar.addMenu('View')
-        
+
         animate_action = QAction('Toggle Animation', self)
         animate_action.triggered.connect(self.signal_widget.toggle_animation)
         view_menu.addAction(animate_action)
-        
+
         # Help menu
         help_menu = menubar.addMenu('Help')
-        
+
         about_action = QAction('About', self)
         about_action.triggered.connect(self.show_about)
         help_menu.addAction(about_action)
-    
+
     def load_config(self):
         """Load configuration from YAML file"""
         try:
             with open(self.config_path, 'r') as f:
                 self.config = yaml.safe_load(f)
-            
+
             self.create_parameter_widgets()
             self.signal_widget.set_config(self.config)
             self.equation_widget.update_equation_visualization(self.config.get('equation', {}).get('coefficients', {}))
             self.status_bar.showMessage(f"Loaded configuration from {self.config_path}")
-            
+
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to load configuration: {str(e)}")
-    
+
     def create_parameter_widgets(self):
         """Create parameter control widgets based on configuration"""
         # Clear existing tabs
         self.tab_widget.clear()
         self.parameter_widgets.clear()
-        
+
         # Group parameters by category
         categories = {
             'System': ['system'],
@@ -1385,7 +1394,7 @@ class ConfigVisualizerMainWindow(QMainWindow):
             'Visualization': ['visualization'],
             'Advanced': ['advanced', 'experimental']
         }
-        
+
         for category, sections in categories.items():
             # Create scroll area for category with enhanced styling
             scroll = QScrollArea()
@@ -1414,27 +1423,27 @@ class ConfigVisualizerMainWindow(QMainWindow):
             scroll_layout = QVBoxLayout(scroll_widget)
             scroll_layout.setSpacing(12)
             scroll_layout.setContentsMargins(12, 12, 12, 12)
-            
+
             for section in sections:
                 if section in self.config:
                     group_box = QGroupBox(section.title())
                     group_layout = QVBoxLayout(group_box)
-                    
+
                     self.add_section_widgets(self.config[section], section, group_layout)
-                    
+
                     scroll_layout.addWidget(group_box)
-            
+
             scroll_layout.addStretch()
             scroll.setWidget(scroll_widget)
             scroll.setWidgetResizable(True)
-            
+
             self.tab_widget.addTab(scroll, category)
-    
+
     def add_section_widgets(self, section_config: Dict, prefix: str, layout: QVBoxLayout):
         """Recursively add widgets for configuration section"""
         for key, value in section_config.items():
             full_key = f"{prefix}.{key}"
-            
+
             if isinstance(value, dict):
                 # Create sub-group with enhanced styling
                 sub_group = QGroupBox(key.replace('_', ' ').title())
@@ -1467,29 +1476,29 @@ class ConfigVisualizerMainWindow(QMainWindow):
                 sub_layout.setSpacing(8)
                 self.add_section_widgets(value, full_key, sub_layout)
                 layout.addWidget(sub_group)
-                
+
             elif isinstance(value, bool):
                 # Create switch widget
                 widget = SwitchWidget(key, value)
                 widget.valueChanged.connect(self.on_parameter_changed)
                 self.parameter_widgets[full_key] = widget
                 layout.addWidget(widget)
-                
+
             elif isinstance(value, (int, float)):
                 # Determine appropriate range
                 min_val, max_val = self.get_parameter_range(full_key, value)
-                
+
                 # Create slider widget
                 widget = SliderWidget(key, float(value), min_val, max_val)
                 widget.valueChanged.connect(self.on_parameter_changed)
                 self.parameter_widgets[full_key] = widget
                 layout.addWidget(widget)
-                
+
             elif isinstance(value, list):
                 # Create list editor (simplified for now)
                 label = QLabel(f"{key}: {value}")
                 layout.addWidget(label)
-    
+
     def get_parameter_range(self, key: str, value: float) -> Tuple[float, float]:
         """Get appropriate range for parameter"""
         # Define ranges for known parameters
@@ -1515,12 +1524,12 @@ class ConfigVisualizerMainWindow(QMainWindow):
             'dropout': (0.0, 0.9),
             'momentum': (0.0, 0.999),
         }
-        
+
         # Check if key contains any of the range keywords
         for keyword, (min_val, max_val) in ranges.items():
             if keyword in key.lower():
                 return min_val, max_val
-        
+
         # Default range based on current value
         if 0 <= value <= 1:
             return 0.0, 1.0
@@ -1528,7 +1537,7 @@ class ConfigVisualizerMainWindow(QMainWindow):
             return value * 2, -value * 2
         else:
             return 0.0, value * 2
-    
+
     def on_parameter_changed(self, key: str, value: Any):
         """Handle parameter value change"""
         # Find full key
@@ -1537,23 +1546,23 @@ class ConfigVisualizerMainWindow(QMainWindow):
             if widget.key == key:
                 full_key = widget_key
                 break
-        
+
         if not full_key:
             return
-        
+
         # Update configuration
         parts = full_key.split('.')
         config_ref = self.config
-        
+
         for part in parts[:-1]:
             config_ref = config_ref[part]
-        
+
         config_ref[parts[-1]] = value
-        
+
         # Update all visualizations
         self.signal_widget.set_config(self.config)
         self.equation_widget.update_equation_visualization(self.config.get('equation', {}).get('coefficients', {}))
-        
+
         # Update performance metrics with simulated data
         if 'learning_rate' in full_key:
             self.metrics_widget.update_metrics({
@@ -1562,10 +1571,10 @@ class ConfigVisualizerMainWindow(QMainWindow):
                 'memory_usage': 1024 + np.random.uniform(-100, 100),
                 'accuracy': 0.9 + np.random.uniform(-0.05, 0.05)
             })
-        
+
         # Update status
         self.status_bar.showMessage(f"Updated {full_key} = {value}")
-    
+
     def save_config(self):
         """Save current configuration to YAML file"""
         try:
@@ -1574,40 +1583,40 @@ class ConfigVisualizerMainWindow(QMainWindow):
             if self.config_path.exists():
                 import shutil
                 shutil.copy(self.config_path, backup_path)
-            
+
             # Save configuration
             with open(self.config_path, 'w') as f:
                 yaml.dump(self.config, f, default_flow_style=False, sort_keys=False)
-            
+
             self.status_bar.showMessage(f"Saved configuration to {self.config_path}")
             QMessageBox.information(self, "Success", "Configuration saved successfully!")
-            
+
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to save configuration: {str(e)}")
-    
+
     def load_config_dialog(self):
         """Show dialog to load configuration file"""
         file_path, _ = QFileDialog.getOpenFileName(
-            self, "Load Configuration", str(self.config_path.parent), 
+            self, "Load Configuration", str(self.config_path.parent),
             "YAML Files (*.yaml *.yml)"
         )
-        
+
         if file_path:
             self.config_path = Path(file_path)
             self.load_config()
-    
+
     def reset_config(self):
         """Reset configuration to default values"""
         reply = QMessageBox.question(
-            self, "Reset Configuration", 
+            self, "Reset Configuration",
             "Are you sure you want to reset to default configuration?",
             QMessageBox.Yes | QMessageBox.No
         )
-        
+
         if reply == QMessageBox.Yes:
             # Reload from file
             self.load_config()
-    
+
     def show_about(self):
         """Show about dialog"""
         QMessageBox.about(
@@ -1623,14 +1632,14 @@ class ConfigVisualizerMainWindow(QMainWindow):
 def main():
     """Main entry point"""
     app = QApplication(sys.argv)
-    
+
     # Set application style
     app.setStyle('Fusion')
-    
+
     # Create and show main window
     window = ConfigVisualizerMainWindow()
     window.show()
-    
+
     sys.exit(app.exec_())
 
 
