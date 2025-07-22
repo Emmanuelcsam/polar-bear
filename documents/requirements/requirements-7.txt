@@ -1,0 +1,12 @@
+torch
+torchvision
+numpy
+matplotlib
+tqdm
+pandas
+requests
+torchmetrics
+mlxtend
+opencv-python
+scikit-learn
+tensorboard

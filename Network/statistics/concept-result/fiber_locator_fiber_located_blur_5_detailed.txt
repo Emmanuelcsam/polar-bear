@@ -1,0 +1,93 @@
+================================================================================
+ULTRA-COMPREHENSIVE ANOMALY DETECTION REPORT
+================================================================================
+
+FILE INFORMATION
+----------------------------------------
+Test File: fiber_locator_fiber_located_blur_5.png
+Analysis Date: 2025-07-09_03:37:50
+Image Dimensions: (864, 1152)
+
+OVERALL VERDICT
+----------------------------------------
+Status: ANOMALOUS
+Confidence: 70.0%
+
+GLOBAL STATISTICAL ANALYSIS
+----------------------------------------
+Mahalanobis Distance: 0.0161
+Comparison Scores:
+  - Mean: 100.0000
+  - Std: 0.0000
+  - Min: 100.0000
+  - Max: 100.0000
+
+TOP DEVIANT FEATURES (Z-Score > 2)
+----------------------------------------
+lbp_r1_entropy                 Z=  2.28  Test=    2.4107  Ref=    2.7175
+shape_hu_5                     Z=  2.28  Test=  -10.0000  Ref=    4.7739
+lbp_r1_mean                    Z=  2.14  Test=    6.3016  Ref=    5.2903
+lbp_r1_energy                  Z=  2.12  Test=   42.5503  Ref=   31.5344
+lbp_r2_entropy                 Z=  2.08  Test=    4.0566  Ref=    4.3894
+lbp_r2_mean                    Z=  2.02  Test=   17.3872  Ref=   15.0117
+
+STRUCTURAL ANALYSIS
+----------------------------------------
+SSIM Index: 0.9519
+Luminance Similarity: 0.9867
+Contrast Similarity: 0.9798
+Structure Similarity: 0.9766
+
+LOCAL ANOMALY REGIONS
+----------------------------------------
+Total Regions Found: 7
+
+Region 1:
+  - Location: (318, 212, 479, 439)
+  - Area: 177491 pixels
+  - Confidence: 0.910
+  - Centroid: (555, 438)
+
+Region 2:
+  - Location: (184, 476, 36, 27)
+  - Area: 909 pixels
+  - Confidence: 0.095
+  - Centroid: (201, 489)
+
+Region 3:
+  - Location: (0, 720, 140, 143)
+  - Area: 12486 pixels
+  - Confidence: 0.076
+  - Centroid: (55, 812)
+
+Region 4:
+  - Location: (1131, 831, 20, 21)
+  - Area: 382 pixels
+  - Confidence: 0.063
+  - Centroid: (1142, 841)
+
+Region 5:
+  - Location: (178, 755, 81, 60)
+  - Area: 4135 pixels
+  - Confidence: 0.058
+  - Centroid: (217, 785)
+
+... and 2 more regions
+
+SPECIFIC DEFECTS DETECTED
+----------------------------------------
+Scratches: 21
+Digs: 134
+Blobs: 1
+Edge Irregularities: 8
+
+ANOMALY CRITERIA SUMMARY
+----------------------------------------
+Mahalanobis Threshold Exceeded: No
+Comparison Threshold Exceeded: No
+Low Structural Similarity: No
+Multiple Local Anomalies: Yes
+
+================================================================================
+END OF REPORT
+================================================================================

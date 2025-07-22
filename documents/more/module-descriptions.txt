@@ -1,0 +1,254 @@
+FIBER OPTIC INSPECTION SYSTEM - SCRIPT DESCRIPTIONS
+==================================================
+
+1. AI_SEGMENTER_PYTORCH.PY
+--------------------------
+PURPOSE: Implements a U-Net based segmentation model using PyTorch for fiber-optic end-face segmentation.
+HOW IT WORKS:
+- Uses a U-Net architecture with ResNet-34 encoder pretrained on ImageNet
+- Segments images into 4-5 classes: background, fiber core, cladding, ferrule, and optionally defects
+- Provides inference wrapper (AI_Segmenter) for easy integration
+- Loads pretrained model weights and performs segmentation on input images
+- Returns segmentation masks with class predictions for each pixel
+
+2. ANOMALY_DETECTOR_PYTORCH.PY
+------------------------------
+PURPOSE: Unsupervised anomaly detection using convolutional autoencoder for pixel-wise defect detection.
+HOW IT WORKS:
+- Implements a Convolutional Autoencoder (CAE) architecture
+- Trains on clean fiber images to learn normal patterns
+- Detects anomalies by comparing reconstruction error against threshold
+- Creates heatmaps showing pixel-wise anomaly scores
+- Provides binary defect masks and confidence scores
+
+3. CLUSTERING.PY
+----------------
+PURPOSE: Clusters detected defects using K-Means based on extracted features.
+HOW IT WORKS:
+- Takes defect features (shape, intensity, texture) as input
+- Standardizes features using StandardScaler
+- Applies K-Means clustering to group similar defects
+- Automatically determines optimal number of clusters using elbow method
+- Returns cluster assignments for each defect
+
+4. DATASET_BUILDER.PY
+---------------------
+PURPOSE: Builds final datasets from clustered defect features for ML training.
+HOW IT WORKS:
+- Creates image-level dataset with aggregated statistics
+- Builds region-level dataset with individual defect information
+- Organizes defects into library structure by cluster
+- Saves datasets as CSV files for easy loading
+- Copies defect images into organized directory structure
+
+5. DEFECT_DETECTION.PY
+----------------------
+PURPOSE: Classical defect detection using image processing algorithms.
+HOW IT WORKS:
+- Implements DO2MR (Difference of Min-Max Ranking) for region defects
+- Uses LEI (Linear Enhancement Inspector) for scratch detection
+- Applies morphological operations and filtering
+- Combines both detection methods for comprehensive analysis
+- Returns binary masks and defect contours
+
+6. DETECTION_AI.PY
+------------------
+PURPOSE: Simple wrapper providing unified interface for AI-based defect detection.
+HOW IT WORKS:
+- Lazy loads the anomaly detector model on first use
+- Provides simple detect_defects() function
+- Handles model initialization and caching
+- Returns defect masks and confidence scores
+- Maintains compatibility with classical detection interface
+
+7. DO2MR_LEI_DETECTOR.PY
+------------------------
+PURPOSE: Full implementation of DO2MR and LEI algorithms from Mei et al. paper.
+HOW IT WORKS:
+- DO2MR_Detector: Uses min-max ranking filters to detect region defects
+- LEI_Detector: Applies directional filtering for linear defect detection
+- UnifiedDefectDetector: Combines both methods with parameter tuning
+- Applies advanced morphological operations for noise reduction
+- Returns comprehensive defect maps with type classification
+
+8. FEATURE_EXTRACTION.PY
+------------------------
+PURPOSE: Extracts comprehensive features from detected defects for ML analysis.
+HOW IT WORKS:
+- Calculates shape features: area, perimeter, circularity, aspect ratio
+- Computes intensity statistics: mean, std, min, max
+- Extracts texture features using GLCM (Gray Level Co-occurrence Matrix)
+- Assigns defects to zones (core, cladding, ferrule)
+- Returns feature dictionary for each defect
+
+9. FIBER_DATASET_PYTORCH.PY
+---------------------------
+PURPOSE: Comprehensive PyTorch dataset builder and CNN trainer for fiber inspection.
+HOW IT WORKS:
+- Creates PyTorch Dataset from fiber images and labels
+- Implements data augmentation (rotation, flip, brightness)
+- Builds SQLite database with image metadata and features
+- Trains SimpleCNN model for defect classification
+- Performs correlation analysis between features and defects
+- Saves trained models and generates analysis reports
+
+10. GEMMA_FIBER_ANALYZER.PY
+----------------------------
+PURPOSE: Integrates Google Gemma 3 Vision-Language Model for advanced fiber analysis.
+HOW IT WORKS:
+- Loads Gemma 3 vision model with text generation capabilities
+- Analyzes fiber images using multimodal understanding
+- Generates structured JSON output with defect descriptions
+- Provides quality assessment with reasoning
+- Can be used as drop-in enhancement for existing pipeline
+
+11. LLAMA_VISION_FINETUNER.PY
+------------------------------
+PURPOSE: Fine-tunes Llama-3.2-Vision model specifically for fiber optic defect detection.
+HOW IT WORKS:
+- Implements LoRA (Low-Rank Adaptation) for efficient fine-tuning
+- Creates custom dataset from annotated fiber images
+- Uses 4-bit quantization to reduce memory usage
+- Trains model to detect specific fiber defect types
+- Provides inference wrapper for deployment
+
+12. MAIN.PY
+-----------
+PURPOSE: Main entry point orchestrating the full fiber inspection pipeline.
+HOW IT WORKS:
+- Processes images through zone segmentation
+- Applies defect detection algorithms
+- Extracts features from detected defects
+- Performs clustering analysis
+- Builds final datasets
+- Saves results and generates reports
+
+13. ML_DATASET_BUILDER.PY
+-------------------------
+PURPOSE: Comprehensive ML dataset builder with full unsupervised pipeline.
+HOW IT WORKS:
+- ZoneSegmenter: Identifies fiber zones using Hough circles
+- DefectDetector: Combines multiple detection methods
+- FeatureExtractor: Extracts rich feature set
+- DefectClusterer: Groups defects using unsupervised learning
+- Creates SQLite database with all results
+- Generates comprehensive datasets for ML training
+
+14. OPENCV_PROCESSOR.PY
+-----------------------
+PURPOSE: Educational implementation showcasing various OpenCV techniques.
+HOW IT WORKS:
+- Implements 12 different image processing techniques
+- Includes edge detection (Canny, Sobel, Laplacian)
+- Performs morphological operations
+- Applies various filters and transformations
+- Creates visualization of all techniques
+- Useful for algorithm comparison and testing
+
+15. REALTIME_ANALYZER.PY
+------------------------
+PURPOSE: Real-time video frame analysis for continuous fiber inspection.
+HOW IT WORKS:
+- Processes video frames in separate thread
+- Maintains frame buffer for smooth processing
+- Applies zone segmentation and defect detection
+- Tracks defects across frames
+- Provides thread-safe access to results
+- Supports configurable frame rate limiting
+
+16. REALTIME_DASHBOARD.PY
+-------------------------
+PURPOSE: Web-based dashboard for real-time fiber inspection visualization.
+HOW IT WORKS:
+- Creates Flask web server with video streaming
+- Implements MJPEG streaming for live video
+- Provides JSON API for defect data
+- Includes HTML/JavaScript frontend
+- Updates defect visualization in real-time
+- Supports multiple concurrent viewers
+
+17. REALTIME_LOCATION_PIPELINE.PY
+---------------------------------
+PURPOSE: Advanced real-time pipeline with GPS integration and physical coordinates.
+HOW IT WORKS:
+- CalibrationManager: Converts pixels to physical coordinates
+- GPSReader: Integrates GPS for location tracking
+- RealtimeFiberAnalyzer: Processes frames with location data
+- RealtimeStreamer: WebSocket server for low-latency streaming
+- Tracks defects with real-world coordinates
+- Saves georeferenced defect database
+
+18. SEPARATION_AI.PY
+--------------------
+PURPOSE: Compatibility wrapper for AI segmentation functionality.
+HOW IT WORKS:
+- Provides backward-compatible segment_image() function
+- Lazy loads AI_Segmenter model
+- Maintains same interface as original segmentation
+- Handles model initialization transparently
+- Returns segmentation masks
+
+19. TENSORFLOW_ATTACHMENT.PY
+----------------------------
+PURPOSE: Simple TensorFlow/Keras implementation for classification tasks.
+HOW IT WORKS:
+- Builds basic MLP (Multi-Layer Perceptron) model
+- Trains on Fashion-MNIST dataset
+- Implements standard training loop
+- Provides model save/load functionality
+- Includes prediction interface
+- Example implementation for reference
+
+20. TORCH_QUALITY_CLASSIFIER.PY
+-------------------------------
+PURPOSE: PyTorch binary classifier for fiber quality assessment (PASS/FAIL).
+HOW IT WORKS:
+- Implements SimpleCNN architecture
+- Trains on labeled fiber images
+- Uses binary cross-entropy loss
+- Provides confidence scores for predictions
+- Includes data augmentation
+- Saves best model based on validation accuracy
+
+21. TRAIN_ANOMALY.PY
+--------------------
+PURPOSE: Training script for unsupervised anomaly detection model.
+HOW IT WORKS:
+- Creates dataset of clean fiber images only
+- Trains convolutional autoencoder
+- Uses reconstruction loss (MSE)
+- Implements learning rate scheduling
+- Saves model checkpoints
+- Validates on held-out clean images
+
+22. TRAIN_SEGMENTER.PY
+----------------------
+PURPOSE: Training script for segmentation model with synthetic defect generation.
+HOW IT WORKS:
+- CutPasteDataset: Creates synthetic defects using cut-paste augmentation
+- Takes clean images and adds artificial defects
+- Trains U-Net model with cross-entropy loss
+- Uses dice coefficient for validation
+- Implements early stopping
+- Saves best model based on validation metrics
+
+23. UTILS.PY
+------------
+PURPOSE: Basic utility functions for image file operations.
+HOW IT WORKS:
+- load_image(): Loads and validates image files
+- list_images(): Finds all images in directory
+- Handles multiple image formats
+- Provides error checking
+- Returns standardized image arrays
+
+24. ZONE_SEGMENTATION.PY
+------------------------
+PURPOSE: Classical zone segmentation using circle detection.
+HOW IT WORKS:
+- Applies Gaussian blur for noise reduction
+- Uses Hough Circle Transform to detect circular zones
+- Identifies fiber core (innermost circle)
+- Detects cladding (middle circle)
+- Finds ferrule boundary (outermost circle)
+- Returns zone masks and boundaries

@@ -1,0 +1,88 @@
+================================================================================
+ULTRA-COMPREHENSIVE ANOMALY DETECTION REPORT
+================================================================================
+
+FILE INFORMATION
+----------------------------------------
+Test File: circle_detector_contour_circles.png
+Analysis Date: 2025-07-08_19:13:44
+Image Dimensions: (864, 1152)
+
+OVERALL VERDICT
+----------------------------------------
+Status: ANOMALOUS
+Confidence: 100.0%
+
+GLOBAL STATISTICAL ANALYSIS
+----------------------------------------
+Mahalanobis Distance: 0.0137
+Comparison Scores:
+  - Mean: 100.0000
+  - Std: 0.0000
+  - Min: 100.0000
+  - Max: 100.0000
+
+TOP DEVIANT FEATURES (Z-Score > 2)
+----------------------------------------
+shape_hu_5                     Z=  2.28  Test=  -10.0000  Ref=    4.7739
+
+STRUCTURAL ANALYSIS
+----------------------------------------
+SSIM Index: 0.9351
+Luminance Similarity: 0.9852
+Contrast Similarity: 0.9708
+Structure Similarity: 0.9671
+
+LOCAL ANOMALY REGIONS
+----------------------------------------
+Total Regions Found: 16
+
+Region 1:
+  - Location: (318, 206, 478, 445)
+  - Area: 177034 pixels
+  - Confidence: 0.924
+  - Centroid: (556, 437)
+
+Region 2:
+  - Location: (181, 474, 49, 37)
+  - Area: 1807 pixels
+  - Confidence: 0.123
+  - Centroid: (204, 492)
+
+Region 3:
+  - Location: (0, 687, 145, 176)
+  - Area: 17064 pixels
+  - Confidence: 0.120
+  - Centroid: (56, 796)
+
+Region 4:
+  - Location: (1105, 811, 46, 52)
+  - Area: 1860 pixels
+  - Confidence: 0.109
+  - Centroid: (1132, 841)
+
+Region 5:
+  - Location: (802, 844, 19, 13)
+  - Area: 227 pixels
+  - Confidence: 0.087
+  - Centroid: (811, 850)
+
+... and 11 more regions
+
+SPECIFIC DEFECTS DETECTED
+----------------------------------------
+Scratches: 29
+Digs: 41
+Blobs: 1
+Edge Irregularities: 8
+
+ANOMALY CRITERIA SUMMARY
+----------------------------------------
+Mahalanobis Threshold Exceeded: No
+Comparison Threshold Exceeded: No
+Low Structural Similarity: No
+Multiple Local Anomalies: Yes
+
+================================================================================
+END OF REPORT
+================================================================================

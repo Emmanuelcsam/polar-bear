@@ -1,6 +1,0 @@
-# realtime_processor.py
-import threading,time
-from pixel_generator import run as pg
-t=threading.Thread(target=pg)
-if __name__=='__main__': t.daemon=True; t.start(); time.sleep(10)
-

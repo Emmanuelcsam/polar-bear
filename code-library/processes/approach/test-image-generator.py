@@ -1,2 +1,0 @@
-#creates test image
-

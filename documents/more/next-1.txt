@@ -1,0 +1,6 @@
+automatic parameter tuning
+troubleshooting every script and ensure that they are functional
+ensure template matching and classification
+ensure keyword match to folder title
+unit testing, script testing, program testing
+full log process making sure each step has a timestamp and declaration stamp

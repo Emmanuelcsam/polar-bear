@@ -1,1 +1,0 @@
-attempt to run this program troubleshoot its errrors and why it won't run on my windows computer fix all the errors and ensure that it will run, it asks me a list of string options when it runs ensure all of those options work perfectly and every subsequent option from those options work so you're troubleshooting beyond if itll run youre ensuring that it will run well\

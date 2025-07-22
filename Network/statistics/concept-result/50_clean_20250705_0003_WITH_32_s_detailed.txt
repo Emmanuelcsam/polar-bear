@@ -1,0 +1,89 @@
+================================================================================
+ULTRA-COMPREHENSIVE ANOMALY DETECTION REPORT
+================================================================================
+
+FILE INFORMATION
+----------------------------------------
+Test File: 50_clean_20250705_0003_WITH_32_s.jpg
+Analysis Date: 2025-07-09_00:32:45
+Image Dimensions: (864, 1152)
+
+OVERALL VERDICT
+----------------------------------------
+Status: ANOMALOUS
+Confidence: 90.0%
+
+GLOBAL STATISTICAL ANALYSIS
+----------------------------------------
+Mahalanobis Distance: 0.3584
+Comparison Scores:
+  - Mean: 100.0000
+  - Std: 0.0000
+  - Min: 100.0000
+  - Max: 100.0000
+
+TOP DEVIANT FEATURES (Z-Score > 2)
+----------------------------------------
+shape_hu_5                     Z=  2.28  Test=  -10.0000  Ref=    4.7739
+shape_hu_0                     Z=  2.15  Test=    2.9218  Ref=    2.9840
+
+STRUCTURAL ANALYSIS
+----------------------------------------
+SSIM Index: 0.8780
+Luminance Similarity: 0.9555
+Contrast Similarity: 0.9491
+Structure Similarity: 0.9593
+
+LOCAL ANOMALY REGIONS
+----------------------------------------
+Total Regions Found: 9
+
+Region 1:
+  - Location: (320, 216, 474, 433)
+  - Area: 170484 pixels
+  - Confidence: 0.952
+  - Centroid: (555, 439)
+
+Region 2:
+  - Location: (252, 0, 54, 27)
+  - Area: 1452 pixels
+  - Confidence: 0.371
+  - Centroid: (278, 13)
+
+Region 3:
+  - Location: (186, 478, 30, 22)
+  - Area: 665 pixels
+  - Confidence: 0.332
+  - Centroid: (201, 489)
+
+Region 4:
+  - Location: (0, 715, 162, 148)
+  - Area: 16120 pixels
+  - Confidence: 0.329
+  - Centroid: (60, 804)
+
+Region 5:
+  - Location: (1086, 72, 31, 22)
+  - Area: 691 pixels
+  - Confidence: 0.329
+  - Centroid: (1101, 83)
+
+... and 4 more regions
+
+SPECIFIC DEFECTS DETECTED
+----------------------------------------
+Scratches: 40
+Digs: 96
+Blobs: 1
+Edge Irregularities: 17
+
+ANOMALY CRITERIA SUMMARY
+----------------------------------------
+Mahalanobis Threshold Exceeded: No
+Comparison Threshold Exceeded: No
+Low Structural Similarity: No
+Multiple Local Anomalies: Yes
+
+================================================================================
+END OF REPORT
+================================================================================
