@@ -15,8 +15,8 @@ from typing import Dict, List, Tuple, Optional
 from datetime import datetime
 import cv2
 
-from config import get_config
-from logger import get_logger
+from fiber_config import get_config
+from fiber_logger import get_logger
 
 class AnomalyDetector(nn.Module):
     """
@@ -374,7 +374,7 @@ class DefectLocator:
             defects.append(defect_info)
         
         self.logger.info(f"Located {len(defects)} defects")
-        self.logger.log_function_exit("locate_defects", result=f"{len(defects)} defects")
+        self.logger.log_function_exit("locate_defects", f"{len(defects)} defects")
         
         return defects
 

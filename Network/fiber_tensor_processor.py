@@ -12,8 +12,8 @@ from pathlib import Path
 from typing import Union, Tuple, Dict, List, Optional
 from datetime import datetime
 
-from config import get_config
-from logger import get_logger
+from fiber_config import get_config
+from fiber_logger import get_logger
 
 class TensorProcessor:
     """Handles all tensor operations for fiber optic images"""
@@ -243,7 +243,7 @@ class TensorProcessor:
             if 'tensor' in tensor_data:
                 self.logger.log_tensor_info("loaded_tensor", tensor_data['tensor'])
             
-            self.logger.log_function_exit("load_tensor_file", result="Success")
+            self.logger.log_function_exit("load_tensor_file", "Success")
             return tensor_data
             
         except Exception as e:
@@ -311,7 +311,7 @@ class TensorProcessor:
             multi_scale.append(scaled)
             self.logger.debug(f"Created scale {scale}: shape={scaled.shape}")
         
-        self.logger.log_function_exit("create_multi_scale_tensors", result=f"{len(multi_scale)} scales")
+        self.logger.log_function_exit("create_multi_scale_tensors", f"{len(multi_scale)} scales")
         return multi_scale
     
     def extract_region_mask(self, tensor: torch.Tensor, region_type: str) -> torch.Tensor:
@@ -354,6 +354,18 @@ class TensorProcessor:
         self.logger.log_function_exit("extract_region_mask")
         
         return mask
+    
+    def get_tensor_statistics(self, tensor: torch.Tensor) -> Dict[str, Union[float, List[int]]]:
+        """
+        Calculate statistics for a tensor
+        """
+        return {
+            'mean': float(tensor.mean().item()),
+            'std': float(tensor.std().item()),
+            'min': float(tensor.min().item()),
+            'max': float(tensor.max().item()),
+            'shape': list(tensor.shape)
+        }
 
 # Test the tensor processor
 if __name__ == "__main__":

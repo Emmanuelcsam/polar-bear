@@ -22,7 +22,7 @@ class FiberOpticsLogger:
         
         # Get configuration
         if config is None:
-            from config import get_config
+            from fiber_config import get_config
             config = get_config()
         self.config = config
         

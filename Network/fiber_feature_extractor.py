@@ -12,9 +12,9 @@ import numpy as np
 from typing import Dict, List, Tuple, Optional
 from datetime import datetime
 
-from config import get_config
-from logger import get_logger
-from tensor_processor import TensorProcessor
+from fiber_config import get_config
+from fiber_logger import get_logger
+from fiber_tensor_processor import TensorProcessor
 
 class SimultaneousFeatureExtractor(nn.Module):
     """
@@ -56,16 +56,21 @@ class SimultaneousFeatureExtractor(nn.Module):
         self.anomaly_threshold = nn.Parameter(torch.tensor(0.3))
         
         # Quality assessment network
+        # Calculate actual input channels based on patterns
+        # features (out_channels) + all_matches (num_patterns * 3 for each region) + anomaly_matches (num_patterns)
+        # But all_matches concatenates individual matches, so it's the sum of individual pattern counts
+        quality_input_channels = out_channels + num_patterns * 3 + num_patterns
+        
+        # Create a flexible quality assessor that can handle variable input channels
         self.quality_assessor = nn.Sequential(
-            nn.Conv2d(out_channels + num_patterns * 2, 64, 1),
+            nn.LazyConv2d(64, 1),  # LazyConv2d infers input channels automatically
             nn.ReLU(inplace=True),
             nn.Conv2d(64, 1, 1),
             nn.Sigmoid()
         )
         
-        # Simultaneous classifier
-        self.simultaneous_classifier = nn.Conv2d(
-            out_channels + num_patterns * 2,  # features + normal matches + anomaly matches
+        # Simultaneous classifier with flexible input
+        self.simultaneous_classifier = nn.LazyConv2d(
             4,  # core, cladding, ferrule, anomaly
             1
         )
@@ -248,7 +253,7 @@ class MultiScaleFeatureExtractor(nn.Module):
             weighted_features = scale_results['features'] * weight.item()
             
             # Correlate with previous scale if not first
-            if i > 0 and i <= len(self.scale_correlators):
+            if i > 0 and (i-1) < len(self.scale_correlators):
                 # Resize previous features to match current size
                 prev_features = F.interpolate(
                     all_features[-1],
@@ -272,7 +277,7 @@ class MultiScaleFeatureExtractor(nn.Module):
             
             self.logger.debug(f"Scale {i}: features shape={weighted_features.shape}, weight={weight.item():.4f}")
         
-        self.logger.log_function_exit("forward", num_scales=len(all_features))
+        self.logger.log_function_exit("forward")
         
         return {
             'features': all_features,

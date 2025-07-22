@@ -15,10 +15,10 @@ from typing import Dict, List, Optional, Tuple
 from datetime import datetime
 import time
 
-from config import get_config
-from logger import get_logger
-from integrated_network import FiberOpticsIntegratedNetwork
-from data_loader import FiberOpticsDataLoader
+from fiber_config import get_config
+from fiber_logger import get_logger
+from fiber_integrated_network import FiberOpticsIntegratedNetwork
+from fiber_data_loader import FiberOpticsDataLoader
 
 class FiberOpticsTrainer:
     """
@@ -70,8 +70,7 @@ class FiberOpticsTrainer:
             self.optimizer, 
             mode='min', 
             patience=5, 
-            factor=0.5,
-            verbose=True
+            factor=0.5
         )
         
         # Training history

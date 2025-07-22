@@ -12,12 +12,12 @@ import numpy as np
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime
 
-from config import get_config
-from logger import get_logger
-from tensor_processor import TensorProcessor
-from feature_extractor import MultiScaleFeatureExtractor, TrendAnalyzer
-from reference_comparator import SimilarityCalculator
-from anomaly_detector import AnomalyDetector
+from fiber_config import get_config
+from fiber_logger import get_logger
+from fiber_tensor_processor import TensorProcessor
+from fiber_feature_extractor import MultiScaleFeatureExtractor, TrendAnalyzer
+from fiber_reference_comparator import SimilarityCalculator
+from fiber_anomaly_detector import AnomalyDetector
 
 class FiberOpticsIntegratedNetwork(nn.Module):
     """
@@ -35,6 +35,9 @@ class FiberOpticsIntegratedNetwork(nn.Module):
         self.logger = get_logger("FiberOpticsIntegratedNetwork")
         
         self.logger.log_class_init("FiberOpticsIntegratedNetwork")
+        
+        # Initialize tensor processor
+        self.tensor_processor = TensorProcessor()
         
         # Multi-scale feature extraction with simultaneous analysis
         self.feature_extractor = MultiScaleFeatureExtractor()
@@ -105,9 +108,8 @@ class FiberOpticsIntegratedNetwork(nn.Module):
         batch_size = x.shape[0]
         
         # Calculate gradient and position information
-        tensor_processor = TensorProcessor()
-        gradient_info = tensor_processor.calculate_gradient_intensity(x)
-        position_info = tensor_processor.calculate_pixel_positions(x.shape)
+        gradient_info = self.tensor_processor.calculate_gradient_intensity(x)
+        position_info = self.tensor_processor.calculate_pixel_positions(x.shape)
         
         # Multi-scale feature extraction with simultaneous analysis
         extraction_results = self.feature_extractor(x, gradient_info, position_info)

@@ -15,9 +15,9 @@ from datetime import datetime
 import json
 import random
 
-from config import get_config
-from logger import get_logger
-from tensor_processor import TensorProcessor
+from fiber_config import get_config
+from fiber_logger import get_logger
+from fiber_tensor_processor import TensorProcessor
 
 class FiberOpticsDataset(Dataset):
     """

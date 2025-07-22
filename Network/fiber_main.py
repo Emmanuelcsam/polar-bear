@@ -12,17 +12,18 @@ import sys
 import time
 from datetime import datetime
 import argparse  # Only for documentation, not used
+from typing import Optional, Dict, List
 
 # Import all modules
-from config import get_config
-from logger import get_logger
-from tensor_processor import TensorProcessor
-from feature_extractor import FeatureExtractionPipeline
-from reference_comparator import ReferenceComparator
-from anomaly_detector import ComprehensiveAnomalyDetector
-from integrated_network import IntegratedAnalysisPipeline
-from trainer import FiberOpticsTrainer
-from data_loader import FiberOpticsDataLoader, ReferenceDataLoader
+from fiber_config import get_config
+from fiber_logger import get_logger
+from fiber_tensor_processor import TensorProcessor
+from fiber_feature_extractor import FeatureExtractionPipeline
+from fiber_reference_comparator import ReferenceComparator
+from fiber_anomaly_detector import ComprehensiveAnomalyDetector
+from fiber_integrated_network import IntegratedAnalysisPipeline
+from fiber_trainer import FiberOpticsTrainer
+from fiber_data_loader import FiberOpticsDataLoader, ReferenceDataLoader
 
 class FiberOpticsSystem:
     """
