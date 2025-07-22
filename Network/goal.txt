@@ -1,0 +1,95 @@
+Im developing a software, I need your help creating the framkwork for the program, The program will use 
+  opencv, pytorch, numpy and other essential libraries(IT WILL NOT USE ARGPARSE OR FLAGS I HATE FLAGS), 
+  the program will log all of its processes in a log file as soon as the happen, it will log verbosely and
+   with time stamps so I can see exactly what is happening when it happens, the program will use 
+  tensorized images as its reference data(I have a folder with a large database of .pt files of different 
+  images used as reference and the files are separated by folder name, I'll list that out later), the 
+  weights of the neural network will be dependent on the average intensity gradient of the images(but 
+  It'll adjust the weight of that average as needed), another weight will be dependent on the average 
+  pixel position(but this also will be adjusted per image), another weight you will comment out completely
+   will be a manual circle alignment where I will have a ui place circles over regions of the image and 
+  then the program will adjust itself to those circles, the program is a fiber optics image classifier and
+   defect analyser so its a neural network of classification and anomaly detection, I have made programs 
+  in the past and script that have segmented the regions of the fiber optic endfaces into the core 
+  cladding and ferrule, I also have reference tensorized images of these regions, I need help in 
+  integrating the code and logic of the scripts I've already made into the neural network, in addition to 
+  that I've made code and scripts for detecting anaomalies, I need help in integrating the logic and 
+  processes into the nearual network as well, I also have several .json files, .pth files, .csv files .pkl
+   files and .txt files with loads of data surrounding the segmentation, the image correlations, the 
+  defects and loads of information surrounding the images, I also have a scratch library of .bmp files, I 
+  need you to create a collection of scripts with many comments within them that will serve as the 
+  detailed framework to integrate all my data and scripts to have a working neural network, to reiterate 
+  the process: an image will be selected from a datset folder(or multiple images for batch processing or 
+  realtime processing), the image will then be tensorized so it can better be computed by pytorch, that 
+  tensor will be compared to other tensors in the correlational data and at the same time it will go 
+  through the neural network for classification, in the neural network for classification it will be split
+   up into segments, each segment will be analyzed by multiple comparisions, statistics, and correlational
+   data from the multiple sources of data I have (any possible way an image can be analyzed and compared),
+   the weights of the connections between the first layer and next layer will be dependent on thse 
+  correlational values and parameters such as but not limted to the gradient intensity, the pixel 
+  positions and other factors, then after some hidden layers the network will converge into three specific
+   regions the core, cladding and ferrule(each region has a reference in the reference databank where only
+   that region is cropped out)(I have cut up images of a cladding for cladding features, I also have 
+  images where only the cladding is shown and the rest of the image is cropped, I have images where only 
+  the core is shown and the resto of the image doesn't exist because its cropped and the same with the 
+  ferrule, and I have references with many variations) after the network converges the features of the 
+  image to either core cladding and ferrule it will take those three features of an image and try to see 
+  which of the reference images in the reference folder of the datbase that the regions most specifically 
+  represent but (this might not be possible if there is no image in the reference bank that represent any 
+  of the regions, if that is the case it will not converge the core claddding and ferrule instead it will 
+  use those regions to compare to the most likely regions in the reference bank, instead of the whole 
+  image), now that the process has either the three regions or a most similar image from the reference 
+  bank as well as the input image separated into its three regions the process will take the input 
+  tensorized region or image and the reference image and take the absoulute value of the difference 
+  between the two and it will also look at the structural similarity index between the two to find the 
+  defects or anomalies, it will also look at the local anaomaly heat map then it will compare the local 
+  anomaly heatmap with the structural simialrity index and combine them to find the total anaomalies or 
+  defects and their locations, while it does that it will understand that the regions themselves or the 
+  change in regions within an image such as the change in pixels between the core to cladding or cladding 
+  to ferrule are not anomalies because the program will find all trends between all images in its database
+   or reference images in a way that it understands all continuities and similarities and trends and knows
+   the lines of best fit for all pixel values, gradents, and pixel positions that way it can tell between 
+  a defect and between a core region going into cladding which is a sharp change in intensity gradient 
+  from a an in circle to a annulus region and the change from cladding to ferrule which is a sharp change 
+  from an annulus region to the rest of the outer image, the program will forcivly look for all lines of 
+  best fit based on gradient trends for all datapoints and pixels and everything by using the neural 
+  network, when a feature of an image follows this line its classified as region (core cladding ferrule) 
+  when it doesn't its classified as a defect, the prgoram will allow me to see and tweek the paramters and
+   weights of these fitting equations and over time the program will get more accurate and faster at 
+  computing, the program will run entirely in hpc meaning that it has to be able to run on gpu and in 
+  parallel, but this is only for the training sequence so that it can be trained fast and effectively with
+   a large database and multiple trials over and over again, the overall program follows this equation 
+  I=Ax1+Bx2+Cx3... =S(R) where each coefficent of x corresponds to a change in the program that I can 
+  later tweek and each x value is a parameter multiplier (or weight) for the effectiveness S is the 
+  similarity coefficent the percentage of how similar the input image is from the reference and R is the 
+  reference, when classifiying and comparing to the reference the program must achieve over .7(S is always
+   fractional to R), if the entire program does not achieve over .7 whenever refering to the reference no 
+  matter if its trying to find a feature, a region, a feautre of a region, or directly comparing images, 
+  it must achieve over .7, if it doesn't it will detail why it didn't and try to locate the anomalies 
+  meaning that maybe that feature has anomalies, the for every image the program will spit out an anomaly 
+  or defect map which will just be a matrix of the pixel intensities of the defects in a hightened 
+  contrast on top of the matrix of the input image(it will export this into a results folder and each 
+  result matrix will be the smallest files type and size possible, its easy for me to just copy and paste 
+  values in a visualizer so I don't need any robust file type), the program will calculate its loses and 
+  try to minimize its loses by small percentile adjustments to paramters. You will create multiple scripts
+   will clear documentation and comments so that I can go in and develop each script to make this entire 
+  program function perfectly, you will take everything I've said here plus detailed research online on how
+   to do this project and for all I've said and your research you will not only use it to influence your 
+  example code but you will comment quotes of what i've said and the deep exhaustive research you do, you 
+  will comment quotes of that information into the places in the scripts that they most apply.
+I want you to create scripts closer to my goal where the nerual network does
+   the segmentation and reference comparison and anomaly detection internally, the neuranl network itself in order to classify the image will separte the 
+  image into its features (or edges), isn't that how a neural network works? and then itll compare the edges or features to what they most likely can be 
+  classified as, the addition with my program is that Im subtracting the resulting classification with the orignial input to find anaomalies
+ advance it further where it doesn't just separate then reconstruct and then detect anaomalies, it separates, does anaomaly 
+  detection and comparision, and then also does reconstructuion(try again without removing anythign you already did), really fully analyze everything that
+   I've been saying I want each feature to not only look for comparisions but also look for anomalies while comparing so I get a fully detailed anaomaly 
+  detection while also classifying most propable features(or segments) of the image at the same time
+
+I want you to create multiple modular scripts to do this scripts that work fully functionally on their own and that fully collaboarte and connect with each other to make this process work completely, the scripts you create will focus on specific tasks and for every function there will be a printed statement in addition to the other logging, and the same for every class, and when the entire script runs it will also print a statment so I know everything that is running when its running and how ell its running and what time it runs and then after everything it will say the name of the next script that its going to send information to and before everything it says the name of the script that its taking infomration from
+
+the program will  Extract features AND simultaneously: - Compare to normal patterns (for classification) - Compare to anomaly patterns (for defect detection) - Assess feature quality - All at the same time, at every scale
+
+The network learns gradient and position trends for each region: - Core has certain expected gradient patterns - Cladding has different patterns - Deviations from trends indicate anomalies - But region transitions follow trends and aren't anomalies
+
+Features from different scales are correlated to ensure consistency: - Small defects visible at fine scales - Large defects visible at coarse scales - Correlation ensures we don't miss anything
