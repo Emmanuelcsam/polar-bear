@@ -1,5 +1,0 @@
-# The latest versions will be installed by pip
-numpy
-torch
-torchvision
-opencv-python

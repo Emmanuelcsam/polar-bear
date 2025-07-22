@@ -1,5 +1,0 @@
-wireless communication between the two picos 
-the dimension scope is saving jpg
-Ill do whatever necessary between getting an  an SD card breakout board or adapter for interfacing the Pico 2 with the SD card slot on the scope, or just soldering directly
-Im running entirely on windows 
-I prefer micropython for the scripts
