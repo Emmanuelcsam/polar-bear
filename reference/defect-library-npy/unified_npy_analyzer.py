@@ -8,27 +8,52 @@ Generates complete mathematical expressions for neural network training
 import numpy as np
 import os
 import glob
+import itertools
+import json
+import warnings
+from datetime import datetime
 from scipy import stats, linalg, optimize, signal
 from scipy.special import gamma, digamma, polygamma
 from scipy.spatial.distance import pdist, squareform
-from scipy.signal import hilbert, find_peaks, ricker
+from scipy.signal import hilbert, find_peaks
+
+# Handle ricker import for different scipy versions
+try:
+    from scipy.signal.wavelets import ricker
+except ImportError:
+    try:
+        from scipy.signal import ricker
+        from scipy.signal import ricker
+    except ImportError:
+        # Define ricker wavelet if not available
+        def ricker(points, a):
+            """
+            Return a Ricker wavelet, also known as the "Mexican hat wavelet".
+            """
+            A = 2 / (np.sqrt(3 * a) * (np.pi**0.25))
+            wsq = a**2
+            vec = np.arange(0, points) - (points - 1.0) / 2
+            xsq = vec**2
+            mod = (1 - xsq / wsq)
+            gauss = np.exp(-xsq / (2 * wsq))
+            return A * mod * gauss
+
+# Handle cwt import
 try:
     from scipy.signal import cwt
 except ImportError:
-    # For newer scipy versions, cwt might be in a different location
-    try:
-        from scipy.signal import cwt as cwt
-    except:
-        # Fallback implementation if cwt is not available
-        cwt = None
+    cwt = None
+
 from sklearn.preprocessing import StandardScaler
-from sklearn.decomposition import PCA, ICA, FactorAnalysis, NMF, SparsePCA, KernelPCA
+from sklearn.decomposition import PCA, FastICA, FactorAnalysis, NMF, SparsePCA, KernelPCA
 from sklearn.linear_model import LinearRegression, Ridge, Lasso
 from sklearn.metrics import mutual_info_score
 from sklearn.feature_selection import mutual_info_regression
 from sklearn.manifold import TSNE, MDS
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, Matern, RationalQuadratic
+
+# Handle statsmodels import
 try:
     from statsmodels.tsa.stattools import adfuller, kpss, acf, pacf
     from statsmodels.stats.diagnostic import acorr_ljungbox
@@ -36,10 +61,7 @@ try:
 except ImportError:
     STATSMODELS_AVAILABLE = False
     print("Warning: statsmodels not available. Some advanced statistics will be skipped.")
-import itertools
-from datetime import datetime
-import json
-import warnings
+
 warnings.filterwarnings('ignore')
 
 class ComprehensiveNPYAnalyzer:
@@ -85,9 +107,25 @@ class ComprehensiveNPYAnalyzer:
         # Central tendency
         stats_dict['mean'] = float(np.mean(flat_data))
         stats_dict['median'] = float(np.median(flat_data))
-        stats_dict['mode'] = float(stats.mode(flat_data, keepdims=True).mode[0])
-        stats_dict['geometric_mean'] = float(stats.gmean(flat_data[flat_data > 0])) if np.any(flat_data > 0) else None
-        stats_dict['harmonic_mean'] = float(stats.hmean(flat_data[flat_data > 0])) if np.any(flat_data > 0) else None
+        
+        # Handle mode for different scipy versions
+        try:
+            mode_result = stats.mode(flat_data, keepdims=True)
+            stats_dict['mode'] = float(mode_result.mode[0])
+        except TypeError:
+            # Older scipy versions don't have keepdims parameter
+            mode_result = stats.mode(flat_data)
+            stats_dict['mode'] = float(mode_result.mode[0] if hasattr(mode_result.mode, '__getitem__') else mode_result.mode)
+        
+        # Geometric and harmonic mean for positive values
+        positive_data = flat_data[flat_data > 0]
+        if len(positive_data) > 0:
+            stats_dict['geometric_mean'] = float(stats.gmean(positive_data))
+            stats_dict['harmonic_mean'] = float(stats.hmean(positive_data))
+        else:
+            stats_dict['geometric_mean'] = None
+            stats_dict['harmonic_mean'] = None
+            
         stats_dict['trimmed_mean_10'] = float(stats.trim_mean(flat_data, 0.1))
         stats_dict['trimmed_mean_20'] = float(stats.trim_mean(flat_data, 0.2))
         
@@ -102,7 +140,13 @@ class ComprehensiveNPYAnalyzer:
         # Distribution shape
         stats_dict['skewness'] = float(stats.skew(flat_data))
         stats_dict['kurtosis'] = float(stats.kurtosis(flat_data))
-        stats_dict['jarque_bera'] = stats.jarque_bera(flat_data)._asdict()
+        
+        # Jarque-Bera test
+        jb_result = stats.jarque_bera(flat_data)
+        stats_dict['jarque_bera'] = {
+            'statistic': float(jb_result.statistic) if hasattr(jb_result, 'statistic') else float(jb_result[0]),
+            'pvalue': float(jb_result.pvalue) if hasattr(jb_result, 'pvalue') else float(jb_result[1])
+        }
         
         # Percentiles
         percentiles = [1, 5, 10, 20, 25, 30, 40, 50, 60, 70, 75, 80, 90, 95, 99]
@@ -188,21 +232,32 @@ class ComprehensiveNPYAnalyzer:
                     self.correlations[corr_key]['pearson'] = float(np.corrcoef(data1, data2)[0, 1])
                     
                 # Spearman correlation
-                self.correlations[corr_key]['spearman'] = float(stats.spearmanr(data1, data2).correlation)
+                try:
+                    spearman_result = stats.spearmanr(data1, data2)
+                    self.correlations[corr_key]['spearman'] = float(spearman_result.correlation if hasattr(spearman_result, 'correlation') else spearman_result[0])
+                except:
+                    self.correlations[corr_key]['spearman'] = None
                 
                 # Kendall tau
                 if len(data1) < 1000:  # Computationally expensive
-                    self.correlations[corr_key]['kendall'] = float(stats.kendalltau(data1, data2).correlation)
+                    try:
+                        kendall_result = stats.kendalltau(data1, data2)
+                        self.correlations[corr_key]['kendall'] = float(kendall_result.correlation if hasattr(kendall_result, 'correlation') else kendall_result[0])
+                    except:
+                        self.correlations[corr_key]['kendall'] = None
                 
                 # Distance correlation
                 self.correlations[corr_key]['distance_corr'] = self.distance_correlation(data1, data2)
                 
                 # Mutual information
                 if len(np.unique(data1)) < 100 and len(np.unique(data2)) < 100:
-                    self.correlations[corr_key]['mutual_info'] = float(mutual_info_score(
-                        np.digitize(data1, np.percentile(data1, np.arange(0, 101, 10))),
-                        np.digitize(data2, np.percentile(data2, np.arange(0, 101, 10)))
-                    ))
+                    try:
+                        self.correlations[corr_key]['mutual_info'] = float(mutual_info_score(
+                            np.digitize(data1, np.percentile(data1, np.arange(0, 101, 10))),
+                            np.digitize(data2, np.percentile(data2, np.arange(0, 101, 10)))
+                        ))
+                    except:
+                        self.correlations[corr_key]['mutual_info'] = None
                 
                 # Cross-correlation
                 xcorr = np.correlate(data1 - np.mean(data1), data2 - np.mean(data2), mode='full')
@@ -449,9 +504,15 @@ class AdvancedPHDAnalysis:
             if n >= r:
                 l_moment = 0
                 for k in range(r):
-                    coeff = (-1)**k * np.math.comb(r-1, k)
+                    try:
+                        from math import comb
+                    except ImportError:
+                        # For Python < 3.8
+                        from scipy.special import comb
+                    
+                    coeff = (-1)**k * comb(r-1, k)
                     indices = np.arange(k, n)
-                    weights = np.array([np.math.comb(i, k) * np.math.comb(n-1-i, r-1-k) / np.math.comb(n-1, r-1) for i in indices])
+                    weights = np.array([comb(i, k) * comb(n-1-i, r-1-k) / comb(n-1, r-1) for i in indices])
                     l_moment += coeff * np.sum(weights * sorted_data[indices])
                 results[f'l_moment_{r}'] = l_moment
         
@@ -730,9 +791,6 @@ class AdvancedPHDAnalysis:
         flat_data = data.flatten()
         results = {}
         
-        # Multitaper spectral analysis
-        from scipy.signal import windows
-        
         # Spectral entropy
         freqs = np.fft.fftfreq(len(flat_data))
         fft = np.abs(np.fft.fft(flat_data))
@@ -761,20 +819,23 @@ class AdvancedPHDAnalysis:
         # Spectral kurtosis
         results['spectral_kurtosis'] = np.sum((freqs[:len(psd)] - results['spectral_centroid'])**4 * psd) / (np.sum(psd) * results['spectral_spread']**4)
         
-        # Wavelet entropy (simplified implementation)
-        def simple_wavelet_transform(data, wavelet_func, scales):
-            """Simple continuous wavelet transform implementation"""
-            output = np.zeros((len(scales), len(data)))
-            for i, scale in enumerate(scales):
-                # Create wavelet at this scale
-                wavelet_length = min(10 * scale, len(data))
-                wavelet = wavelet_func(wavelet_length, scale)
-                # Convolve with data
-                output[i, :] = np.convolve(data, wavelet, mode='same')
-            return output
-        
+        # Wavelet entropy
         try:
             scales = np.arange(1, min(20, len(flat_data)//10))
+            
+            # Simple continuous wavelet transform implementation
+            def simple_wavelet_transform(data, wavelet_func, scales):
+                """Simple continuous wavelet transform implementation"""
+                output = np.zeros((len(scales), len(data)))
+                for i, scale in enumerate(scales):
+                    # Create wavelet at this scale
+                    wavelet_length = min(10 * scale, len(data))
+                    wavelet = wavelet_func(wavelet_length, scale)
+                    # Convolve with data
+                    output[i, :] = np.convolve(data, wavelet, mode='same')
+                return output
+            
+            # Use the ricker function we imported/defined
             cwt_matrix = simple_wavelet_transform(flat_data[:min(1000, len(flat_data))], ricker, scales)
             wavelet_energy = np.sum(np.abs(cwt_matrix)**2, axis=1)
             wavelet_energy_norm = wavelet_energy / np.sum(wavelet_energy)
@@ -830,7 +891,10 @@ class AdvancedPHDAnalysis:
                             acf_value = acf(flat_data, nlags=lag, fft=True)[-1]
                         else:
                             # Simple autocorrelation calculation
-                            acf_value = np.corrcoef(flat_data[:-lag], flat_data[lag:])[0, 1]
+                            if lag < len(flat_data):
+                                acf_value = np.corrcoef(flat_data[:-lag], flat_data[lag:])[0, 1]
+                            else:
+                                acf_value = np.nan
                         if not np.isnan(acf_value):
                             expression_parts.append(f"({acf_value:.15e} * w_{file_idx}_{lag}_acf)")
                     except:
