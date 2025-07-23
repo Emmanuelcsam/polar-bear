@@ -1,0 +1,409 @@
+# HPC-Optimized Configuration for Fiber Optics Neural Network
+# This configuration maximizes performance, statistics, and debugging for HPC systems
+# Copy this to config.yaml when running on HPC
+
+# System Settings - Optimized for HPC
+system:
+  # Device configuration
+  device: "cuda"  # Force CUDA for HPC
+  gpu_id: 0
+  num_workers: 16  # Increase based on HPC CPU cores
+  seed: 42
+  
+  # Maximum logging for debugging
+  log_level: "DEBUG"
+  log_to_file: true
+  log_file_path: "../logs/hpc_fiber_optics_debug.log"
+  logs_path: "../logs"
+  verbose_logging: true
+  log_every_n_steps: 1
+  save_logs_to_wandb: true
+  
+  # HPC scratch paths for performance
+  data_path: "../dataset"  # Adjust to HPC scratch: /scratch/$USER/fiber_optics/dataset
+  tensorized_data_path: "../reference"  # Adjust to HPC scratch
+  reference_data_path: "../reference"
+  checkpoints_path: "../checkpoints"
+  results_path: "../results"
+  cache_path: "../cache"  # Consider /dev/shm for RAM disk
+  temp_path: "../temp"
+  
+  # System behavior
+  auto_cleanup_temp: false  # Keep for debugging
+  max_cache_size_gb: 50.0
+  enable_profiling: true
+  profile_memory: true
+  deterministic_mode: true
+
+# Model Architecture - Maximum Capability
+model:
+  architecture: "advanced"
+  
+  # Increased capacity
+  input_channels: 3
+  base_channels: 128  # Doubled
+  num_blocks: [3, 4, 6, 3]  # ResNet-50 style
+  
+  # Enable all advanced features
+  use_se_blocks: true
+  se_reduction: 16
+  use_deformable_conv: true
+  use_cbam: true
+  use_efficient_channel_attention: true
+  
+  # Adaptive computation
+  use_adaptive_computation: true
+  adaptive_threshold: 0.98
+  max_computation_steps: 20
+  
+  # Larger embeddings
+  num_classes: 3
+  num_reference_embeddings: 5000
+  embedding_dim: 512
+
+# Equation Parameters - Optimized coefficients
+equation:
+  coefficients:
+    A: 1.2  # Reference similarity weight
+    B: 1.0  # Trend adherence weight
+    C: 0.8  # Inverse anomaly score weight
+    D: 1.0  # Segmentation confidence weight
+    E: 0.6  # Reconstruction similarity weight
+  
+  min_coefficient: -3.0
+  max_coefficient: 3.0
+  
+  # Evolution strategy
+  use_evolution: true
+  evolution_interval: 50
+  population_size: 50
+  evolution_sigma: 0.1
+  evolution_learning_rate: 0.02
+
+# Optimizer - Best for HPC
+optimizer:
+  type: "sam_lookahead"
+  
+  # Tuned for larger batches
+  learning_rate: 0.002
+  weight_decay: 0.01
+  betas: [0.9, 0.999]
+  eps: 1.0e-8
+  
+  # Enhanced SAM
+  sam_rho: 0.1
+  sam_adaptive: true
+  
+  # Lookahead
+  lookahead_k: 10
+  lookahead_alpha: 0.5
+  lookahead_pullback: "pullback"
+  
+  # Cosine scheduler for long training
+  scheduler:
+    type: "cosine"
+    patience: 10
+    factor: 0.5
+    min_lr: 1.0e-7
+  
+  # Parameter groups
+  param_groups:
+    feature_extractor: 1.0
+    segmentation: 0.5
+    reference_embeddings: 0.1
+    decoder: 0.5
+    equation_parameters: 0.05
+
+# Loss Configuration - Comprehensive
+loss:
+  weights:
+    segmentation: 0.25
+    anomaly: 0.25
+    contrastive: 0.15
+    perceptual: 0.15
+    wasserstein: 0.10
+    reconstruction: 0.10
+  
+  focal_loss:
+    segmentation_alpha: 0.25
+    segmentation_gamma: 3.0
+    anomaly_alpha: 0.75
+    anomaly_gamma: 5.0
+  
+  contrastive_loss:
+    temperature: 0.05
+    normalize: true
+  
+  wasserstein_loss:
+    p: 2
+    epsilon: 0.01
+    max_iter: 200
+  
+  perceptual_loss:
+    network: "vgg19"
+    layers: [3, 8, 15, 22, 29, 36]
+    use_spatial: true
+
+# Similarity Metrics - Enhanced
+similarity:
+  threshold: 0.7
+  
+  lpips:
+    network: "vgg19"
+    use_dropout: true
+    spatial: true
+  
+  optimal_transport:
+    epsilon: 0.01
+    max_iter: 200
+    metric: "euclidean"
+  
+  ssim:
+    window_size: 11
+    use_edges: true
+    multi_scale: true
+  
+  combination_weights:
+    lpips: 0.4
+    ssim: 0.3
+    optimal_transport: 0.3
+
+# Training - HPC Optimized for Intensive Continuous Training
+training:
+  num_epochs: 5000  # Very high for continuous training
+  batch_size: 128  # Large for HPC GPUs
+  validation_split: 0.2
+  early_stopping_patience: -1  # Disabled for continuous training
+  
+  # Aggressive augmentation
+  augmentation:
+    enabled: true
+    random_rotation: 30
+    random_scale: [0.8, 1.2]
+    random_brightness: 0.2
+    random_contrast: 0.2
+    horizontal_flip: true
+    vertical_flip: true
+  
+  # Gradient clipping
+  gradient_clip_value: 1.0
+  gradient_clip_norm: 10.0
+  
+  # Mixed precision - Critical
+  use_amp: true
+  amp_opt_level: "O2"
+  
+  # Knowledge distillation
+  use_distillation: false
+  distillation_alpha: 0.7
+  distillation_temperature: 4.0
+  teacher_model_path: null
+
+# Anomaly Detection - Enhanced
+anomaly:
+  threshold: 0.25
+  min_defect_size: 5
+  max_defect_size: 2000
+  ignore_boundary_width: 5
+  region_transition_tolerance: 0.1
+  defect_types: ["scratch", "contamination", "chip", "crack", "other"]
+  confidence_threshold: 0.4
+
+# Feature Extraction - Multi-scale
+features:
+  scales: [1.0, 0.75, 0.5, 0.25]
+  scale_weights: [0.4, 0.3, 0.2, 0.1]
+  gradient_kernel_size: 3
+  gradient_normalization: true
+  use_position_encoding: true
+  position_encoding_dim: 128
+  trend_window_size: 7
+  trend_polynomial_degree: 2
+
+# Real-time Optimization
+realtime:
+  target_fps: 60
+  use_pruning: false
+  pruning_ratio: 0.3
+  use_quantization: false
+  quantization_backend: "qnnpack"
+  max_batch_size: 16
+  dynamic_batching: true
+  enable_caching: true
+  cache_size: 1000
+
+# Visualization - Full debugging
+visualization:
+  window_width: 1920
+  window_height: 1080
+  fps: 60
+  show_original: true
+  show_segmentation: true
+  show_anomaly_map: true
+  show_reference_match: true
+  show_statistics: true
+  show_coefficients: true
+  segmentation_colors:
+    core: [255, 0, 0]
+    cladding: [0, 255, 0]
+    ferrule: [0, 0, 255]
+  anomaly_colormap: "hot"
+  enable_parameter_adjustment: true
+  parameter_adjustment_step: 0.01
+  save_visualizations: true
+  visualization_format: "png"
+  video_codec: "h264"
+
+# Advanced Features - All enabled
+advanced:
+  use_gradient_checkpointing: true
+  use_nas: false  # Expensive, enable selectively
+  nas_search_space: "darts"
+  use_maml: false  # Enable for few-shot
+  maml_inner_steps: 10
+  maml_inner_lr: 0.01
+  use_self_supervised: true
+  ssl_method: "simclr"
+  use_uncertainty: true
+  uncertainty_method: "ensemble"
+  dropout_samples: 20
+  use_continual_learning: true
+  replay_buffer_size: 5000
+  use_neural_ode: false  # Expensive
+  ode_solver: "dopri5"
+  ode_rtol: 1e-4
+  ode_atol: 1e-5
+
+# Experimental Features
+experimental:
+  use_cross_attention: true
+  use_self_attention: true
+  attention_heads: 16
+  use_graph_features: false
+  graph_hidden_dim: 256
+  graph_num_layers: 3
+  use_transformer: false
+  transformer_depth: 12
+  transformer_heads: 12
+  transformer_dim: 768
+  use_diffusion: false
+  diffusion_steps: 1000
+  diffusion_beta_schedule: "linear"
+
+# Performance Monitoring - Everything
+monitoring:
+  track_memory_usage: true
+  track_computation_time: true
+  track_gradient_norms: true
+  use_tensorboard: true
+  tensorboard_dir: "../runs/hpc_experiment"
+  use_wandb: true
+  wandb_project: "fiber-optics-hpc"
+  wandb_entity: null
+  enable_profiling: true
+  profile_batches: [10, 20, 50, 100, 200, 500]
+
+# Debug - Maximum information
+debug:
+  enabled: true
+  save_intermediate_features: true
+  save_gradient_flow: true
+  save_attention_maps: true
+  save_feature_evolution: true
+  save_loss_landscape: true
+  check_nan: true
+  check_inf: true
+  check_gradient_explosion: true
+  gradient_explosion_threshold: 1000.0
+  deterministic: true
+  benchmark: false
+  print_model_summary: true
+  print_parameter_counts: true
+  save_debug_images: true
+  debug_image_frequency: 10
+
+# Data Processing - Optimized
+data_processing:
+  image_size: [256, 256]
+  normalize_mean: [0.485, 0.456, 0.406]
+  normalize_std: [0.229, 0.224, 0.225]
+  color_space: "RGB"
+  dtype: "float32"
+  pin_memory: true
+  persistent_workers: true
+  prefetch_factor: 4
+  validate_images: true
+  remove_corrupted: true
+  min_image_size: [64, 64]
+  max_image_size: [4096, 4096]
+
+# Runtime - Intensive HPC training mode
+runtime:
+  mode: "train"  # Continuous training mode
+  input_path: null
+  output_path: null
+  batch_process: true
+  max_batch_images: 100000  # Process more images
+  realtime_source: null
+  realtime_fps: 60
+  save_visualizations: false  # Disable for performance
+  export_metrics: true
+  generate_report: true
+  # Command-line arguments from main_distributed.py
+  config_path: "config/config.yaml"  # Path to configuration file
+  distributed: false  # Enable distributed training
+  checkpoint: null  # Path to checkpoint to resume from
+  benchmark: false  # Run performance benchmarking
+  results_dir: "../results"  # Directory to save results
+  
+  # Intensive training settings
+  continuous_training: true
+  auto_resume: true
+  checkpoint_every_n_epochs: 5
+  save_best_k_models: 3
+
+# Integration
+integration:
+  use_cloud_storage: false
+  cloud_provider: null
+  cloud_bucket: null
+  enable_api: false
+  api_port: 8080
+  api_host: "0.0.0.0"
+  api_auth_required: true
+  use_database: false
+  database_type: null
+  database_url: null
+  enable_notifications: false
+  notification_webhook: null
+  notification_email: null
+
+# Performance Optimization - Critical for HPC
+optimization:
+  gradient_accumulation_steps: 4
+  mixed_precision_training: true
+  memory_efficient_attention: true
+  flash_attention: true
+  compile_model: true
+  use_channels_last: true
+  fuse_batch_norm: true
+  num_data_workers: 32
+  data_loader_pin_memory: true
+  non_blocking_transfer: true
+  use_distributed: false  # Set to true when running distributed
+  distributed_backend: "nccl"
+  world_size: 1  # Will be overridden by SLURM
+  rank: 0  # Will be overridden by SLURM
+  local_rank: 0  # Will be overridden by SLURM
+
+# Custom Extensions
+extensions:
+  enable_plugins: false
+  plugin_directory: "../plugins"
+  custom_metrics: []
+  custom_losses: []
+  custom_augmentations: []
+  pre_processing_hook: null
+  post_processing_hook: null
+  pre_training_hook: null
+  post_training_hook: null

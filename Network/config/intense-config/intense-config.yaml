@@ -1,0 +1,409 @@
+# HPC-Optimized Configuration for Intensive Continuous Training
+# This configuration maximizes training cycles and utilizes full HPC allocation time
+
+# System Settings - Optimized for HPC
+system:
+  # Device configuration
+  device: "cuda"
+  gpu_id: 0
+  num_workers: 32  # Maximum workers for data loading
+  seed: 42
+  
+  # Maximum logging for monitoring long runs
+  log_level: "INFO"  # INFO level to reduce I/O overhead
+  log_to_file: true
+  log_file_path: "../logs/hpc_intensive_training.log"
+  logs_path: "../logs"
+  verbose_logging: false  # Reduce for performance
+  log_every_n_steps: 100  # Log less frequently
+  save_logs_to_wandb: true
+  
+  # HPC scratch paths for performance
+  data_path: "/scratch/$USER/fiber_optics/dataset"
+  tensorized_data_path: "/scratch/$USER/fiber_optics/reference"
+  reference_data_path: "/scratch/$USER/fiber_optics/reference"
+  checkpoints_path: "/scratch/$USER/fiber_optics/checkpoints"
+  results_path: "../results"
+  cache_path: "/dev/shm/fiber_optics_cache"  # RAM disk for speed
+  temp_path: "/scratch/$USER/fiber_optics/temp"
+  
+  # System behavior
+  auto_cleanup_temp: true
+  max_cache_size_gb: 100.0
+  enable_profiling: false  # Disable for performance
+  profile_memory: false
+  deterministic_mode: false  # Faster training
+  
+  # Checkpoint settings for continuous training
+  checkpoint_interval: 500  # Save every N iterations
+  keep_last_n_checkpoints: 5
+  save_best_only: false  # Save all for safety
+  checkpoint_on_interrupt: true
+
+# Model Architecture - Maximum Capability
+model:
+  architecture: "advanced"
+  
+  # Large capacity for intensive training
+  input_channels: 3
+  base_channels: 256  # Maximum capacity
+  num_blocks: [3, 4, 23, 3]  # ResNet-101 style for depth
+  
+  # Enable all advanced features
+  use_se_blocks: true
+  se_reduction: 16
+  use_deformable_conv: true
+  use_cbam: true
+  use_efficient_channel_attention: true
+  
+  # Adaptive computation
+  use_adaptive_computation: true
+  adaptive_threshold: 0.99
+  max_computation_steps: 30
+  
+  # Large embeddings
+  num_classes: 3
+  num_reference_embeddings: 10000
+  embedding_dim: 1024
+
+# Equation Parameters - Dynamic evolution
+equation:
+  coefficients:
+    A: 1.0
+    B: 1.0
+    C: 1.0
+    D: 1.0
+    E: 1.0
+  
+  min_coefficient: -5.0
+  max_coefficient: 5.0
+  
+  # Continuous evolution
+  use_evolution: true
+  evolution_interval: 100  # Evolve frequently
+  population_size: 100
+  evolution_sigma: 0.2
+  evolution_learning_rate: 0.05
+  evolution_momentum: 0.9
+
+# Optimizer - Aggressive training
+optimizer:
+  type: "sam_lookahead"
+  
+  # Higher learning rate for intensive training
+  learning_rate: 0.01
+  weight_decay: 0.0001
+  betas: [0.9, 0.999]
+  eps: 1.0e-8
+  
+  # Enhanced SAM
+  sam_rho: 0.2
+  sam_adaptive: true
+  
+  # Lookahead
+  lookahead_k: 10
+  lookahead_alpha: 0.5
+  
+  # Cyclic learning rate for continuous training
+  scheduler:
+    type: "cyclic"
+    base_lr: 0.0001
+    max_lr: 0.01
+    step_size_up: 2000
+    step_size_down: 2000
+    mode: "triangular2"
+    cycle_momentum: true
+    base_momentum: 0.8
+    max_momentum: 0.95
+  
+  # Warm restarts for long training
+  use_warm_restarts: true
+  restart_interval: 5000
+  restart_factor: 2.0
+  
+  # Parameter groups with different LRs
+  param_groups:
+    feature_extractor: 1.0
+    segmentation: 0.8
+    reference_embeddings: 0.1
+    decoder: 0.5
+    equation_parameters: 0.2
+
+# Loss Configuration - Comprehensive with scheduling
+loss:
+  # Dynamic loss weighting
+  use_dynamic_weighting: true
+  weight_update_interval: 1000
+  
+  weights:
+    segmentation: 0.20
+    anomaly: 0.20
+    contrastive: 0.15
+    perceptual: 0.15
+    wasserstein: 0.15
+    reconstruction: 0.15
+  
+  # Loss scheduling
+  loss_schedule:
+    0: {segmentation: 0.5, anomaly: 0.3, others: 0.2}
+    10000: {segmentation: 0.3, anomaly: 0.3, others: 0.4}
+    50000: {segmentation: 0.2, anomaly: 0.2, others: 0.6}
+  
+  focal_loss:
+    segmentation_alpha: 0.25
+    segmentation_gamma: 3.0
+    anomaly_alpha: 0.75
+    anomaly_gamma: 5.0
+  
+  contrastive_loss:
+    temperature: 0.05
+    normalize: true
+    hard_negative_mining: true
+    
+  perceptual_loss:
+    network: "vgg19"
+    layers: [3, 8, 15, 22, 29, 36]
+    use_spatial: true
+
+# Training - Intensive Continuous Cycles
+training:
+  # Multiple training cycles
+  num_epochs: 10000  # Very high for continuous training
+  epochs_per_cycle: 100
+  num_cycles: 100
+  
+  # Large batch sizes for efficiency
+  batch_size: 256  # Maximum for HPC GPUs
+  accumulation_steps: 4  # Effective batch = 1024
+  
+  validation_split: 0.1  # Smaller for more training data
+  validation_frequency: 500  # Validate less often
+  
+  # No early stopping for continuous training
+  early_stopping_patience: -1  # Disabled
+  
+  # Aggressive augmentation with scheduling
+  augmentation:
+    enabled: true
+    use_progressive: true  # Increase difficulty over time
+    
+    # Initial augmentation
+    random_rotation: 15
+    random_scale: [0.9, 1.1]
+    random_brightness: 0.1
+    random_contrast: 0.1
+    horizontal_flip: true
+    vertical_flip: true
+    
+    # Progressive augmentation (applied over time)
+    progressive_schedule:
+      10000: {rotation: 30, scale: [0.8, 1.2], brightness: 0.2}
+      50000: {rotation: 45, scale: [0.7, 1.3], brightness: 0.3}
+      100000: {rotation: 60, scale: [0.6, 1.4], brightness: 0.4}
+  
+  # MixUp and CutMix
+  use_mixup: true
+  mixup_alpha: 0.2
+  use_cutmix: true
+  cutmix_alpha: 1.0
+  cutmix_prob: 0.5
+  
+  # Gradient settings
+  gradient_clip_value: 10.0
+  gradient_clip_norm: 100.0
+  
+  # Mixed precision - Critical for speed
+  use_amp: true
+  amp_opt_level: "O2"
+  
+  # Curriculum learning
+  use_curriculum: true
+  curriculum_stages:
+    0: "easy"      # Simple samples
+    25000: "medium" # Moderate difficulty
+    75000: "hard"   # Challenging samples
+    150000: "all"   # Full dataset
+  
+  # Self-supervised pretraining cycles
+  use_ssl_cycles: true
+  ssl_interval: 10000  # SSL task every N steps
+  ssl_duration: 1000   # Steps per SSL cycle
+
+# Data Loading - Optimized for continuous training
+data_processing:
+  # Data pipeline optimization
+  use_infinite_dataloader: true  # Never stops
+  shuffle_buffer_size: 10000
+  
+  # Multi-scale training
+  use_multi_scale: true
+  scales: [[224, 224], [256, 256], [320, 320], [384, 384], [448, 448]]
+  scale_schedule:
+    0: [224, 224]
+    20000: [256, 256]
+    50000: [320, 320]
+    100000: [384, 384]
+    200000: [448, 448]
+  
+  # Preprocessing
+  normalize_mean: [0.485, 0.456, 0.406]
+  normalize_std: [0.229, 0.224, 0.225]
+  
+  # Performance settings
+  pin_memory: true
+  persistent_workers: true
+  prefetch_factor: 4
+  drop_last: true
+  
+  # Dynamic dataset refresh
+  refresh_dataset_interval: 50000  # Reload data periodically
+  use_weighted_sampling: true
+  recompute_weights_interval: 10000
+
+# Anomaly Detection - Progressive thresholds
+anomaly:
+  # Dynamic thresholds
+  use_adaptive_threshold: true
+  initial_threshold: 0.5
+  target_threshold: 0.1
+  threshold_decay_steps: 100000
+  
+  min_defect_size: 5
+  max_defect_size: 2000
+  confidence_threshold: 0.3
+
+# Real-time Optimization
+realtime:
+  # Periodic optimization
+  optimize_interval: 50000  # Optimize model periodically
+  optimization_types: ["prune", "distill"]
+  
+  target_fps: 60
+  use_pruning: true
+  pruning_ratio: 0.1  # Gradual pruning
+  
+  # Knowledge distillation cycles
+  use_self_distillation: true
+  distillation_interval: 25000
+  distillation_temperature: 4.0
+
+# Monitoring - Comprehensive tracking
+monitoring:
+  track_memory_usage: true
+  track_computation_time: true
+  track_gradient_norms: true
+  
+  # Logging backends
+  use_tensorboard: true
+  tensorboard_dir: "../runs/hpc_intensive"
+  use_wandb: true
+  wandb_project: "fiber-optics-intensive"
+  wandb_tags: ["hpc", "intensive", "continuous"]
+  
+  # Periodic evaluation
+  full_evaluation_interval: 5000
+  save_predictions_interval: 10000
+  
+  # Performance tracking
+  log_gpu_stats: true
+  log_learning_rate: true
+  log_loss_landscape: false  # Expensive
+  
+  # Automatic reporting
+  generate_report_interval: 25000
+  email_reports: true
+  email_address: "your-email@wm.edu"
+
+# Advanced Features - Rotating through techniques
+advanced:
+  # Gradient checkpointing for memory
+  use_gradient_checkpointing: true
+  
+  # Meta-learning cycles
+  use_maml: true
+  maml_interval: 30000
+  maml_inner_steps: 5
+  maml_inner_lr: 0.01
+  
+  # Self-supervised learning
+  use_self_supervised: true
+  ssl_method: "rotating"  # Rotate through methods
+  ssl_methods: ["simclr", "byol", "swav", "dino"]
+  ssl_rotation_interval: 20000
+  
+  # Uncertainty estimation
+  use_uncertainty: true
+  uncertainty_method: "ensemble"
+  ensemble_size: 5
+  
+  # Continual learning
+  use_continual_learning: true
+  replay_buffer_size: 50000
+  replay_ratio: 0.1
+  
+  # Neural architecture search
+  use_nas: true
+  nas_interval: 100000
+  nas_search_space: "darts"
+  nas_epochs: 10
+
+# Experimental Features - Cycle through experiments
+experimental:
+  # Experiment rotation
+  experiment_cycle_interval: 50000
+  active_experiments: ["attention", "augmentation", "loss"]
+  
+  # Attention mechanisms
+  use_cross_attention: true
+  use_self_attention: true
+  attention_heads: 16
+  
+  # Advanced augmentations
+  use_auto_augment: true
+  auto_augment_policy: "imagenet"
+  
+  # Loss experiments
+  use_focal_loss_variants: true
+  use_dice_loss: true
+  use_lovasz_loss: true
+
+# Recovery and Resilience
+recovery:
+  # Automatic recovery from interruptions
+  auto_resume: true
+  resume_from_last: true
+  
+  # Periodic backup
+  backup_interval: 10000
+  backup_location: "$HOME/fiber_optics_backups"
+  
+  # Health checks
+  health_check_interval: 1000
+  max_nan_count: 10
+  auto_restart_on_nan: true
+  
+  # Memory management
+  clear_cache_interval: 5000
+  garbage_collect_interval: 10000
+
+# HPC-Specific Settings
+hpc:
+  # SLURM integration
+  save_on_preempt: true
+  checkpoint_signal: "SIGUSR1"
+  
+  # Resource management
+  auto_adjust_batch_size: true
+  target_gpu_memory_usage: 0.95
+  
+  # Multi-job chaining
+  enable_job_chaining: true
+  chain_time_buffer: 300  # 5 minutes before timeout
+  auto_resubmit: true
+  max_resubmissions: 10
+  
+  # Distributed settings
+  sync_interval: 1000
+  gradient_sync_interval: 1
+  use_gradient_compression: true
+  compression_ratio: 0.01

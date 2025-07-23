@@ -1,66 +1,70 @@
 #!/bin/bash
-#SBATCH --job-name=fiber-optics-distributed
-#SBATCH --partition=gpu
-#SBATCH --gres=gpu:2
-#SBATCH --nodes=4
-#SBATCH --ntasks-per-node=2
-#SBATCH --cpus-per-task=8
-#SBATCH --mem=128G
+#SBATCH --job-name=fiber_optics_distributed
+#SBATCH --output=logs/distributed_%j.out
+#SBATCH --error=logs/distributed_%j.err
 #SBATCH --time=48:00:00
-#SBATCH --output=logs/fiber_optics_dist_%j.out
-#SBATCH --error=logs/fiber_optics_dist_%j.err
+#SBATCH --partition=gpu
+#SBATCH --nodes=2
+#SBATCH --ntasks-per-node=4
+#SBATCH --cpus-per-task=8
+#SBATCH --gres=gpu:4
+#SBATCH --mem=256G
 #SBATCH --mail-type=BEGIN,END,FAIL
-#SBATCH --mail-user=your_email@wm.edu
-
-# Create logs directory if it doesn't exist
-mkdir -p logs
+#SBATCH --mail-user=your-email@wm.edu
 
 # Load required modules
 module purge
-module load python/3.9
 module load cuda/11.8
-module load gcc/9.3.0
-module load openmpi/4.1.1
+module load cudnn/8.6
+module load python/3.10
+module load gcc/11.2
+module load openmpi/4.1.4
 
-# Activate virtual environment
-if [ ! -d "venv" ]; then
-    python -m venv venv
-    source venv/bin/activate
-    pip install --upgrade pip
-    pip install -r requirements.txt
-else
-    source venv/bin/activate
-fi
-
-# Set environment variables for distributed training
-export PYTHONUNBUFFERED=1
+# Set up environment
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
+export PYTHONUNBUFFERED=1
+
+# Distributed training environment
+export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
+export MASTER_PORT=29500
+export WORLD_SIZE=$((SLURM_NNODES * SLURM_NTASKS_PER_NODE))
+
+# NCCL settings for optimal performance
 export NCCL_DEBUG=INFO
 export NCCL_IB_DISABLE=0
-export NCCL_NET_GDR_LEVEL=2
+export NCCL_SOCKET_IFNAME=^lo
 
-# Get master node information
-export MASTER_ADDR=$(scontrol show hostname $SLURM_JOB_NODELIST | head -n 1)
-export MASTER_PORT=29500
-export WORLD_SIZE=$SLURM_NTASKS
-
-# Print job information
-echo "Job ID: $SLURM_JOB_ID"
-echo "Nodes: $SLURM_JOB_NODELIST"
-echo "Tasks: $SLURM_NTASKS"
-echo "Master Node: $MASTER_ADDR"
-echo "Start Time: $(date)"
-echo "Working Directory: $(pwd)"
+# Create directories
+mkdir -p logs
+mkdir -p checkpoints
+mkdir -p results
 
 # Navigate to project directory
-cd /path/to/polar-bear/Network
+cd /path/to/your/polar-bear/Network
 
-# Run distributed training using srun
-echo "Starting distributed training on $SLURM_NNODES nodes with $SLURM_NTASKS tasks..."
-srun python main_distributed.py \
-    --mode train \
-    --config config.yaml \
-    --distributed
+# Activate environment
+source venv/bin/activate
+source .env
 
-echo "End Time: $(date)"
-echo "Distributed training completed"
+# Log job information
+echo "========================================="
+echo "Distributed Training Job Information"
+echo "========================================="
+echo "Job ID: $SLURM_JOB_ID"
+echo "Job Name: $SLURM_JOB_NAME"
+echo "Nodes: $SLURM_JOB_NODELIST"
+echo "Number of nodes: $SLURM_NNODES"
+echo "Tasks per node: $SLURM_NTASKS_PER_NODE"
+echo "Total tasks: $WORLD_SIZE"
+echo "Master node: $MASTER_ADDR"
+echo "Master port: $MASTER_PORT"
+echo "========================================="
+
+# Run distributed training
+srun python core/main_distributed.py \
+    --distributed \
+    --config config/config.yaml \
+    --epochs 100 \
+    --results-dir results/distributed_${SLURM_JOB_ID}
+
+echo "Distributed training completed on $(date)"

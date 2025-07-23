@@ -1,168 +1,166 @@
 #!/usr/bin/env python3
 """
-GPU and Distributed Training Test Script
-Tests CUDA availability and distributed communication
+GPU Test Script for HPC Environment
+Tests CUDA availability and basic PyTorch operations
 """
 
 import torch
-import torch.distributed as dist
-import os
 import sys
+import os
 from datetime import datetime
 
-def test_cuda():
-    """Test CUDA availability and properties"""
-    print("=" * 60)
-    print("CUDA AVAILABILITY TEST")
-    print("=" * 60)
+def test_cuda_availability():
+    """Test if CUDA is available and functioning"""
+    print("="*60)
+    print("CUDA Availability Test")
+    print("="*60)
     
     cuda_available = torch.cuda.is_available()
     print(f"CUDA Available: {cuda_available}")
     
     if cuda_available:
-        device_count = torch.cuda.device_count()
-        print(f"Number of GPUs: {device_count}")
+        print(f"CUDA Version: {torch.version.cuda}")
+        print(f"PyTorch Version: {torch.__version__}")
+        print(f"Number of GPUs: {torch.cuda.device_count()}")
         
-        for i in range(device_count):
+        for i in range(torch.cuda.device_count()):
             print(f"\nGPU {i}:")
             print(f"  Name: {torch.cuda.get_device_name(i)}")
-            props = torch.cuda.get_device_properties(i)
-            print(f"  Compute Capability: {props.major}.{props.minor}")
-            print(f"  Total Memory: {props.total_memory / 1024**3:.2f} GB")
-            print(f"  Multiprocessors: {props.multi_processor_count}")
-        
-        # Test tensor operations
-        print("\nTesting tensor operations on GPU...")
-        try:
-            x = torch.randn(1000, 1000).cuda()
-            y = torch.randn(1000, 1000).cuda()
-            z = torch.matmul(x, y)
-            print(f"Matrix multiplication successful. Result shape: {z.shape}")
-            
-            # Test memory allocation
-            try:
-                large_tensor = torch.randn(10000, 10000).cuda()
-                print(f"Large tensor allocation successful: {large_tensor.shape}")
-                del large_tensor
-            except RuntimeError as e:
-                print(f"Large tensor allocation failed: {e}")
-            
-        except Exception as e:
-            print(f"GPU tensor operations failed: {e}")
+            print(f"  Memory: {torch.cuda.get_device_properties(i).total_memory / 1e9:.2f} GB")
+            print(f"  Compute Capability: {torch.cuda.get_device_properties(i).major}.{torch.cuda.get_device_properties(i).minor}")
     else:
-        print("CUDA is not available. Please check your installation.")
+        print("CUDA is not available!")
+        print("Please check your CUDA installation and environment modules")
+        return False
     
-    return cuda_available
+    return True
 
-def test_distributed():
-    """Test distributed training setup"""
-    print("\n" + "=" * 60)
-    print("DISTRIBUTED TRAINING TEST")
-    print("=" * 60)
+def test_tensor_operations():
+    """Test basic tensor operations on GPU"""
+    print("\n" + "="*60)
+    print("Tensor Operations Test")
+    print("="*60)
     
-    # Check environment variables
-    env_vars = ['SLURM_PROCID', 'SLURM_NTASKS', 'MASTER_ADDR', 'MASTER_PORT']
-    print("Environment variables:")
-    for var in env_vars:
-        value = os.environ.get(var, 'Not set')
-        print(f"  {var}: {value}")
-    
-    # Try to initialize distributed
-    if 'SLURM_PROCID' in os.environ:
-        try:
-            rank = int(os.environ['SLURM_PROCID'])
-            world_size = int(os.environ['SLURM_NTASKS'])
-            
-            print(f"\nInitializing distributed with rank {rank}/{world_size}")
-            
-            dist.init_process_group(
-                backend='nccl',
-                init_method='env://',
-                rank=rank,
-                world_size=world_size
-            )
-            
-            print("Distributed initialization successful!")
-            
-            # Test all_reduce
-            tensor = torch.ones(1).cuda() * (rank + 1)
-            print(f"Before all_reduce: {tensor.item()}")
-            
-            dist.all_reduce(tensor)
-            print(f"After all_reduce: {tensor.item()}")
-            
-            dist.destroy_process_group()
-            print("Distributed test completed successfully!")
-            
-        except Exception as e:
-            print(f"Distributed initialization failed: {e}")
-    else:
-        print("\nNot running under SLURM. Skipping distributed test.")
-
-def test_performance():
-    """Basic performance test"""
-    if not torch.cuda.is_available():
-        print("\nSkipping performance test (no GPU available)")
-        return
-    
-    print("\n" + "=" * 60)
-    print("PERFORMANCE TEST")
-    print("=" * 60)
-    
-    # Test different operations
-    sizes = [1024, 2048, 4096]
-    
-    for size in sizes:
-        print(f"\nMatrix size: {size}x{size}")
+    try:
+        # Create tensors
+        size = (1000, 1000)
+        a = torch.randn(size).cuda()
+        b = torch.randn(size).cuda()
         
-        # Create random matrices
-        a = torch.randn(size, size).cuda()
-        b = torch.randn(size, size).cuda()
+        # Test operations
+        print(f"Created tensors of size: {size}")
         
-        # Warmup
-        for _ in range(3):
-            _ = torch.matmul(a, b)
-        
-        # Time the operation
-        torch.cuda.synchronize()
+        # Matrix multiplication
         start = torch.cuda.Event(enable_timing=True)
         end = torch.cuda.Event(enable_timing=True)
         
         start.record()
-        for _ in range(10):
-            c = torch.matmul(a, b)
+        c = torch.matmul(a, b)
         end.record()
         
         torch.cuda.synchronize()
-        elapsed = start.elapsed_time(end) / 10  # Average time in ms
+        elapsed = start.elapsed_time(end)
         
-        flops = 2 * size**3  # Approximate FLOPs for matrix multiplication
-        tflops = (flops / elapsed / 1e9)  # TFLOPs
+        print(f"Matrix multiplication completed in: {elapsed:.2f} ms")
+        print(f"Result shape: {c.shape}")
         
-        print(f"  Average time: {elapsed:.2f} ms")
-        print(f"  Performance: {tflops:.2f} TFLOPs")
+        # Memory info
+        print(f"\nGPU Memory Usage:")
+        print(f"  Allocated: {torch.cuda.memory_allocated() / 1e9:.2f} GB")
+        print(f"  Cached: {torch.cuda.memory_reserved() / 1e9:.2f} GB")
         
-        del a, b, c
+        return True
+        
+    except Exception as e:
+        print(f"Error during tensor operations: {e}")
+        return False
+
+def test_multi_gpu():
+    """Test multi-GPU setup if available"""
+    if torch.cuda.device_count() > 1:
+        print("\n" + "="*60)
+        print("Multi-GPU Test")
+        print("="*60)
+        
+        try:
+            # Create a simple model
+            model = torch.nn.Linear(100, 10)
+            model = torch.nn.DataParallel(model)
+            model = model.cuda()
+            
+            # Test forward pass
+            x = torch.randn(32, 100).cuda()
+            output = model(x)
+            
+            print(f"Multi-GPU forward pass successful")
+            print(f"Input shape: {x.shape}")
+            print(f"Output shape: {output.shape}")
+            
+            return True
+            
+        except Exception as e:
+            print(f"Error during multi-GPU test: {e}")
+            return False
+    else:
+        print("\nOnly one GPU available, skipping multi-GPU test")
+        return True
+
+def test_distributed_setup():
+    """Test distributed training setup"""
+    print("\n" + "="*60)
+    print("Distributed Setup Test")
+    print("="*60)
+    
+    # Check environment variables
+    env_vars = ['MASTER_ADDR', 'MASTER_PORT', 'WORLD_SIZE', 'RANK']
+    
+    for var in env_vars:
+        value = os.environ.get(var, 'Not set')
+        print(f"{var}: {value}")
+    
+    # Check if running under SLURM
+    if 'SLURM_JOB_ID' in os.environ:
+        print(f"\nSLURM Job ID: {os.environ['SLURM_JOB_ID']}")
+        print(f"SLURM Node List: {os.environ.get('SLURM_JOB_NODELIST', 'Not set')}")
+        print(f"SLURM Task ID: {os.environ.get('SLURM_PROCID', 'Not set')}")
+    else:
+        print("\nNot running under SLURM")
+    
+    return True
 
 def main():
     """Run all tests"""
-    print(f"Starting GPU and Distributed Tests - {datetime.now()}")
+    print(f"GPU Test Script - {datetime.now()}")
     print(f"Python: {sys.version}")
-    print(f"PyTorch: {torch.__version__}")
+    print(f"Working Directory: {os.getcwd()}")
     
-    # Test CUDA
-    cuda_ok = test_cuda()
+    all_passed = True
     
-    # Test distributed if available
-    test_distributed()
+    # Run tests
+    if not test_cuda_availability():
+        all_passed = False
     
-    # Test performance
-    if cuda_ok:
-        test_performance()
+    if torch.cuda.is_available():
+        if not test_tensor_operations():
+            all_passed = False
+        
+        if not test_multi_gpu():
+            all_passed = False
     
-    print("\n" + "=" * 60)
-    print("All tests completed!")
-    print("=" * 60)
+    test_distributed_setup()
+    
+    # Summary
+    print("\n" + "="*60)
+    print("Test Summary")
+    print("="*60)
+    
+    if all_passed:
+        print("✓ All tests passed!")
+        print("The environment is ready for GPU training")
+    else:
+        print("✗ Some tests failed!")
+        print("Please check the error messages above")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

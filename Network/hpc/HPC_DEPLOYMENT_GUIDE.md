@@ -1,284 +1,257 @@
 # HPC Deployment Guide for Fiber Optics Neural Network
 
-This guide provides detailed instructions for deploying and running the Polar Bear Fiber Optics Neural Network on William & Mary's Bora HPC cluster.
+This guide provides instructions for deploying and running the Fiber Optics Neural Network system on the William & Mary Kuro HPC cluster or similar HPC systems.
 
-## Table of Contents
-1. [Initial Setup](#initial-setup)
-2. [Single GPU Training](#single-gpu-training)
-3. [Multi-GPU Distributed Training](#multi-gpu-distributed-training)
-4. [Performance Optimization](#performance-optimization)
-5. [Troubleshooting](#troubleshooting)
-6. [Best Practices](#best-practices)
+## Prerequisites
 
-## Initial Setup
+- Access to the HPC cluster with GPU nodes
+- Basic familiarity with SLURM job scheduler
+- Storage quota for datasets and model checkpoints
 
-### 1. Login to Bora
+## Quick Start
+
+1. **Clone the repository** to your HPC home directory:
+   ```bash
+   cd $HOME
+   git clone https://github.com/your-repo/polar-bear.git
+   cd polar-bear/Network
+   ```
+
+2. **Set up the environment**:
+   ```bash
+   chmod +x hpc/setup_environment.sh
+   ./hpc/setup_environment.sh
+   ```
+
+3. **Prepare your data**:
+   - Copy your fiber optic images to `dataset/` directory
+   - Place reference images in `reference/` directory
+   - Add sample images to `samples/` for testing
+
+4. **Configure paths** in the SLURM scripts:
+   - Edit `hpc/run_job.slurm` and update:
+     - Email address for notifications
+     - Path to project directory
+     - Any module names specific to your HPC
+
+5. **Submit a job**:
+   ```bash
+   sbatch hpc/run_job.slurm
+   ```
+
+## Available SLURM Scripts
+
+### 1. Single GPU Training (`run_job.slurm`)
+Basic training job for single GPU:
 ```bash
-ssh your_username@bora.wm.edu
+sbatch hpc/run_job.slurm
 ```
 
-### 2. Clone the Repository
+**Resources:**
+- 1 GPU
+- 16 CPU cores
+- 64GB RAM
+- 24 hours walltime
+
+### 2. Distributed Training (`run_distributed.slurm`)
+Multi-node, multi-GPU distributed training:
 ```bash
-cd /your/work/directory
-git clone https://github.com/your-repo/polar-bear.git
-cd polar-bear/Network
+sbatch hpc/run_distributed.slurm
 ```
 
-### 3. Run Setup Script
+**Resources:**
+- 2 nodes, 4 GPUs per node (8 GPUs total)
+- 8 CPU cores per task
+- 256GB RAM per node
+- 48 hours walltime
+
+### 3. Performance Benchmark (`run_benchmark.slurm`)
+Test inference speed and memory usage:
 ```bash
-cd hpc
-chmod +x setup_environment.sh
-./setup_environment.sh
-source setup_env.sh
+sbatch hpc/run_benchmark.slurm
 ```
 
-### 4. Test GPU Access
-```bash
-# Request interactive GPU session
-salloc --partition=gpu --gres=gpu:1 --time=0:30:00
+**Resources:**
+- 1 GPU
+- 16 CPU cores
+- 64GB RAM
+- 4 hours walltime
 
-# Test GPU
-python test_gpu.py
+### 4. Interactive Debugging
+Get an interactive GPU session:
+```bash
+./hpc/interactive_debug.sh
 ```
 
-## Single GPU Training
+## Configuration
 
-### Basic Training Job
-Edit the SLURM script to set your email and paths:
-```bash
-nano run_single_gpu.slurm
-# Update: --mail-user=your_email@wm.edu
-# Update: cd /path/to/polar-bear/Network
-```
+### Adjusting for Your HPC System
 
-Submit the job:
-```bash
-sbatch run_single_gpu.slurm
-```
+1. **Module names** - Check available modules:
+   ```bash
+   module avail cuda
+   module avail python
+   ```
+   Update module names in SLURM scripts accordingly.
 
-Monitor job status:
+2. **Partition names** - Check available partitions:
+   ```bash
+   sinfo
+   ```
+   Update `--partition` in SLURM scripts.
+
+3. **GPU types** - Check available GPUs:
+   ```bash
+   sinfo -o "%P %G"
+   ```
+   Update `--gres` if needed (e.g., `--gres=gpu:v100:1`).
+
+### Optimizing Performance
+
+1. **Batch size** - Edit `config/config.yaml`:
+   ```yaml
+   training:
+     batch_size: 128  # Adjust based on GPU memory
+   ```
+
+2. **Number of workers** - Based on CPU cores:
+   ```yaml
+   system:
+     num_workers: 16  # Set to number of CPUs
+   ```
+
+3. **Mixed precision training** - Already enabled:
+   ```yaml
+   training:
+     use_amp: true
+     amp_opt_level: "O2"
+   ```
+
+## Monitoring Jobs
+
+### Check job status:
 ```bash
 squeue -u $USER
-tail -f logs/fiber_optics_*.out
 ```
 
-### Custom Training Parameters
+### View job output:
 ```bash
-# Edit config.yaml for training parameters
-nano config.yaml
-
-# Or pass parameters directly
-sbatch run_single_gpu.slurm --epochs 100 --batch-size 64
+tail -f logs/fiber_optics_<job_id>.out
 ```
 
-## Multi-GPU Distributed Training
-
-### Small Scale (2-4 GPUs)
+### Cancel a job:
 ```bash
-# Edit distributed script
-nano run_distributed.slurm
-# Update paths and email
-
-# Submit for 4 GPUs across 2 nodes
-sbatch --nodes=2 --ntasks-per-node=2 run_distributed.slurm
+scancel <job_id>
 ```
 
-### Large Scale (8+ GPUs)
+### Check GPU utilization:
 ```bash
-# Use the scaling script for optimal performance
-sbatch run_multinode_scaling.slurm
+ssh <node_name>
+nvidia-smi
 ```
 
-### Monitoring Distributed Training
+## Data Management
+
+### Using scratch space for better I/O:
 ```bash
-# Check all tasks
-squeue -u $USER -t RUNNING
-
-# Monitor master node output
-tail -f logs/fiber_optics_dist_*.out
-
-# Check GPU utilization across nodes
-ssh node001 nvidia-smi
+# In your SLURM script, copy data to scratch
+cp -r $HOME/polar-bear/Network/dataset $SCRATCH/
+export DATA_PATH=$SCRATCH/dataset
 ```
 
-## Performance Optimization
-
-### 1. Data Loading Optimization
-```yaml
-# In config.yaml
-training:
-  num_workers: 16  # 2x number of GPUs
-  pin_memory: true
-  prefetch_factor: 2
-```
-
-### 2. Mixed Precision Training
-```yaml
-training:
-  use_amp: true  # Automatic Mixed Precision
-  gradient_accumulation_steps: 4
-```
-
-### 3. NCCL Optimization
-Add to SLURM script:
+### Cleaning up:
 ```bash
-export NCCL_IB_DISABLE=0
-export NCCL_NET_GDR_LEVEL=2
-export NCCL_TREE_THRESHOLD=0
+# At the end of job, copy results back
+cp -r $SCRATCH/results/* $HOME/polar-bear/Network/results/
 ```
-
-### 4. Batch Size Scaling
-- Single V100: batch_size = 32-64
-- Multi-GPU: batch_size = 16-32 per GPU
-- Gradient accumulation for larger effective batch sizes
 
 ## Troubleshooting
 
-### Common Issues
+### Out of Memory (OOM)
+- Reduce batch size in config.yaml
+- Enable gradient checkpointing
+- Use mixed precision training
 
-1. **CUDA Out of Memory**
+### CUDA errors
+1. Check CUDA version compatibility:
    ```bash
-   # Reduce batch size in config.yaml
-   # Or use gradient accumulation
-   training:
-     batch_size: 16
-     gradient_accumulation_steps: 4
+   python hpc/test_gpu.py
    ```
 
-2. **Distributed Training Hangs**
+2. Ensure correct modules are loaded:
    ```bash
-   # Enable NCCL debugging
-   export NCCL_DEBUG=INFO
-   
-   # Check network connectivity
-   srun --nodes=2 hostname
+   module list
    ```
 
-3. **Slow Data Loading**
-   ```bash
-   # Check data location
-   # Move data to fast scratch space
-   cp -r /path/to/data /scratch/$USER/
-   ```
+### Slow data loading
+- Increase num_workers
+- Use SSD/scratch space for data
+- Enable persistent_workers in config
 
-4. **Module Not Found**
-   ```bash
-   # Ensure environment is activated
-   source hpc/setup_env.sh
-   
-   # Reinstall requirements
-   pip install -r requirements.txt
-   ```
-
-### Performance Debugging
-```python
-# Add to main_distributed.py for profiling
-import torch.profiler
-
-with torch.profiler.profile(
-    activities=[torch.profiler.ProfilerActivity.CPU,
-                torch.profiler.ProfilerActivity.CUDA],
-    schedule=torch.profiler.schedule(wait=1, warmup=1, active=3),
-    on_trace_ready=torch.profiler.tensorboard_trace_handler('./log/profiler'),
-    record_shapes=True,
-    with_stack=True
-) as prof:
-    # Training code here
-    pass
-```
+### Connection issues
+- Use tmux or screen for long sessions
+- Save checkpoints frequently
 
 ## Best Practices
 
-### 1. Resource Management
-- Always specify time limits appropriately
-- Use --exclusive for benchmarking
-- Release resources when done
+1. **Always test with small data first**:
+   ```bash
+   # Quick test run
+   sbatch --time=00:30:00 hpc/run_job.slurm
+   ```
 
-### 2. Data Management
+2. **Use checkpointing**:
+   - Model saves automatically to `checkpoints/`
+   - Resume from checkpoint if job times out
+
+3. **Monitor resource usage**:
+   ```bash
+   # After job completes
+   seff <job_id>
+   ```
+
+4. **Request appropriate resources**:
+   - Don't over-request memory/time
+   - Use job arrays for parameter sweeps
+
+## Advanced Usage
+
+### Custom experiments
+Create your own SLURM script based on the templates:
 ```bash
-# Stage data to scratch for better I/O
-mkdir -p /scratch/$USER/fiber_optics_data
-rsync -av /path/to/data/ /scratch/$USER/fiber_optics_data/
+cp hpc/run_job.slurm hpc/my_experiment.slurm
+# Edit as needed
+sbatch hpc/my_experiment.slurm
 ```
 
-### 3. Checkpointing
+### Performance profiling
+Enable profiling in config:
 ```yaml
-# Enable frequent checkpointing
-training:
-  checkpoint_interval: 10  # epochs
-  save_best_only: false
+monitoring:
+  enable_profiling: true
+  profile_batches: [10, 50, 100]
 ```
 
-### 4. Job Arrays for Hyperparameter Search
+### Using Weights & Biases
+Set up W&B credentials:
 ```bash
-#!/bin/bash
-#SBATCH --array=0-9
-#SBATCH --job-name=fiber_hparam
-
-LEARNING_RATES=(0.001 0.0005 0.0001)
-BATCH_SIZES=(16 32 64)
-
-LR=${LEARNING_RATES[$SLURM_ARRAY_TASK_ID % 3]}
-BS=${BATCH_SIZES[$SLURM_ARRAY_TASK_ID / 3]}
-
-srun python main.py --lr $LR --batch-size $BS
-```
-
-### 5. Monitoring and Logging
-```bash
-# Use tensorboard
-tensorboard --logdir=logs --host=0.0.0.0 --port=6006
-
-# Or Weights & Biases
 wandb login
-export WANDB_PROJECT=fiber-optics-hpc
 ```
 
-## Example Workflow
-
-### Complete Training Pipeline
-```bash
-# 1. Setup environment
-cd /path/to/polar-bear/Network
-source hpc/setup_env.sh
-
-# 2. Test single GPU
-sbatch --partition=gpu --gres=gpu:1 --wrap="python main.py --epochs 1"
-
-# 3. Run full training
-sbatch hpc/run_distributed.slurm
-
-# 4. Monitor progress
-watch -n 60 'squeue -u $USER; tail -n 20 logs/fiber_optics_dist_*.out'
-
-# 5. Evaluate results
-sbatch --dependency=afterok:$SLURM_JOB_ID --wrap="python main.py --mode evaluate"
+Enable in config:
+```yaml
+monitoring:
+  use_wandb: true
+  wandb_project: "fiber-optics-hpc"
 ```
-
-## Performance Expectations
-
-### Single V100 GPU
-- Training speed: ~100-200 images/second
-- Memory usage: 12-16 GB
-- Typical epoch time: 5-10 minutes
-
-### Multi-GPU Scaling
-- 2 GPUs: 1.8x speedup
-- 4 GPUs: 3.5x speedup
-- 8 GPUs: 6.5x speedup
-
-### Optimization Impact
-- Mixed precision: 1.5-2x speedup
-- Optimized data loading: 20-30% improvement
-- Gradient accumulation: Allows 2-4x larger effective batch size
 
 ## Support
 
 For HPC-specific issues:
-- W&M HPC Documentation: https://www.wm.edu/it/rc/
-- Contact: hpc@wm.edu
+- Check your institution's HPC documentation
+- Contact HPC support team
 
 For software issues:
-- Create issue on GitHub repository
 - Check logs in `logs/` directory
-- Run diagnostic script: `python hpc/test_gpu.py`
+- Review error messages in `.err` files
+- Open an issue on the project repository
