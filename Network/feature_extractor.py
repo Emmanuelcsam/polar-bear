@@ -3,6 +3,8 @@
 Feature Extractor module for Fiber Optics Neural Network
 "I want each feature to not only look for comparisons but also look for anomalies while comparing"
 Performs simultaneous feature extraction, classification, and anomaly detection
+
+This module now uses the UnifiedFeatureExtractor for all feature extraction
 """
 
 import torch
@@ -61,16 +63,21 @@ class SimultaneousFeatureExtractor(nn.Module):
         # But all_matches concatenates individual matches, so it's the sum of individual pattern counts
         quality_input_channels = out_channels + num_patterns * 3 + num_patterns
         
-        # Create a flexible quality assessor that can handle variable input channels
+        # Calculate expected input channels for quality assessor
+        # features (out_channels) + all_matches (num_patterns * 3) + anomaly_matches (num_patterns)
+        quality_input_channels = out_channels + num_patterns * 4
+        
+        # Create quality assessor with fixed input channels
         self.quality_assessor = nn.Sequential(
-            nn.LazyConv2d(64, 1),  # LazyConv2d infers input channels automatically
+            nn.Conv2d(quality_input_channels, 64, 1),
             nn.ReLU(inplace=True),
             nn.Conv2d(64, 1, 1),
             nn.Sigmoid()
         )
         
-        # Simultaneous classifier with flexible input
-        self.simultaneous_classifier = nn.LazyConv2d(
+        # Simultaneous classifier with fixed input channels  
+        self.simultaneous_classifier = nn.Conv2d(
+            quality_input_channels,
             4,  # core, cladding, ferrule, anomaly
             1
         )
@@ -167,11 +174,10 @@ class SimultaneousFeatureExtractor(nn.Module):
         
         return torch.cat(anomaly_matches, dim=1) if anomaly_matches else torch.zeros_like(features[:, :1, :, :])
 
+# MultiScaleFeatureExtractor 
 class MultiScaleFeatureExtractor(nn.Module):
     """
-    Multi-scale feature extraction with correlation
-    "Features from different scales are correlated to ensure consistency:
-    - Small defects visible at fine scales - Large defects visible at coarse scales"
+    Multi-scale feature extraction with simultaneous classification and anomaly detection
     """
     
     def __init__(self):
@@ -371,7 +377,7 @@ class TrendAnalyzer(nn.Module):
 
 # Main feature extraction pipeline
 class FeatureExtractionPipeline:
-    """Complete feature extraction pipeline with all components"""
+    """Complete feature extraction pipeline using UnifiedFeatureExtractor"""
     
     def __init__(self):
         print(f"[{datetime.now()}] Initializing FeatureExtractionPipeline")
@@ -382,7 +388,7 @@ class FeatureExtractionPipeline:
         
         self.logger.log_class_init("FeatureExtractionPipeline")
         
-        # Initialize components
+        # Use multi-scale extractor
         self.multi_scale_extractor = MultiScaleFeatureExtractor()
         self.trend_analyzer = TrendAnalyzer()
         

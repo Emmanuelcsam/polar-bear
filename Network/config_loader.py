@@ -372,6 +372,31 @@ class NestedDict(OrderedDict):
         try:
             return self[key]
         except KeyError:
+            # Handle special cases for backward compatibility
+            if key == 'REGION_CATEGORIES':
+                return {
+                    'core': ['core-batch-1', 'core-batch-2', 'core-batch-3', 'core-batch-4',
+                            'core-batch-5', 'core-batch-6', 'core-batch-7', 'core-batch-8',
+                            'large-core-batch'],
+                    'cladding': ['50-cladding', '91-cladding', 'cladding-batch-1',
+                                'cladding-batch-3', 'cladding-batch-4', 'cladding-batch-5',
+                                'cladding-features-batch-1'],
+                    'ferrule': ['ferrule-batch-1', 'ferrule-batch-2', 'ferrule-batch-3',
+                              'ferrule-batch-4'],
+                    'defects': ['dirty-image', '19700101000222-scratch.jpg',
+                              '19700101000223-scratch.jpg', '19700101000237-scratch.jpg',
+                              '91-scratched', 'scratch-library-bmp']
+                }
+            elif key == 'TENSORIZED_DATA_PATH':
+                return Path('data/tensorized')
+            elif key == 'BATCH_SIZE':
+                return self.get('training', {}).get('batch_size', 16)
+            elif key == 'NUM_WORKERS':
+                return self.get('system', {}).get('num_workers', 4)
+            elif key == 'PIN_MEMORY':
+                return True
+            elif key == 'ANOMALY_THRESHOLD':
+                return self.get('anomaly', {}).get('threshold', 0.3)
             raise AttributeError(f"No attribute '{key}'")
     
     def __setattr__(self, key, value):

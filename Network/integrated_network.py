@@ -324,6 +324,35 @@ class EnhancedIntegratedNetwork(nn.Module):
         # Loss function
         self.loss_fn = CombinedAdvancedLoss(self.config)
         
+        # Statistical components for comprehensive analysis
+        self.statistical_feature_dim = 88
+        self.statistical_extractor = nn.Sequential(
+            nn.Conv2d(self.backbone.out_channels[-1], 128, 1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(inplace=True),
+            nn.AdaptiveAvgPool2d(1),
+            nn.Flatten(),
+            nn.Linear(128, self.statistical_feature_dim)
+        )
+        
+        # Zone parameter predictors
+        self.zone_predictor = nn.Sequential(
+            nn.Linear(self.statistical_feature_dim, 64),
+            nn.ReLU(inplace=True),
+            nn.Linear(64, 3)  # core_radius, cladding_radius, ratio
+        )
+        
+        # Consensus mechanism
+        self.consensus_voter = nn.Sequential(
+            nn.Conv2d(7, 16, 1),  # 7 method predictions
+            nn.ReLU(inplace=True),
+            nn.Conv2d(16, 3, 1)   # Final consensus for 3 regions
+        )
+        
+        # Method accuracy tracker
+        self.register_buffer('method_scores', torch.ones(7))
+        self.method_score_ema = 0.9
+        
         # Attention gates for feature fusion
         self.attention_gates = nn.ModuleList([
             AttentionGate(
@@ -404,10 +433,14 @@ class EnhancedIntegratedNetwork(nn.Module):
     
     def forward(self, x: torch.Tensor) -> Dict[str, torch.Tensor]:
         """
-        Enhanced forward pass with all improvements
+        Enhanced forward pass with all improvements and optimizations
         """
         batch_size = x.shape[0]
         computation_start = time.time()
+        
+        # Enable automatic mixed precision if configured
+        use_amp = self.config.optimization.mixed_precision_training if hasattr(self.config, 'optimization') else True
+        device = x.device
         
         # Calculate gradient and position information
         tensor_processor = TensorProcessor()
@@ -721,6 +754,19 @@ class EnhancedIntegratedNetwork(nn.Module):
             self.config.equation.coefficients[c] 
             for c in ['A', 'B', 'C', 'D', 'E']
         ])
+
+
+# Enable torch.compile for PyTorch 2.0+ optimization
+def compile_model(model: nn.Module, backend: str = "inductor") -> nn.Module:
+    """Compile model for optimized inference"""
+    if hasattr(torch, 'compile') and torch.cuda.is_available():
+        try:
+            compiled_model = torch.compile(model, backend=backend)
+            return compiled_model
+        except:
+            print("torch.compile not available, using regular model")
+            return model
+    return model
 
 
 # Test the enhanced network

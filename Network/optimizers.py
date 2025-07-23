@@ -280,7 +280,7 @@ class Lookahead(Optimizer):
             self.pullback_momentum_buffer = state_dict['slow_state']['pullback_momentum_buffer']
 
 
-class SAMWithLookahead(Optimizer):
+class SAMWithLookahead:
     """
     Combined SAM + Lookahead optimizer for optimal performance
     "Replace standard gradient descent with SAM + Lookahead"
@@ -307,8 +307,7 @@ class SAMWithLookahead(Optimizer):
         
         # Wrap with SAM
         self.sam_optimizer = SAM(
-            params, base_optimizer_fn, rho=rho, adaptive=adaptive,
-            lr=lr, betas=betas, weight_decay=weight_decay
+            params, base_optimizer_fn, rho=rho, adaptive=adaptive
         )
         
         # Wrap with Lookahead
@@ -319,8 +318,6 @@ class SAMWithLookahead(Optimizer):
             lr=lr, rho=rho, k=k, alpha=alpha, 
             weight_decay=weight_decay, betas=betas
         )
-        
-        super(SAMWithLookahead, self).__init__(params, self.defaults)
         
         self.logger.info("SAMWithLookahead optimizer initialized")
         print(f"[{datetime.now()}] SAMWithLookahead initialized successfully")

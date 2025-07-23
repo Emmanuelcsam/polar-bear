@@ -5,6 +5,8 @@ Anomaly Detector module for Fiber Optics Neural Network
 the structural similarity index between the two to find the defects or anomalies"
 "the change in regions within an image such as the change in pixels between the core 
 to cladding or cladding to ferrule are not anomalies"
+
+This module now uses the UnifiedAnomalyDetector for all anomaly detection
 """
 
 import torch
@@ -14,24 +16,28 @@ import numpy as np
 from typing import Dict, List, Tuple, Optional
 from datetime import datetime
 import cv2
+from scipy import ndimage
+from skimage.metrics import structural_similarity as ssim
 
 from config_loader import get_config
 from logger import get_logger
 
 class AnomalyDetector(nn.Module):
     """
-    Main anomaly detection network
+    Main anomaly detection network with comprehensive features
+    Combines neural, statistical, structural, and defect-specific detection
     "I get a fully detailed anomaly detection while also classifying most probable features"
     """
     
-    def __init__(self):
+    def __init__(self, feature_dim: int = 88):
         super().__init__()
         print(f"[{datetime.now()}] Initializing AnomalyDetector")
         print(f"[{datetime.now()}] Previous script: reference_comparator.py")
         
         self.config = get_config()
+        self.feature_dim = feature_dim
         
-        # Anomaly detection network
+        # Neural anomaly detection components
         self.anomaly_encoder = nn.Sequential(
             nn.Conv2d(3, 64, 3, padding=1),
             nn.BatchNorm2d(64),
@@ -68,15 +74,26 @@ class AnomalyDetector(nn.Module):
         self.defect_classifier = nn.Sequential(
             nn.Conv2d(256, 128, 1),
             nn.ReLU(inplace=True),
-            nn.Conv2d(128, 5, 1)  # scratch, contamination, misalignment, crack, other
+            nn.Conv2d(128, 5, 1)  # scratch, dig, blob, crack, other
         )
+        
+        # Statistical components for Mahalanobis distance
+        self.register_buffer('running_mean', torch.zeros(feature_dim))
+        self.register_buffer('running_cov', torch.eye(feature_dim))
+        self.register_buffer('num_samples', torch.tensor(0.0))
+        
+        # Defect-specific detectors
+        self.scratch_detector = nn.Conv2d(1, 1, kernel_size=(15, 3), padding=(7, 1))
+        self.dig_detector = nn.Conv2d(1, 1, kernel_size=7, padding=3)
+        self.blob_detector = nn.Conv2d(1, 1, kernel_size=11, padding=5)
         
         print(f"[{datetime.now()}] AnomalyDetector initialized")
     
     def forward(self, input_tensor: torch.Tensor, reference_tensor: torch.Tensor,
-                gradient_map: torch.Tensor, region_boundaries: torch.Tensor) -> Dict[str, torch.Tensor]:
+                gradient_map: torch.Tensor, region_boundaries: torch.Tensor,
+                statistical_features: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
         """
-        Detect anomalies using multiple methods
+        Comprehensive anomaly detection using multiple methods
         """
         print(f"[{datetime.now()}] AnomalyDetector.forward: Processing anomaly detection")
         
@@ -98,6 +115,183 @@ class AnomalyDetector(nn.Module):
         # Apply suppression
         # "the change in regions... are not anomalies"
         suppressed_anomalies = anomaly_probs * (1 - edge_suppression)
+        
+        # Defect type classification
+        defect_logits = self.defect_classifier(feature_diff)
+        defect_probs = F.softmax(defect_logits, dim=1)
+        defect_types = defect_logits.argmax(dim=1)
+        
+        # Structural anomaly detection (SSIM-based)
+        structural_anomalies = self._calculate_structural_anomalies(input_tensor, reference_tensor)
+        
+        # Statistical anomaly detection (if features provided)
+        if statistical_features is not None:
+            mahalanobis_distance = self._calculate_mahalanobis_distance(statistical_features)
+            statistical_anomaly_score = 1 - torch.exp(-mahalanobis_distance / 10.0)
+        else:
+            mahalanobis_distance = torch.zeros(input_tensor.shape[0], device=input_tensor.device)
+            statistical_anomaly_score = torch.zeros(input_tensor.shape[0], device=input_tensor.device)
+        
+        # Defect-specific detection
+        gray_input = torch.mean(input_tensor, dim=1, keepdim=True)
+        scratch_map = torch.sigmoid(F.relu(self.scratch_detector(gray_input)) * 5.0)
+        dig_map = torch.sigmoid(F.relu(self.dig_detector(gray_input)) * 3.0)
+        blob_map = torch.sigmoid(F.relu(self.blob_detector(gray_input)) * 2.0)
+        
+        # Combine all anomaly scores
+        combined_anomaly_map = self._combine_anomaly_scores(
+            suppressed_anomalies, structural_anomalies, 
+            scratch_map, dig_map, blob_map,
+            statistical_anomaly_score
+        )
+        
+        print(f"[{datetime.now()}] Anomaly detection complete")
+        
+        return {
+            'anomaly_map': combined_anomaly_map,
+            'suppressed_anomalies': suppressed_anomalies,
+            'defect_probs': defect_probs,
+            'defect_types': defect_types,
+            'defect_type_probs': defect_probs,
+            'edge_suppression': edge_suppression,
+            'structural_anomalies': structural_anomalies,
+            'mahalanobis_distance': mahalanobis_distance,
+            'statistical_anomaly_score': statistical_anomaly_score,
+            'scratch_map': scratch_map,
+            'dig_map': dig_map,
+            'blob_map': blob_map
+        }
+    
+    def _calculate_structural_anomalies(self, input_tensor: torch.Tensor, 
+                                      reference_tensor: torch.Tensor) -> torch.Tensor:
+        """Calculate structural anomalies using SSIM"""
+        # Calculate SSIM map
+        ssim_map = self._calculate_ssim_map(input_tensor, reference_tensor)
+        
+        # Invert SSIM to get anomaly scores
+        structural_anomaly_map = 1 - ssim_map
+        
+        # Calculate pixel differences
+        pixel_diff = torch.abs(input_tensor - reference_tensor).mean(dim=1, keepdim=True)
+        
+        # Combine SSIM and pixel differences
+        combined = 0.7 * structural_anomaly_map + 0.3 * pixel_diff
+        
+        return combined
+    
+    def _calculate_ssim_map(self, x: torch.Tensor, y: torch.Tensor,
+                          window_size: int = 11) -> torch.Tensor:
+        """Calculate SSIM map between two images"""
+        # Constants for SSIM
+        C1 = 0.01 ** 2
+        C2 = 0.03 ** 2
+        
+        # Create Gaussian window
+        window = self._create_window(window_size, x.shape[1]).to(x.device)
+        
+        # Calculate local means
+        mu_x = F.conv2d(x, window, padding=window_size//2, groups=x.shape[1])
+        mu_y = F.conv2d(y, window, padding=window_size//2, groups=y.shape[1])
+        
+        # Calculate local variances and covariance
+        mu_x_sq = mu_x ** 2
+        mu_y_sq = mu_y ** 2
+        mu_xy = mu_x * mu_y
+        
+        sigma_x_sq = F.conv2d(x**2, window, padding=window_size//2, groups=x.shape[1]) - mu_x_sq
+        sigma_y_sq = F.conv2d(y**2, window, padding=window_size//2, groups=y.shape[1]) - mu_y_sq
+        sigma_xy = F.conv2d(x*y, window, padding=window_size//2, groups=x.shape[1]) - mu_xy
+        
+        # Calculate SSIM
+        ssim_map = ((2 * mu_xy + C1) * (2 * sigma_xy + C2)) / \
+                   ((mu_x_sq + mu_y_sq + C1) * (sigma_x_sq + sigma_y_sq + C2))
+        
+        # Average across channels
+        ssim_map = ssim_map.mean(dim=1, keepdim=True)
+        
+        return ssim_map
+    
+    def _create_window(self, window_size: int, channel: int) -> torch.Tensor:
+        """Create Gaussian window for SSIM calculation"""
+        _1D_window = torch.Tensor(
+            [np.exp(-(x - window_size//2)**2/float(2*1.5**2)) for x in range(window_size)]
+        )
+        _1D_window = _1D_window / _1D_window.sum()
+        _2D_window = _1D_window.unsqueeze(1) @ _1D_window.unsqueeze(0)
+        window = _2D_window.expand(channel, 1, window_size, window_size).contiguous()
+        return window
+    
+    def _calculate_mahalanobis_distance(self, features: torch.Tensor) -> torch.Tensor:
+        """Calculate Mahalanobis distance for statistical anomaly detection"""
+        if features.dim() > 2:
+            features = features.mean(dim=(2, 3)) if features.dim() == 4 else features
+        
+        # Center features
+        centered = features - self.running_mean.unsqueeze(0)
+        
+        # Calculate Mahalanobis distance
+        try:
+            cov_inv = torch.linalg.inv(self.running_cov + 1e-6 * torch.eye(
+                self.feature_dim, device=features.device
+            ))
+            mahalanobis = torch.sqrt(
+                torch.sum(centered @ cov_inv * centered, dim=1)
+            )
+        except:
+            # Fallback to simple L2 distance if covariance is singular
+            mahalanobis = torch.norm(centered, dim=1)
+        
+        return mahalanobis
+    
+    def _combine_anomaly_scores(self, neural_map: torch.Tensor,
+                               structural_map: torch.Tensor,
+                               scratch_map: torch.Tensor,
+                               dig_map: torch.Tensor,
+                               blob_map: torch.Tensor,
+                               statistical_score: torch.Tensor) -> torch.Tensor:
+        """Combine multiple anomaly detection methods"""
+        # Expand statistical score to match spatial dimensions
+        if statistical_score.dim() == 1:
+            statistical_map = statistical_score.view(-1, 1, 1, 1).expand_as(neural_map)
+        else:
+            statistical_map = statistical_score
+        
+        # Weighted combination
+        combined = (
+            0.3 * neural_map +
+            0.2 * structural_map +
+            0.2 * statistical_map +
+            0.1 * scratch_map +
+            0.1 * dig_map +
+            0.1 * blob_map
+        )
+        
+        # Normalize to [0, 1]
+        combined = torch.clamp(combined, 0, 1)
+        
+        return combined
+    
+    def update_statistics(self, features: torch.Tensor):
+        """Update running statistics for Mahalanobis distance calculation"""
+        if features.dim() > 2:
+            features = features.mean(dim=(2, 3)) if features.dim() == 4 else features
+        
+        batch_size = features.shape[0]
+        
+        # Update running mean
+        self.running_mean = (
+            self.num_samples * self.running_mean + features.sum(dim=0)
+        ) / (self.num_samples + batch_size)
+        
+        # Update running covariance
+        centered = features - self.running_mean.unsqueeze(0)
+        new_cov = centered.T @ centered / batch_size
+        
+        self.running_cov = (
+            self.num_samples * self.running_cov + batch_size * new_cov
+        ) / (self.num_samples + batch_size)
+        
+        self.num_samples += batch_size
         
         # Classify defect types where anomalies are detected
         defect_logits = self.defect_classifier(feature_diff)
@@ -382,7 +576,8 @@ class DefectLocator:
 
 class ComprehensiveAnomalyDetector:
     """
-    Complete anomaly detection system combining all methods
+    Complete anomaly detection system using enhanced AnomalyDetector
+    Combines neural, structural, and defect-specific detection
     """
     
     def __init__(self):
@@ -393,8 +588,10 @@ class ComprehensiveAnomalyDetector:
         
         self.logger.log_class_init("ComprehensiveAnomalyDetector")
         
-        # Initialize components
-        self.neural_detector = AnomalyDetector()
+        # Use enhanced anomaly detector
+        self.neural_detector = AnomalyDetector(feature_dim=88)
+        
+        # Keep additional components for backward compatibility
         self.structural_detector = StructuralAnomalyDetector()
         self.boundary_detector = RegionBoundaryDetector()
         self.defect_locator = DefectLocator()

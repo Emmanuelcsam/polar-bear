@@ -30,6 +30,12 @@ from real_time_optimization import (
     ModelCompressor,
     create_student_teacher_models
 )
+from distributed_utils import (
+    init_distributed, cleanup_distributed, is_main_process,
+    wrap_model_ddp, save_checkpoint_distributed, synchronize,
+    reduce_tensor, distributed_print, DistributedMetricTracker,
+    get_rank, get_world_size
+)
 
 
 class EnhancedTrainer:
@@ -40,19 +46,32 @@ class EnhancedTrainer:
     
     def __init__(self, 
                  model: Optional[EnhancedIntegratedNetwork] = None,
-                 teacher_model: Optional[nn.Module] = None):
+                 teacher_model: Optional[nn.Module] = None,
+                 distributed: bool = False):
         """
         Initialize enhanced trainer
         
         Args:
             model: Model to train (creates new if None)
             teacher_model: Teacher model for knowledge distillation
+            distributed: Whether to use distributed training
         """
         print(f"[{datetime.now()}] Initializing EnhancedTrainer")
         print(f"[{datetime.now()}] Previous script: enhanced_integrated_network.py")
         
         self.config = get_config()
-        self.logger = get_logger("EnhancedTrainer")
+        self.distributed = distributed
+        
+        # Initialize distributed training if requested
+        if self.distributed:
+            self.rank, self.local_rank, self.world_size = init_distributed()
+            self.logger = get_logger(f"EnhancedTrainer_rank{self.rank}")
+        else:
+            self.rank = 0
+            self.local_rank = 0
+            self.world_size = 1
+            self.logger = get_logger("EnhancedTrainer")
+            
         self.logger.log_class_init("EnhancedTrainer")
         
         # Initialize model
@@ -71,10 +90,29 @@ class EnhancedTrainer:
             )
         
         # Move to device
-        self.device = self.config.get_device()
+        if self.distributed and torch.cuda.is_available():
+            self.device = torch.device(f'cuda:{self.local_rank}')
+            torch.cuda.set_device(self.device)
+        else:
+            self.device = self.config.get_device()
+            
         self.model = self.model.to(self.device)
         if self.teacher_model:
             self.teacher_model = self.teacher_model.to(self.device)
+            
+        # Wrap model with DDP if distributed
+        if self.distributed:
+            self.model = wrap_model_ddp(
+                self.model, 
+                device_ids=[self.local_rank],
+                find_unused_parameters=True
+            )
+            if self.teacher_model:
+                self.teacher_model = wrap_model_ddp(
+                    self.teacher_model,
+                    device_ids=[self.local_rank],
+                    find_unused_parameters=True
+                )
         
         # Data loader
         self.data_loader = FiberOpticsDataLoader()
@@ -98,6 +136,10 @@ class EnhancedTrainer:
         
         # Best model tracking
         self.best_val_loss = float('inf')
+        
+        # Distributed metric tracker
+        if self.distributed:
+            self.metric_tracker = DistributedMetricTracker()
         self.best_model_path = Path(self.config.system.checkpoints_path) / "best_model.pth"
         
         # Experiment tracking
@@ -153,17 +195,32 @@ class EnhancedTrainer:
         scheduler_config = self.config.optimizer.scheduler
         
         if scheduler_config.type == "reduce_on_plateau":
+            # Get the base optimizer for scheduler
+            if hasattr(self.optimizer, 'optimizer'):
+                base_optimizer = self.optimizer.optimizer  # SAMWithLookahead
+            elif hasattr(self.optimizer, 'gradient_optimizer'):
+                base_optimizer = self.optimizer.gradient_optimizer  # HybridOptimizer
+            else:
+                base_optimizer = self.optimizer
+                
             self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-                self.optimizer if not self.is_hybrid else self.optimizer.gradient_optimizer,
+                base_optimizer,
                 mode='min',
                 patience=scheduler_config.patience,
                 factor=scheduler_config.factor,
-                min_lr=scheduler_config.min_lr,
-                verbose=True
+                min_lr=scheduler_config.min_lr
             )
         elif scheduler_config.type == "cosine":
+            # Get the base optimizer for scheduler
+            if hasattr(self.optimizer, 'optimizer'):
+                base_optimizer = self.optimizer.optimizer  # SAMWithLookahead
+            elif hasattr(self.optimizer, 'gradient_optimizer'):
+                base_optimizer = self.optimizer.gradient_optimizer  # HybridOptimizer
+            else:
+                base_optimizer = self.optimizer
+                
             self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
-                self.optimizer if not self.is_hybrid else self.optimizer.gradient_optimizer,
+                base_optimizer,
                 T_max=self.config.training.num_epochs,
                 eta_min=scheduler_config.min_lr
             )
@@ -172,12 +229,13 @@ class EnhancedTrainer:
     
     def _init_wandb(self):
         """Initialize Weights & Biases tracking"""
-        wandb.init(
-            project=self.config.monitoring.wandb_project,
-            entity=self.config.monitoring.wandb_entity,
-            config=self.config._to_dict() if hasattr(self.config, '_to_dict') else dict(self.config)
-        )
-        wandb.watch(self.model)
+        if is_main_process():
+            wandb.init(
+                project=self.config.monitoring.wandb_project,
+                entity=self.config.monitoring.wandb_entity,
+                config=self.config._to_dict() if hasattr(self.config, '_to_dict') else dict(self.config)
+            )
+            wandb.watch(self.model)
     
     def train(self, 
               num_epochs: Optional[int] = None,
@@ -198,7 +256,9 @@ class EnhancedTrainer:
         
         # Get data loaders if not provided
         if train_loader is None or val_loader is None:
-            train_loader, val_loader = self.data_loader.get_data_loaders()
+            train_loader, val_loader = self.data_loader.get_data_loaders(
+                distributed=self.distributed
+            )
         
         # Training loop
         for epoch in range(self.current_epoch, self.current_epoch + num_epochs):
@@ -230,14 +290,15 @@ class EnhancedTrainer:
             epoch_time = time.time() - epoch_start
             self._log_epoch_results(epoch, train_metrics, val_metrics, epoch_time)
             
-            # Save checkpoints
+            # Save checkpoints (only on main process in distributed)
             if val_metrics['loss'] < self.best_val_loss:
                 self.best_val_loss = val_metrics['loss']
-                self._save_checkpoint(epoch, is_best=True)
-                self.logger.info(f"New best model! Loss: {self.best_val_loss:.4f}")
+                if is_main_process():
+                    self._save_checkpoint(epoch, is_best=True)
+                    self.logger.info(f"New best model! Loss: {self.best_val_loss:.4f}")
             
             # Regular checkpoint
-            if (epoch + 1) % 10 == 0:
+            if (epoch + 1) % 10 == 0 and is_main_process():
                 self._save_checkpoint(epoch, is_best=False)
             
             # Early stopping
@@ -515,14 +576,19 @@ class EnhancedTrainer:
     
     def _save_checkpoint(self, epoch: int, is_best: bool = False):
         """Save model checkpoint"""
+        # Get the actual model if using DDP
+        model_to_save = self.model.module if hasattr(self.model, 'module') else self.model
+        
         checkpoint = {
             'epoch': epoch,
-            'model_state_dict': self.model.state_dict(),
+            'model_state_dict': model_to_save.state_dict(),
             'optimizer_state_dict': self.optimizer.state_dict(),
             'scheduler_state_dict': self.scheduler.state_dict() if self.scheduler else None,
             'best_val_loss': self.best_val_loss,
             'config': self.config._to_dict() if hasattr(self.config, '_to_dict') else dict(self.config),
-            'history': dict(self.history)
+            'history': dict(self.history),
+            'distributed': self.distributed,
+            'world_size': self.world_size
         }
         
         # Save path
@@ -534,20 +600,50 @@ class EnhancedTrainer:
         else:
             path = checkpoint_dir / f"checkpoint_epoch_{epoch:04d}.pth"
         
-        torch.save(checkpoint, path)
-        self.logger.info(f"Saved checkpoint to {path}")
+        if self.distributed:
+            # Use distributed checkpoint saving
+            save_checkpoint_distributed(checkpoint, str(path), is_best=is_best)
+        else:
+            torch.save(checkpoint, path)
+            
+        if is_main_process():
+            self.logger.info(f"Saved checkpoint to {path}")
     
     def _save_training_history(self):
         """Save training history"""
         history_path = Path(self.config.system.checkpoints_path) / "training_history.npz"
         np.savez_compressed(history_path, **self.history)
         self.logger.info(f"Saved training history to {history_path}")
+        
+        # Visualize training history if enabled
+        if self.config.visualization.save_visualizations and len(self.history['train_loss']) > 0:
+            from visualizer import FiberOpticsVisualizer
+            visualizer = FiberOpticsVisualizer()
+            vis_path = Path(self.config.system.results_path) / 'training_history.png'
+            
+            # Ensure the results directory exists
+            vis_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            visualizer.plot_training_history(dict(self.history), str(vis_path))
+            self.logger.info(f"Saved training visualization to {vis_path}")
     
     def load_checkpoint(self, checkpoint_path: str):
         """Load model from checkpoint"""
         checkpoint = torch.load(checkpoint_path, map_location=self.device)
         
-        self.model.load_state_dict(checkpoint['model_state_dict'])
+        # Handle loading for DDP models
+        model_to_load = self.model.module if hasattr(self.model, 'module') else self.model
+        
+        # Handle state dict keys that might have 'module.' prefix
+        state_dict = checkpoint['model_state_dict']
+        if list(state_dict.keys())[0].startswith('module.') and not hasattr(self.model, 'module'):
+            # Remove 'module.' prefix
+            state_dict = {k[7:]: v for k, v in state_dict.items()}
+        elif not list(state_dict.keys())[0].startswith('module.') and hasattr(self.model, 'module'):
+            # Add 'module.' prefix
+            state_dict = {f'module.{k}': v for k, v in state_dict.items()}
+        
+        self.model.load_state_dict(state_dict)
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         
         if self.scheduler and checkpoint['scheduler_state_dict']:
@@ -556,6 +652,12 @@ class EnhancedTrainer:
         self.current_epoch = checkpoint['epoch'] + 1
         self.best_val_loss = checkpoint['best_val_loss']
         self.history = defaultdict(list, checkpoint['history'])
+        
+        # Check distributed compatibility
+        if checkpoint.get('distributed', False) and not self.distributed:
+            self.logger.warning("Checkpoint was saved in distributed mode but loading in single GPU mode")
+        elif not checkpoint.get('distributed', False) and self.distributed:
+            self.logger.warning("Checkpoint was saved in single GPU mode but loading in distributed mode")
         
         self.logger.info(f"Loaded checkpoint from epoch {checkpoint['epoch']}")
 

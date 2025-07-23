@@ -480,6 +480,11 @@ class FiberOpticsBackbone(nn.Module):
         # Global attention
         self.global_attention = CBAM(in_ch)
         
+        # Store output channels for each stage
+        self.out_channels = []
+        for i in range(len(num_blocks)):
+            self.out_channels.append(base_channels * (2 ** i))
+        
         self.logger.info(f"FiberOpticsBackbone initialized with {len(self.stages)} stages")
     
     def forward(self, x: torch.Tensor) -> List[torch.Tensor]:

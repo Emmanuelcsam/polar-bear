@@ -1,58 +1,97 @@
 #!/usr/bin/env python3
 """
-Main entry point for Fiber Optics Neural Network System
-Complete integrated system for fiber optic image analysis
+Unified Main Entry Point for Fiber Optics Neural Network System
+Combines both production and research modes with statistical integration
 "the overall program follows this equation I=Ax1+Bx2+Cx3... =S(R)"
 """
 
 import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import DataLoader
 import numpy as np
 from pathlib import Path
 import sys
 import time
+import json
+import cv2
 from datetime import datetime
-import argparse  # Only for documentation, not used
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Tuple, Union
 
-# Import all modules - using enhanced versions
+# Import all core modules
 from config_loader import get_config
 from logger import get_logger
 from tensor_processor import TensorProcessor
 from feature_extractor import FeatureExtractionPipeline
 from reference_comparator import ReferenceComparator
 from anomaly_detector import ComprehensiveAnomalyDetector
-from integrated_network import IntegratedAnalysisPipeline, EnhancedFiberOpticsIntegratedNetwork
+from integrated_network import (
+    IntegratedAnalysisPipeline, 
+    EnhancedFiberOpticsIntegratedNetwork,
+    EnhancedIntegratedNetwork
+)
 from trainer import EnhancedTrainer
-from data_loader import FiberOpticsDataLoader, ReferenceDataLoader
+from data_loader import FiberOpticsDataLoader, ReferenceDataLoader, FiberOpticsDataset
 from real_time_optimization import (
     EfficientFiberOpticsNetwork,
     ModelCompressor,
     create_student_teacher_models
 )
 
-class FiberOpticsSystem:
+# Import statistical modules
+from statistical_integration import (
+    integrate_statistics_into_network,
+    StatisticallyIntegratedNetwork
+)
+from statistical_config import (
+    get_statistical_config,
+    merge_with_base_config
+)
+
+class UnifiedFiberOpticsSystem:
     """
     Complete fiber optics analysis system
     "the program will use tensorized images as its reference data"
     """
     
-    def __init__(self):
-        print(f"[{datetime.now()}] Initializing FiberOpticsSystem")
-        print(f"[{datetime.now()}] Previous script: data_loader.py")
-        print(f"[{datetime.now()}] Starting complete integrated system")
+    def __init__(self, mode: str = "production", config_path: Optional[str] = None):
+        """
+        Initialize unified fiber optics system
         
+        Args:
+            mode: 'production' for optimized deployment, 'research' for statistical analysis
+            config_path: Optional path to custom configuration file
+        """
+        print(f"[{datetime.now()}] Initializing UnifiedFiberOpticsSystem")
+        print(f"[{datetime.now()}] Mode: {mode}")
+        
+        # Load configuration based on mode
+        self.mode = mode
         self.config = get_config()
-        self.logger = get_logger("FiberOpticsSystem")
         
-        self.logger.log_class_init("FiberOpticsSystem")
+        # Override runtime mode in config
+        if hasattr(self.config, 'runtime'):
+            self.config.runtime.mode = mode
+        
+        # Setup logger
+        self.logger = get_logger("UnifiedFiberOpticsSystem")
+        self.logger.log_class_init("UnifiedFiberOpticsSystem")
         self.logger.log_process_start("System Initialization")
         
-        # Initialize all components
-        self.tensor_processor = TensorProcessor()
-        self.integrated_pipeline = IntegratedAnalysisPipeline()
-        self.trainer = EnhancedTrainer(self.integrated_pipeline.network)
+        # Initialize device
+        self.device = self.config.get_device()
+        self.logger.info(f"Using device: {self.device}")
+        
+        # Initialize components based on mode
+        if mode == "research":
+            self._init_research_mode()
+        else:
+            self._init_production_mode()
+        
+        # Common components
         self.data_loader = FiberOpticsDataLoader()
         self.reference_loader = ReferenceDataLoader()
+        self.tensor_processor = TensorProcessor()
         
         # Real-time optimization components
         self.efficient_model = None
@@ -63,12 +102,191 @@ class FiberOpticsSystem:
         self.training_history = {}
         self.optimization_enabled = False
         
-        self.logger.info("FiberOpticsSystem initialized successfully")
-        self.logger.info(f"Device: {self.config.get_device()}")
-        self.logger.info(f"Tensorized data path: {self.config.system.tensorized_data_path}")
-        
+        self.logger.info(f"UnifiedFiberOpticsSystem initialized in {mode} mode")
         self.logger.log_process_end("System Initialization")
-        print(f"[{datetime.now()}] FiberOpticsSystem ready")
+        print(f"[{datetime.now()}] UnifiedFiberOpticsSystem ready")
+    
+    def _init_production_mode(self):
+        """Initialize components for production mode"""
+        self.logger.info("Initializing production mode components")
+        
+        # Use integrated pipeline directly
+        self.integrated_pipeline = IntegratedAnalysisPipeline()
+        self.network = self.integrated_pipeline.network
+        
+        # Initialize trainer
+        self.trainer = EnhancedTrainer(self.network)
+        
+        # Initialize loss (use combined advanced loss)
+        from losses import CombinedAdvancedLoss
+        self.criterion = CombinedAdvancedLoss(self.config)
+        
+        # Initialize optimizer
+        self._init_optimizer()
+        
+    def _init_research_mode(self):
+        """Initialize components for research mode with statistical integration"""
+        self.logger.info("Initializing research mode components")
+        
+        # Load statistical configuration
+        self.stat_config = get_statistical_config()
+        
+        # Merge configurations
+        if hasattr(self.config, '__dict__'):
+            base_dict = self.config.__dict__
+        else:
+            base_dict = self.config
+        
+        merged_config = merge_with_base_config(base_dict, self.stat_config)
+        
+        # Update config with merged values
+        for key, value in merged_config.items():
+            if hasattr(self.config, key):
+                setattr(self.config, key, value)
+        
+        # Create base network and integrate statistics
+        base_network = EnhancedIntegratedNetwork()
+        self.network = integrate_statistics_into_network(base_network)
+        self.network = self.network.to(self.device)
+        
+        # Create integrated pipeline wrapper
+        self.integrated_pipeline = IntegratedAnalysisPipeline()
+        self.integrated_pipeline.network = self.network
+        
+        # Initialize statistical loss
+        from losses import CombinedAdvancedLoss
+        self.criterion = CombinedAdvancedLoss(self.config)
+        
+        # Initialize trainer with statistical components
+        self.trainer = EnhancedTrainer(self.network)
+        
+        # Initialize optimizer with separate learning rates
+        self._init_statistical_optimizer()
+        
+        # Load reference statistics
+        self._load_reference_statistics()
+        
+        self.logger.info("Statistical components integrated successfully")
+    
+    def _init_optimizer(self):
+        """Initialize standard optimizer"""
+        optimizer_config = self.config.optimizer
+        
+        if optimizer_config.type == "adam":
+            self.optimizer = optim.Adam(
+                self.network.parameters(),
+                lr=optimizer_config.learning_rate,
+                weight_decay=optimizer_config.weight_decay
+            )
+        elif optimizer_config.type == "adamw":
+            self.optimizer = optim.AdamW(
+                self.network.parameters(),
+                lr=optimizer_config.learning_rate,
+                weight_decay=optimizer_config.weight_decay
+            )
+        else:
+            self.optimizer = optim.SGD(
+                self.network.parameters(),
+                lr=optimizer_config.learning_rate,
+                momentum=0.9,
+                weight_decay=optimizer_config.weight_decay
+            )
+        
+        # Initialize scheduler
+        if optimizer_config.scheduler.type == "cosine":
+            self.scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
+                self.optimizer, T_0=10, T_mult=2
+            )
+        else:
+            self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+                self.optimizer,
+                patience=optimizer_config.scheduler.patience,
+                factor=optimizer_config.scheduler.factor
+            )
+    
+    def _init_statistical_optimizer(self):
+        """Initialize optimizer with statistical component learning rates"""
+        # Separate parameters by component
+        base_params = []
+        statistical_params = []
+        
+        for name, param in self.network.named_parameters():
+            if any(comp in name for comp in ['statistical', 'master_similarity', 'zone_predictor', 
+                                             'consensus', 'correlation', 'anomaly']):
+                statistical_params.append(param)
+            else:
+                base_params.append(param)
+        
+        # Get learning rates
+        base_lr = self.config.optimizer.learning_rate
+        stat_lr_mult = self.stat_config.training_settings['statistical_lr_multiplier']
+        
+        # Create parameter groups
+        param_groups = [
+            {'params': base_params, 'lr': base_lr, 'name': 'base'},
+            {'params': statistical_params, 'lr': base_lr * stat_lr_mult, 'name': 'statistical'}
+        ]
+        
+        # Initialize optimizer
+        self.optimizer = optim.AdamW(param_groups, weight_decay=0.01)
+        
+        # Initialize scheduler
+        self.scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
+            self.optimizer, T_0=10, T_mult=2
+        )
+        
+        self.logger.info(f"Statistical optimizer initialized: Base LR={base_lr}, Stat LR={base_lr * stat_lr_mult}")
+    
+    def _load_reference_statistics(self):
+        """Load reference statistics for research mode"""
+        self.logger.info("Loading reference statistics...")
+        
+        stats_dir = Path("statistics")
+        
+        # Load global statistics
+        global_stats_path = stats_dir / "global_statistics.json"
+        if global_stats_path.exists():
+            with open(global_stats_path, 'r') as f:
+                self.global_stats = json.load(f)
+            self.logger.info("Loaded global statistics")
+        else:
+            self.global_stats = None
+            self.logger.warning("Global statistics not found")
+        
+        # Load class statistics
+        class_stats_path = stats_dir / "class_statistics.json"
+        if class_stats_path.exists():
+            with open(class_stats_path, 'r') as f:
+                self.class_stats = json.load(f)
+            self.logger.info("Loaded class statistics")
+        else:
+            self.class_stats = None
+        
+        # Initialize reference features
+        if self.global_stats and 'neural_network_insights' in self.global_stats:
+            self.reference_features = self._extract_reference_features()
+        else:
+            self.reference_features = None
+    
+    def _extract_reference_features(self) -> torch.Tensor:
+        """Extract reference features from statistics"""
+        if self.mode == "research" and hasattr(self, 'stat_config'):
+            num_references = self.stat_config.reference_settings['num_reference_embeddings']
+        else:
+            num_references = 100
+        
+        feature_dim = 6
+        
+        # Create synthetic reference features
+        features = torch.zeros(num_references, feature_dim)
+        features[:, 0] = torch.normal(595.87, 116.35, (num_references,))  # center_x
+        features[:, 1] = torch.normal(447.19, 87.07, (num_references,))   # center_y
+        features[:, 2] = torch.normal(114.42, 78.41, (num_references,))   # core_radius
+        features[:, 3] = torch.normal(208.89, 100.50, (num_references,))  # cladding_radius
+        features[:, 4] = torch.normal(0.530, 0.182, (num_references,))    # ratio
+        features[:, 5] = torch.ones(num_references) * 7                    # num_valid_results
+        
+        return features.to(self.device)
     
     def train_model(self, num_epochs: Optional[int] = None, 
                    load_checkpoint: Optional[str] = None):
@@ -125,6 +343,13 @@ class FiberOpticsSystem:
         # Export results
         output_path = Path(self.config.system.results_path) / f"{Path(image_path).stem}_results.txt"
         self.integrated_pipeline.export_results(results, str(output_path))
+        
+        # Visualize results if enabled
+        if self.config.visualization.save_visualizations:
+            from visualizer import FiberOpticsVisualizer
+            visualizer = FiberOpticsVisualizer()
+            vis_path = Path(self.config.system.results_path) / f"{Path(image_path).stem}_visualization.png"
+            visualizer.visualize_complete_analysis(image_path, results, str(vis_path))
         
         self.logger.log_process_end(f"Single Image Analysis: {image_path}")
         
@@ -432,39 +657,109 @@ class FiberOpticsSystem:
         self.logger.info(f"  Compression: {compression:.1%}")
         
         self.logger.log_process_end("Optimization Benchmarking")
-
-def print_usage():
-    """Print usage information (no argparse)"""
-    print("\nFiber Optics Neural Network System")
-    print("=" * 50)
-    print("\nUsage:")
-    print("  python main.py train [epochs]        - Train the model")
-    print("  python main.py analyze <image>       - Analyze single image")
-    print("  python main.py batch <folder>        - Batch process folder")
-    print("  python main.py realtime              - Real-time processing")
-    print("  python main.py evaluate              - Evaluate performance")
-    print("  python main.py update <coef> <value> - Update coefficient")
-    print("  python main.py optimize [type]       - Optimize model (distill/prune/quantize/all)")
-    print("  python main.py benchmark             - Benchmark optimization")
-    print("\nExample:")
-    print("  python main.py train 50")
-    print("  python main.py analyze sample.jpg")
-    print("  python main.py update A 1.5")
-    print("  python main.py optimize all")
-    print("  python main.py benchmark")
+    
+    def process_image_statistical(self, image_path: str, output_dir: str) -> Dict[str, any]:
+        """
+        Process a single image with full statistical analysis (research mode)
+        
+        Args:
+            image_path: Path to input image
+            output_dir: Directory to save outputs
+            
+        Returns:
+            Comprehensive results dictionary
+        """
+        if self.mode != "research":
+            self.logger.warning("Statistical processing requires research mode")
+            return self.analyze_single_image(image_path)
+        
+        self.logger.info(f"Processing image with statistical analysis: {image_path}")
+        
+        # Create output directory
+        output_path = Path(output_dir)
+        output_path.mkdir(parents=True, exist_ok=True)
+        
+        # Load and preprocess image
+        image = cv2.imread(image_path)
+        if image is None:
+            self.logger.error(f"Failed to load image: {image_path}")
+            return None
+        
+        # Convert to tensor
+        image_tensor = torch.from_numpy(image).permute(2, 0, 1).float() / 255.0
+        image_tensor = image_tensor.unsqueeze(0).to(self.device)
+        
+        # Run through network
+        self.network.eval()
+        with torch.no_grad():
+            outputs = self.network(image_tensor, self.reference_features)
+        
+        # Extract comprehensive results
+        results = {
+            'image_path': image_path,
+            'timestamp': datetime.now().isoformat(),
+            'mode': 'statistical_analysis',
+            'success': True
+        }
+        
+        # Zone parameters
+        if 'zone_parameters' in outputs:
+            results['zones'] = {
+                'core_radius': outputs['zone_parameters']['core_radius'].item(),
+                'cladding_radius': outputs['zone_parameters']['cladding_radius'].item(),
+                'ratio': outputs['zone_parameters']['core_cladding_ratio'].item()
+            }
+        
+        # Consensus results
+        if 'consensus_results' in outputs and outputs['consensus_results'] is not None:
+            consensus = outputs['consensus_results']
+            results['consensus'] = {
+                'center': [consensus['center_x'].item(), consensus['center_y'].item()],
+                'confidence': consensus['confidence'].item(),
+                'num_agreeing_methods': consensus['num_agreeing'].item(),
+                'core_circularity': consensus['core_circularity'].item()
+            }
+        
+        # Statistical features
+        if 'statistical_features' in outputs:
+            results['feature_statistics'] = {
+                'mean': outputs['statistical_features'].mean().item(),
+                'std': outputs['statistical_features'].std().item(),
+                'min': outputs['statistical_features'].min().item(),
+                'max': outputs['statistical_features'].max().item()
+            }
+        
+        # Save results
+        with open(output_path / 'statistical_results.json', 'w') as f:
+            json.dump(results, f, indent=2)
+        
+        self.logger.info(f"Statistical processing complete. Results saved to {output_path}")
+        
+        return results
 
 def main():
     """
-    Main entry point - RUNS EVERYTHING AUTOMATICALLY
-    "IT WILL NOT USE ARGPARSE OR FLAGS I HATE FLAGS"
+    Unified main entry point with configuration-based execution
+    Supports both production and research modes
     """
+    # Load configuration to determine mode
+    config = get_config()
+    
+    # Check runtime mode from config
+    mode = "production"  # Default
+    if hasattr(config, 'runtime') and hasattr(config.runtime, 'mode'):
+        if config.runtime.mode in ['research', 'statistical']:
+            mode = 'research'
+        else:
+            mode = 'production'
+    
     print(f"\n{'='*80}")
-    print("FIBER OPTICS NEURAL NETWORK SYSTEM - FULL AUTOMATIC MODE")
+    print(f"FIBER OPTICS NEURAL NETWORK SYSTEM - {mode.upper()} MODE")
     print(f"{'='*80}\n")
     
-    # Initialize system
-    print("🚀 INITIALIZING SYSTEM...")
-    system = FiberOpticsSystem()
+    # Initialize unified system
+    print(f"🚀 INITIALIZING SYSTEM IN {mode.upper()} MODE...")
+    system = UnifiedFiberOpticsSystem(mode=mode)
     
     # Check if we have a trained model
     best_model_path = Path(system.config.system.checkpoints_path) / "best_model.pth"
@@ -480,84 +775,130 @@ def main():
         
     else:
         print("\n🎯 No trained model found. Starting training...")
-        print("📚 TRAINING MODEL (50 epochs for optimal performance)...")
-        system.train_model(num_epochs=50)
+        epochs = system.config.training.num_epochs if hasattr(system.config, 'training') else 50
+        print(f"📚 TRAINING MODEL ({epochs} epochs)...")
+        system.train_model(num_epochs=epochs)
         
         print("\n💾 Training complete! Evaluating performance...")
         system.evaluate_performance()
     
-    # Now optimize the model for real-time performance
-    print("\n⚡ OPTIMIZING MODEL FOR REAL-TIME PERFORMANCE...")
-    print("   - Knowledge Distillation")
-    print("   - Model Pruning")
-    print("   - Architecture Optimization")
-    system.optimize_model("all")
+    # Mode-specific operations
+    if mode == "production":
+        # Production mode: focus on optimization and real-time performance
+        print("\n⚡ OPTIMIZING MODEL FOR REAL-TIME PERFORMANCE...")
+        print("   - Knowledge Distillation")
+        print("   - Model Pruning")
+        print("   - Architecture Optimization")
+        system.optimize_model("all")
+        
+        # Benchmark the optimization
+        print("\n🏁 BENCHMARKING OPTIMIZED MODEL...")
+        system.benchmark_optimization()
+        
+    else:
+        # Research mode: focus on statistical analysis
+        print("\n📊 STATISTICAL ANALYSIS MODE ACTIVE")
+        print("   - 88-dimensional feature extraction")
+        print("   - Master similarity equation")
+        print("   - Zone parameter regression")
+        print("   - Consensus algorithm")
+        print("   - Mahalanobis distance anomaly detection")
+        
+        # Process sample with statistical analysis
+        sample_folder = Path("./samples")
+        if sample_folder.exists():
+            images = list(sample_folder.glob("*.jpg")) + list(sample_folder.glob("*.png"))
+            if images:
+                print(f"\n📸 PROCESSING SAMPLE IMAGE WITH STATISTICAL ANALYSIS...")
+                result = system.process_image_statistical(
+                    str(images[0]), 
+                    "output/statistical_analysis"
+                )
+                if result:
+                    print("\n📈 STATISTICAL ANALYSIS RESULTS:")
+                    if 'zones' in result:
+                        print(f"   Core Radius: {result['zones']['core_radius']:.1f} px")
+                        print(f"   Cladding Radius: {result['zones']['cladding_radius']:.1f} px")
+                        print(f"   Ratio: {result['zones']['ratio']:.3f}")
+                    if 'consensus' in result:
+                        print(f"   Consensus Confidence: {result['consensus']['confidence']:.3f}")
+                        print(f"   Agreeing Methods: {result['consensus']['num_agreeing_methods']}/7")
     
-    # Benchmark the optimization
-    print("\n🏁 BENCHMARKING OPTIMIZED MODEL...")
-    system.benchmark_optimization()
-    
-    # Process some sample images if available
+    # Common operations for both modes
+    # Process sample images
     sample_folder = Path("./samples")
     if sample_folder.exists():
         print(f"\n📸 PROCESSING SAMPLE IMAGES FROM {sample_folder}...")
-        results = system.batch_process(str(sample_folder), max_images=10)
+        results = system.batch_process(str(sample_folder), max_images=5)
         
         # Show results
         successful = [r for r in results if 'error' not in r]
         if successful:
             print("\n📈 SAMPLE PROCESSING RESULTS:")
-            for i, result in enumerate(successful[:5]):  # Show first 5
+            for i, result in enumerate(successful):
                 print(f"   Image {i+1}: Similarity={result['summary']['final_similarity_score']:.4f}, "
                       f"Threshold={'✅' if result['summary']['meets_threshold'] else '❌'}")
     
-    # Update parameters for optimal performance
+    # Update equation parameters
     print("\n🔧 FINE-TUNING EQUATION PARAMETERS...")
-    optimal_params = {
-        'A': 1.2,  # Structural similarity weight
-        'B': 0.8,  # Reference comparison weight
-        'C': 1.0,  # Feature matching weight
-        'D': 0.6,  # Anomaly detection weight
-        'E': 0.4   # Additional features weight
-    }
+    if hasattr(system.config, 'equation') and hasattr(system.config.equation, 'coefficients'):
+        # Use config values
+        for coef in ['A', 'B', 'C', 'D', 'E']:
+            value = system.config.equation.coefficients[coef]
+            print(f"   {coef} = {value} (from config)")
+    else:
+        # Use optimal defaults
+        optimal_params = {
+            'A': 1.2,  # Structural similarity weight
+            'B': 0.8,  # Reference comparison weight
+            'C': 1.0,  # Feature matching weight
+            'D': 0.6,  # Anomaly detection weight
+            'E': 0.4   # Additional features weight
+        }
+        
+        for coef, value in optimal_params.items():
+            system.update_parameters(coef, value)
+            print(f"   Set {coef} = {value}")
     
-    for coef, value in optimal_params.items():
-        system.update_parameters(coef, value)
-        print(f"   Set {coef} = {value}")
-    
-    # Start real-time processing demo
-    print("\n🎬 STARTING REAL-TIME PROCESSING DEMO...")
-    print("   Press Ctrl+C to stop")
-    
-    try:
-        # Process for a short demo (or until interrupted)
-        import signal
-        import threading
+    # Real-time processing demo
+    if system.config.runtime.mode != "batch":
+        print("\n🎬 STARTING REAL-TIME PROCESSING DEMO...")
+        print("   Press Ctrl+C to stop")
         
-        def timeout_handler():
-            print("\n⏱️  Demo time limit reached")
-            raise KeyboardInterrupt
-        
-        # Set a 30-second demo timer
-        timer = threading.Timer(30.0, timeout_handler)
-        timer.start()
-        
-        system.realtime_process()
-        timer.cancel()
-        
-    except KeyboardInterrupt:
-        print("\n✋ Real-time processing stopped")
+        try:
+            # Process for a short demo (or until interrupted)
+            import signal
+            import threading
+            
+            def timeout_handler():
+                print("\n⏱️  Demo time limit reached")
+                raise KeyboardInterrupt
+            
+            # Set a 30-second demo timer
+            timer = threading.Timer(30.0, timeout_handler)
+            timer.start()
+            
+            system.realtime_process()
+            timer.cancel()
+            
+        except KeyboardInterrupt:
+            print("\n✋ Real-time processing stopped")
     
     # Final summary
     print(f"\n{'='*80}")
-    print("🎉 FULL SYSTEM DEMONSTRATION COMPLETED!")
+    print(f"🎉 SYSTEM DEMONSTRATION COMPLETED - {mode.upper()} MODE!")
     print(f"{'='*80}")
     print("\n📋 SUMMARY:")
-    print("   ✅ Model trained and optimized")
-    print("   ✅ Real-time performance achieved")
+    print(f"   ✅ Model trained and {'optimized' if mode == 'production' else 'statistically enhanced'}")
     print("   ✅ System fully operational")
-    print("\n💡 The system is now ready for production use!")
-    print("   All components are optimized and running at peak performance.")
+    print(f"   ✅ {mode.capitalize()} mode features active")
+    
+    if mode == "production":
+        print("\n💡 The system is optimized for real-time production use!")
+    else:
+        print("\n💡 The system provides comprehensive statistical analysis!")
+        print("   All statistical insights are integrated into the neural network.")
+    
     print(f"\n{'='*80}\n")
 
 if __name__ == "__main__":

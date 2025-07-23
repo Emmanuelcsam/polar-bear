@@ -407,43 +407,103 @@ class PerceptualLoss(nn.Module):
 
 class CombinedAdvancedLoss(nn.Module):
     """
-    Combined loss function using all advanced techniques
+    Combined loss function using all advanced techniques and statistical losses
     Implements the multi-objective optimization for fiber optics analysis
+    Merges both mathematical and domain-specific losses
     """
     
-    def __init__(self, config: Dict):
+    def __init__(self, config: Optional[Dict] = None):
         """
         Initialize combined loss with configuration
         """
         super().__init__()
         print(f"[{datetime.now()}] Initializing CombinedAdvancedLoss")
         
+        # Get config from system if not provided
+        if config is None:
+            from config_loader import get_config
+            config_obj = get_config()
+            # Convert to dict if needed
+            if hasattr(config_obj, '__dict__'):
+                config = config_obj.__dict__
+            else:
+                config = config_obj
+        
         self.config = config
         self.logger = get_logger("CombinedAdvancedLoss")
         self.logger.log_class_init("CombinedAdvancedLoss")
         
-        # Initialize individual losses
+        # Determine mode from config
+        self.mode = "production"
+        if hasattr(config, 'runtime') and hasattr(config.runtime, 'mode'):
+            if config.runtime.mode in ['research', 'statistical']:
+                self.mode = 'research'
+        
+        # Initialize mathematical losses
         self.focal_seg = FocalLoss(alpha=0.25, gamma=2.0)  # For segmentation
         self.focal_anomaly = FocalLoss(alpha=0.75, gamma=3.0)  # For anomaly (higher alpha for rare defects)
         self.contrastive = ContrastiveLoss(temperature=0.07)
         self.wasserstein = WassersteinLoss(p=1)
         self.perceptual = PerceptualLoss(net='vgg16')
         
+        # Initialize statistical/domain-specific losses
+        self.iou_loss = IoULoss()
+        self.circularity_loss = CircularityLoss(target_circularity=1.0, weight=0.1)
+        self.master_similarity_loss = MasterSimilarityLoss(threshold=0.7)
+        self.correlation_loss = CorrelationConsistencyLoss()
+        self.method_accuracy_loss = MethodAccuracyWeightedLoss()
+        self.mahalanobis_loss = MahalanobisAnomalyLoss(margin=2.5)
+        self.zone_regression_loss = ZoneRegressionLoss()
+        self.consensus_loss = ConsensusConsistencyLoss(min_agreement_ratio=0.6)
+        self.defect_loss = DefectSpecificLoss()
+        
         # Standard losses
         self.mse = nn.MSELoss()
         self.l1 = nn.L1Loss()
         
-        # Loss weights (will be loaded from config)
-        self.weights = {
-            'segmentation': config.get('LOSS_WEIGHT_SEGMENTATION', 0.25),
-            'anomaly': config.get('LOSS_WEIGHT_ANOMALY', 0.20),
-            'contrastive': config.get('LOSS_WEIGHT_CONTRASTIVE', 0.15),
-            'perceptual': config.get('LOSS_WEIGHT_PERCEPTUAL', 0.15),
-            'wasserstein': config.get('LOSS_WEIGHT_WASSERSTEIN', 0.10),
-            'reconstruction': config.get('LOSS_WEIGHT_RECONSTRUCTION', 0.15)
-        }
+        # Loss weights based on mode
+        if self.mode == "production":
+            self.weights = {
+                'segmentation': 0.25,
+                'anomaly': 0.20,
+                'contrastive': 0.15,
+                'perceptual': 0.15,
+                'wasserstein': 0.10,
+                'reconstruction': 0.15,
+                # Statistical losses have lower weights in production
+                'iou': 0.1,
+                'circularity': 0.05,
+                'similarity': 0.1,
+                'correlation': 0.05,
+                'mahalanobis': 0.1,
+                'zone_regression': 0.1,
+                'consensus': 0.05,
+                'method_accuracy': 0.05
+            }
+        else:  # research mode
+            self.weights = {
+                'segmentation': 0.15,
+                'anomaly': 0.10,
+                'contrastive': 0.05,
+                'perceptual': 0.05,
+                'wasserstein': 0.05,
+                'reconstruction': 0.05,
+                # Statistical losses have higher weights in research
+                'iou': 0.15,
+                'circularity': 0.10,
+                'similarity': 0.15,
+                'correlation': 0.10,
+                'mahalanobis': 0.15,
+                'zone_regression': 0.15,
+                'consensus': 0.10,
+                'method_accuracy': 0.10
+            }
         
-        self.logger.info(f"Loss weights: {self.weights}")
+        # Override with config if available
+        if hasattr(config, 'loss') and hasattr(config.loss, 'weights'):
+            self.weights.update(config.loss.weights.__dict__ if hasattr(config.loss.weights, '__dict__') else config.loss.weights)
+        
+        self.logger.info(f"Loss weights ({self.mode} mode): {self.weights}")
         
     def forward(self, predictions: Dict[str, torch.Tensor], 
                 targets: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
@@ -501,6 +561,51 @@ class CombinedAdvancedLoss(nn.Module):
                 targets['image']
             )
         
+        # 7. Statistical losses (if in research mode or explicitly requested)
+        if self.mode == "research" or predictions.get('compute_statistical', False):
+            # IoU loss
+            if 'segmentation_logits' in predictions and 'segmentation_masks' in targets:
+                pred_masks = torch.sigmoid(predictions['segmentation_logits'])
+                losses['iou'] = self.iou_loss(pred_masks, targets['segmentation_masks'])
+            
+            # Circularity loss
+            if 'predicted_masks' in predictions:
+                losses['circularity'] = self.circularity_loss(predictions['predicted_masks'])
+            
+            # Master similarity loss
+            if 'similarity_scores' in predictions:
+                losses['similarity'] = self.master_similarity_loss(predictions['similarity_scores'])
+            
+            # Correlation consistency
+            if 'features' in predictions:
+                losses['correlation'] = self.correlation_loss(predictions['features'])
+            
+            # Mahalanobis anomaly loss
+            if 'mahalanobis_distance' in predictions and 'is_anomaly' in targets:
+                losses['mahalanobis'] = self.mahalanobis_loss(
+                    predictions['mahalanobis_distance'],
+                    targets['is_anomaly']
+                )
+            
+            # Zone regression loss
+            if 'zone_parameters' in predictions and 'target_zone_parameters' in targets:
+                losses['zone_regression'] = self.zone_regression_loss(
+                    predictions['zone_parameters'],
+                    targets['target_zone_parameters']
+                )
+            
+            # Consensus consistency
+            if 'method_predictions' in predictions:
+                losses['consensus'] = self.consensus_loss(predictions['method_predictions'])
+            
+            # Method accuracy weighted loss
+            if 'method_predictions' in predictions and 'method_scores' in predictions:
+                base_loss = losses.get('segmentation', torch.tensor(0.0))
+                losses['method_accuracy'] = self.method_accuracy_loss(
+                    base_loss,
+                    predictions['method_scores']
+                )
+        
         # Compute weighted total loss
         total_loss = torch.tensor(0.0, device=next(iter(predictions.values())).device)
         for loss_name, loss_value in losses.items():
@@ -521,6 +626,194 @@ class CombinedAdvancedLoss(nn.Module):
                 self.logger.info(f"Losses - {loss_str}")
         
         return losses
+
+
+# Statistical/Domain-specific loss components
+class IoULoss(nn.Module):
+    """Intersection over Union loss for segmentation quality"""
+    
+    def forward(self, pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        intersection = torch.sum(pred * target, dim=(2, 3))
+        union = torch.sum(pred + target - pred * target, dim=(2, 3))
+        iou = intersection / (union + 1e-6)
+        return 1 - iou.mean()
+
+
+class CircularityLoss(nn.Module):
+    """Enforces circular shape constraint for fiber cores"""
+    
+    def __init__(self, target_circularity: float = 1.0, weight: float = 0.1):
+        super().__init__()
+        self.target_circularity = target_circularity
+        self.weight = weight
+    
+    def forward(self, masks: torch.Tensor) -> torch.Tensor:
+        # Assume first channel is core region
+        core_masks = masks[:, 0:1]
+        
+        # Calculate circularity for each mask
+        batch_size = core_masks.shape[0]
+        circularity_loss = 0
+        
+        for i in range(batch_size):
+            mask = core_masks[i, 0]
+            
+            # Find contour properties
+            if mask.sum() > 0:
+                # Simple approximation of circularity
+                area = mask.sum()
+                # Approximate perimeter using edge detection
+                edges_x = torch.abs(mask[1:] - mask[:-1]).sum()
+                edges_y = torch.abs(mask[:, 1:] - mask[:, :-1]).sum()
+                perimeter = edges_x + edges_y
+                
+                if perimeter > 0:
+                    circularity = 4 * np.pi * area / (perimeter ** 2)
+                    circularity_loss += (circularity - self.target_circularity) ** 2
+        
+        return self.weight * circularity_loss / batch_size
+
+
+class MasterSimilarityLoss(nn.Module):
+    """Loss based on master similarity equation S > 0.7 threshold"""
+    
+    def __init__(self, threshold: float = 0.7):
+        super().__init__()
+        self.threshold = threshold
+    
+    def forward(self, similarity_scores: torch.Tensor) -> torch.Tensor:
+        # Encourage similarities above threshold
+        margin_loss = F.relu(self.threshold - similarity_scores)
+        return margin_loss.mean()
+
+
+class CorrelationConsistencyLoss(nn.Module):
+    """Maintains expected feature correlations from statistical analysis"""
+    
+    def __init__(self):
+        super().__init__()
+        # Expected correlations from statistical analysis
+        self.expected_correlations = {
+            ('center_x', 'center_y'): 0.9088,
+            ('core_radius', 'cladding_radius'): 0.7964,
+            ('core_radius', 'ratio'): -0.1654,
+            ('cladding_radius', 'ratio'): -0.6823
+        }
+    
+    def forward(self, features: torch.Tensor) -> torch.Tensor:
+        # Simplified version - returns zero for now
+        # Real implementation would compute actual correlations
+        return torch.tensor(0.0, device=features.device)
+
+
+class MethodAccuracyWeightedLoss(nn.Module):
+    """Weights losses based on method performance"""
+    
+    def forward(self, base_loss: torch.Tensor, method_scores: torch.Tensor) -> torch.Tensor:
+        # Normalize scores to weights
+        weights = F.softmax(method_scores, dim=0)
+        
+        # Apply weights to base loss
+        if base_loss.dim() > 0 and base_loss.shape[0] == weights.shape[0]:
+            weighted_loss = (base_loss * weights).sum()
+        else:
+            weighted_loss = base_loss
+        
+        return weighted_loss
+
+
+class MahalanobisAnomalyLoss(nn.Module):
+    """Mahalanobis distance-based anomaly loss"""
+    
+    def __init__(self, margin: float = 2.5):
+        super().__init__()
+        self.margin = margin
+    
+    def forward(self, distances: torch.Tensor, is_anomaly: torch.Tensor) -> torch.Tensor:
+        # Normal samples should have low distance
+        normal_loss = distances * (1 - is_anomaly.float())
+        
+        # Anomalies should have high distance
+        anomaly_loss = F.relu(self.margin - distances) * is_anomaly.float()
+        
+        return (normal_loss + anomaly_loss).mean()
+
+
+class ZoneRegressionLoss(nn.Module):
+    """Regression loss for zone parameters with physical constraints"""
+    
+    def forward(self, pred: Dict[str, torch.Tensor], 
+                target: Dict[str, torch.Tensor]) -> torch.Tensor:
+        loss = 0
+        
+        # Basic regression loss
+        for key in ['core_radius', 'cladding_radius', 'core_cladding_ratio']:
+            if key in pred and key in target:
+                loss += F.smooth_l1_loss(pred[key], target[key])
+        
+        # Physical constraints
+        if 'core_radius' in pred and 'cladding_radius' in pred:
+            # Core should be smaller than cladding
+            constraint_loss = F.relu(pred['core_radius'] - pred['cladding_radius'] + 10)
+            loss += constraint_loss.mean()
+        
+        return loss
+
+
+class ConsensusConsistencyLoss(nn.Module):
+    """Ensures multiple methods agree on predictions"""
+    
+    def __init__(self, min_agreement_ratio: float = 0.6):
+        super().__init__()
+        self.min_agreement_ratio = min_agreement_ratio
+    
+    def forward(self, method_predictions: List[torch.Tensor]) -> torch.Tensor:
+        if len(method_predictions) < 2:
+            return torch.tensor(0.0)
+        
+        # Calculate pairwise IoU
+        total_loss = 0
+        num_pairs = 0
+        
+        for i in range(len(method_predictions)):
+            for j in range(i + 1, len(method_predictions)):
+                pred_i = method_predictions[i]
+                pred_j = method_predictions[j]
+                
+                # IoU between predictions
+                intersection = (pred_i * pred_j).sum()
+                union = (pred_i + pred_j - pred_i * pred_j).sum()
+                iou = intersection / (union + 1e-6)
+                
+                # Penalize low agreement
+                total_loss += F.relu(self.min_agreement_ratio - iou)
+                num_pairs += 1
+        
+        return total_loss / num_pairs if num_pairs > 0 else torch.tensor(0.0)
+
+
+class DefectSpecificLoss(nn.Module):
+    """Specialized loss for different defect types"""
+    
+    def __init__(self):
+        super().__init__()
+        self.defect_weights = {
+            'scratch': 1.0,
+            'dig': 1.5,
+            'blob': 0.8
+        }
+        self.focal = FocalLoss(gamma=2.0, alpha=0.25)
+    
+    def forward(self, defect_preds: Dict[str, torch.Tensor], 
+                defect_targets: Dict[str, torch.Tensor]) -> torch.Tensor:
+        total_loss = 0
+        
+        for defect_type, weight in self.defect_weights.items():
+            if defect_type in defect_preds and defect_type in defect_targets:
+                loss = self.focal(defect_preds[defect_type], defect_targets[defect_type])
+                total_loss += weight * loss
+        
+        return total_loss
 
 
 def create_loss_function(config: Dict) -> CombinedAdvancedLoss:

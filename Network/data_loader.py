@@ -8,6 +8,7 @@ Handles loading and batching of tensorized data
 
 import torch
 from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
+from torch.utils.data.distributed import DistributedSampler
 import numpy as np
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Union
@@ -19,6 +20,7 @@ import torchvision.transforms as T
 from config_loader import get_config
 from logger import get_logger
 from tensor_processor import TensorProcessor
+from distributed_utils import get_rank, get_world_size, is_main_process
 
 class FiberOpticsDataset(Dataset):
     """
@@ -212,7 +214,7 @@ class FiberOpticsDataLoader:
         paths = []
         
         # First check if reference folder exists
-        reference_path = Path(self.config.TENSORIZED_DATA_PATH).parent / "reference"
+        reference_path = Path(self.config.system.tensorized_data_path).parent / "reference"
         if reference_path.exists():
             # Scan all subdirectories in reference folder
             for folder_path in reference_path.iterdir():
@@ -236,7 +238,8 @@ class FiberOpticsDataLoader:
                         batch_size: Optional[int] = None,
                         num_workers: Optional[int] = None,
                         use_weighted_sampling: bool = True,
-                        use_augmentation: bool = True) -> Tuple[DataLoader, DataLoader]:
+                        use_augmentation: bool = True,
+                        distributed: bool = False) -> Tuple[DataLoader, DataLoader]:
         """
         Get train and validation data loaders
         "the program will run entirely in hpc"
@@ -303,29 +306,54 @@ class FiberOpticsDataLoader:
             )
             val_dataset = torch.utils.data.Subset(val_dataset_obj, val_indices)
         
-        # Create weighted sampler for training if requested
-        train_sampler = None
-        if use_weighted_sampling:
-            # Calculate class weights
-            train_labels = [dataset.labels[i] for i in train_indices]
-            class_counts = np.bincount(train_labels)
-            class_weights = 1.0 / (class_counts + 1e-6)
-            
-            # Create sample weights
-            sample_weights = [class_weights[label] for label in train_labels]
-            
-            train_sampler = WeightedRandomSampler(
-                weights=sample_weights,
-                num_samples=len(train_indices),
-                replacement=True
+        # Create samplers based on distributed training
+        if distributed:
+            # Distributed samplers for multi-GPU training
+            train_sampler = DistributedSampler(
+                train_dataset,
+                num_replicas=get_world_size(),
+                rank=get_rank(),
+                shuffle=True
             )
+            val_sampler = DistributedSampler(
+                val_dataset,
+                num_replicas=get_world_size(),
+                rank=get_rank(),
+                shuffle=False
+            )
+            # Disable shuffle when using DistributedSampler
+            train_shuffle = False
+            val_shuffle = False
+        else:
+            # Single GPU samplers
+            val_sampler = None
+            val_shuffle = False
+            
+            if use_weighted_sampling:
+                # Calculate class weights
+                train_labels = [dataset.labels[i] for i in train_indices]
+                class_counts = np.bincount(train_labels)
+                class_weights = 1.0 / (class_counts + 1e-6)
+                
+                # Create sample weights
+                sample_weights = [class_weights[label] for label in train_labels]
+                
+                train_sampler = WeightedRandomSampler(
+                    weights=sample_weights,
+                    num_samples=len(train_indices),
+                    replacement=True
+                )
+                train_shuffle = False
+            else:
+                train_sampler = None
+                train_shuffle = True
         
         # Create data loaders
         train_loader = DataLoader(
             train_dataset,
             batch_size=batch_size,
             sampler=train_sampler,
-            shuffle=(train_sampler is None),
+            shuffle=train_shuffle,
             num_workers=num_workers,
             pin_memory=self.config.PIN_MEMORY,
             drop_last=True
@@ -334,14 +362,19 @@ class FiberOpticsDataLoader:
         val_loader = DataLoader(
             val_dataset,
             batch_size=batch_size,
-            shuffle=False,
+            sampler=val_sampler,
+            shuffle=val_shuffle,
             num_workers=num_workers,
             pin_memory=self.config.PIN_MEMORY,
             drop_last=False
         )
         
-        self.logger.info(f"Created data loaders: train={len(train_loader)} batches, "
-                        f"val={len(val_loader)} batches")
+        if distributed and is_main_process():
+            self.logger.info(f"Created distributed data loaders (rank {get_rank()}/{get_world_size()}): "
+                           f"train={len(train_loader)} batches, val={len(val_loader)} batches")
+        elif not distributed:
+            self.logger.info(f"Created data loaders: train={len(train_loader)} batches, "
+                           f"val={len(val_loader)} batches")
         
         self.logger.log_function_exit("get_data_loaders")
         
