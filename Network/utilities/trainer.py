@@ -233,7 +233,7 @@ class EnhancedTrainer:
             wandb.init(
                 project=self.config.monitoring.wandb_project,
                 entity=self.config.monitoring.wandb_entity,
-                config=self.config._to_dict() if hasattr(self.config, '_to_dict') else dict(self.config)
+                config=self.config._to_dict() if hasattr(self.config, '_to_dict') else vars(self.config)
             )
             wandb.watch(self.model)
     

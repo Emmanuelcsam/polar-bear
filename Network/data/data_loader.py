@@ -16,6 +16,7 @@ from datetime import datetime
 import json
 import random
 import torchvision.transforms as T
+from PIL import Image
 
 from core.config_loader import get_config
 from core.logger import get_logger
@@ -26,12 +27,17 @@ class FiberOpticsDataset(Dataset):
     """
     Dataset for fiber optic images
     "an image will be selected from a dataset folder (or multiple images for batch processing)"
+    Supports loading both .pt tensor files and raw image formats (PNG, JPG, JPEG, BMP, TIFF)
     """
+    
+    SUPPORTED_IMAGE_FORMATS = {'.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.tif'}
     
     def __init__(self, data_paths: List[Path], 
                  transform=None,
                  load_into_memory: bool = False,
-                 max_samples_per_class: Optional[int] = None):
+                 max_samples_per_class: Optional[int] = None,
+                 use_raw_images: bool = False,
+                 image_size: Tuple[int, int] = (256, 256)):
         print(f"[{datetime.now()}] Initializing FiberOpticsDataset")
         
         self.logger = get_logger("FiberOpticsDataset")
@@ -44,6 +50,8 @@ class FiberOpticsDataset(Dataset):
         
         self.transform = transform
         self.load_into_memory = load_into_memory
+        self.use_raw_images = use_raw_images
+        self.image_size = image_size
         
         # Storage for samples
         self.samples = []
@@ -74,51 +82,169 @@ class FiberOpticsDataset(Dataset):
                 self.logger.warning(f"Path does not exist: {path}")
                 continue
             
-            # Find all .pt files
-            pt_files = sorted(path.glob("*.pt"))  # Added sorted for deterministic order; original glob could vary by OS/filesystem, causing non-reproducible splits in get_data_loaders
+            # Find files based on mode
+            if self.use_raw_images:
+                # For raw images, check if this is a dataset folder with chunks
+                if path.name == "dataset" and path.is_dir():
+                    # Scan chunk folders
+                    chunk_folders = sorted([d for d in path.iterdir() if d.is_dir() and d.name.startswith('chunk_')])
+                    if chunk_folders:
+                        # Process chunk folders
+                        for chunk_folder in chunk_folders:
+                            self._scan_image_folder(chunk_folder, class_counts, max_samples_per_class)
+                    else:
+                        # No chunks, scan the dataset folder directly
+                        self._scan_image_folder(path, class_counts, max_samples_per_class)
+                else:
+                    # Regular folder scan
+                    self._scan_image_folder(path, class_counts, max_samples_per_class)
+            else:
+                # Find all .pt files
+                pt_files = sorted(path.glob("*.pt"))  # Added sorted for deterministic order; original glob could vary by OS/filesystem, causing non-reproducible splits in get_data_loaders
             
-            self.logger.info(f"Found {len(pt_files)} .pt files in {path.name}")
-            
-            # Determine class label from folder structure
-            class_label = self._determine_class_label(path)
-            
-            if class_label == -1:  # Added skip for unknown labels; original appended invalid labels, causing errors later
-                self.logger.warning(f"Skipping unknown class for path: {path.name}")
-                continue
-            
-            # Limit samples per class if specified
-            if max_samples_per_class is not None:  # Changed to is not None for clarity; original checked truthy but None==False, but explicit better
-                remaining = max_samples_per_class - class_counts.get(class_label, 0)
-                if remaining <= 0:
+                self.logger.info(f"Found {len(pt_files)} .pt files in {path.name}")
+                
+                # Determine class label from folder structure
+                class_label = self._determine_class_label(path)
+                
+                if class_label == -1:  # Added skip for unknown labels; original appended invalid labels, causing errors later
+                    self.logger.warning(f"Skipping unknown class for path: {path.name}")
                     continue
-                pt_files = pt_files[:remaining]
-            
-            for pt_file in pt_files:
-                sample_info = {
-                    'path': pt_file,
-                    'class_name': path.name,
-                    'class_label': class_label,
-                    'has_anomaly': self._check_if_anomaly(path.name)
-                }
                 
-                self.samples.append(pt_file)
-                self.labels.append(class_label)
-                self.metadata.append(sample_info)
+                # Limit samples per class if specified
+                if max_samples_per_class is not None:  # Changed to is not None for clarity; original checked truthy but None==False, but explicit better
+                    remaining = max_samples_per_class - class_counts.get(class_label, 0)
+                    if remaining <= 0:
+                        continue
+                    pt_files = pt_files[:remaining]
                 
-                # Load into memory if requested
-                if self.load_into_memory:
-                    try:
-                        tensor_data = self.tensor_processor.load_tensor_file(pt_file)
-                        self.tensors[str(pt_file)] = tensor_data['tensor']
-                    except Exception as e:
-                        self.logger.warning(f"Failed to load {pt_file}: {e}")
-                        continue  # Added continue to skip invalid files; original appended path but tensors missing, causing KeyError in __getitem__
-                
-                # Update class count
-                class_counts[class_label] += 1  # Simplified; get not needed since initialized
+                for pt_file in pt_files:
+                    sample_info = {
+                        'path': str(pt_file),  # Convert Path to string
+                        'filename': pt_file.name,
+                        'folder': path.name,
+                        'class_name': path.name,
+                        'class_label': class_label,
+                        'has_anomaly': self._check_if_anomaly(path.name)
+                    }
+                    
+                    self.samples.append(pt_file)
+                    self.labels.append(class_label)
+                    self.metadata.append(sample_info)
+                    
+                    # Load into memory if requested
+                    if self.load_into_memory:
+                        try:
+                            tensor_data = self.tensor_processor.load_tensor_file(pt_file)
+                            self.tensors[str(pt_file)] = tensor_data['tensor']
+                        except Exception as e:
+                            self.logger.warning(f"Failed to load {pt_file}: {e}")
+                            continue  # Added continue to skip invalid files; original appended path but tensors missing, causing KeyError in __getitem__
+                    
+                    # Update class count
+                    class_counts[class_label] += 1  # Simplified; get not needed since initialized
         
         self.logger.info(f"Class distribution: {class_counts}")
         self.logger.log_process_end("Scanning data paths")
+    
+    def _scan_image_folder(self, folder: Path, class_counts: Dict[int, int], max_samples_per_class: Optional[int]):
+        """Scan a folder for image files"""
+        # Find all image files
+        image_files = []
+        for ext in self.SUPPORTED_IMAGE_FORMATS:
+            image_files.extend(folder.glob(f"*{ext}"))
+            image_files.extend(folder.glob(f"*{ext.upper()}"))
+        
+        image_files = sorted(image_files)  # Sort for consistency
+        
+        if image_files:
+            self.logger.info(f"Found {len(image_files)} image files in {folder.name}")
+        
+        for img_file in image_files:
+            # Determine class from filename
+            class_label = self._determine_class_from_filename(img_file.name)
+            
+            if class_label == -1:
+                # Try to determine from folder name as fallback
+                class_label = self._determine_class_label(folder)
+                if class_label == -1:
+                    self.logger.debug(f"Unknown class for file: {img_file.name}")
+                    continue
+            
+            # Check limit
+            if max_samples_per_class is not None:
+                if class_counts[class_label] >= max_samples_per_class:
+                    continue
+            
+            sample_info = {
+                'path': str(img_file),  # Convert Path to string for JSON serialization
+                'filename': img_file.name,
+                'folder': folder.name,
+                'class_name': self.classes[class_label],
+                'class_label': class_label,
+                'has_anomaly': self._check_if_anomaly(img_file.name) or self._check_if_anomaly(folder.name)
+            }
+            
+            self.samples.append(img_file)
+            self.labels.append(class_label)
+            self.metadata.append(sample_info)
+            
+            # Load into memory if requested
+            if self.load_into_memory:
+                try:
+                    tensor = self._load_image(img_file)
+                    self.tensors[str(img_file)] = tensor
+                except Exception as e:
+                    self.logger.warning(f"Failed to load image {img_file}: {e}")
+                    continue
+            
+            class_counts[class_label] += 1
+    
+    def _determine_class_from_filename(self, filename: str) -> int:
+        """Determine class label from filename"""
+        filename_lower = filename.lower()
+        
+        # Check for class keywords in filename
+        if 'core' in filename_lower:
+            return self.class_to_idx['core']
+        elif 'cladding' in filename_lower:
+            return self.class_to_idx['cladding']
+        elif 'ferrule' in filename_lower:
+            return self.class_to_idx['ferrule']
+        elif any(keyword in filename_lower for keyword in ['defect', 'dirty', 'scratch', 'contamination', 'anomaly']):
+            return self.class_to_idx['defects']
+        
+        # Check for mask_ prefix patterns
+        if filename_lower.startswith('mask_'):
+            parts = filename_lower.split('_')
+            if len(parts) >= 2:
+                region = parts[1]
+                if region in self.class_to_idx:
+                    return self.class_to_idx[region]
+        
+        return -1  # Unknown class
+    
+    def _load_image(self, image_path: Path) -> torch.Tensor:
+        """Load and preprocess an image file"""
+        try:
+            # Load image using PIL
+            image = Image.open(image_path).convert('RGB')
+            
+            # Resize to target size
+            image = image.resize(self.image_size, Image.BILINEAR)
+            
+            # Convert to numpy array
+            image_np = np.array(image, dtype=np.float32) / 255.0
+            
+            # Convert to tensor (HWC -> CHW)
+            tensor = torch.from_numpy(image_np).permute(2, 0, 1)
+            
+            return tensor
+            
+        except Exception as e:
+            self.logger.error(f"Failed to load image {image_path}: {e}")
+            # Return a black image as fallback
+            return torch.zeros(3, self.image_size[0], self.image_size[1])
     
     def _determine_class_label(self, path: Path) -> int:
         """Determine class label from path"""
@@ -150,17 +276,22 @@ class FiberOpticsDataset(Dataset):
         label = self.labels[idx]
         metadata = self.metadata[idx]
         
-        # Load tensor
+        # Load tensor or image
         if self.load_into_memory and str(sample_path) in self.tensors:
             tensor = self.tensors[str(sample_path)]
         else:
-            try:
-                tensor_data = self.tensor_processor.load_tensor_file(sample_path)
-                tensor = tensor_data['tensor']
-            except Exception as e:
-                self.logger.error(f"Failed to load sample {idx}: {e}")
-                # Return zeros tensor as fallback
-                tensor = torch.zeros(3, 256, 256)
+            if self.use_raw_images:
+                # Load raw image
+                tensor = self._load_image(sample_path)
+            else:
+                # Load tensor file
+                try:
+                    tensor_data = self.tensor_processor.load_tensor_file(sample_path)
+                    tensor = tensor_data['tensor']
+                except Exception as e:
+                    self.logger.error(f"Failed to load sample {idx}: {e}")
+                    # Return zeros tensor as fallback
+                    tensor = torch.zeros(3, self.image_size[0], self.image_size[1])
         
         # Ensure correct shape
         if tensor.dim() == 4:
@@ -202,6 +333,9 @@ class FiberOpticsDataLoader:
         
         self.logger.log_class_init("FiberOpticsDataLoader")
         
+        # Will be set based on data availability
+        self.use_raw_images = False
+        
         # Collect all data paths
         self.data_paths = self._collect_data_paths()
         
@@ -211,6 +345,24 @@ class FiberOpticsDataLoader:
     def _collect_data_paths(self) -> List[Path]:
         """Collect all relevant data paths"""
         paths = []
+        
+        # Check if we should use raw images from dataset folder
+        dataset_path = Path(__file__).parent.parent / "dataset"
+        if dataset_path.exists():
+            # Check if there are image files in the dataset folder
+            has_images = False
+            for ext in FiberOpticsDataset.SUPPORTED_IMAGE_FORMATS:
+                if list(dataset_path.glob(f"*{ext}")) or list(dataset_path.glob(f"**/*{ext}")):
+                    has_images = True
+                    break
+            
+            if has_images:
+                self.logger.info(f"Found images in dataset folder, will use raw image loading")
+                self.use_raw_images = True
+                return [dataset_path]
+        
+        # Otherwise, check for tensor files
+        self.use_raw_images = False
         
         # First check if reference folder exists
         reference_path = Path(self.config.system.tensorized_data_path).parent / "reference"
@@ -238,14 +390,13 @@ class FiberOpticsDataLoader:
                         num_workers: Optional[int] = None,
                         use_weighted_sampling: bool = True,
                         use_augmentation: bool = True,
-                        distributed: bool = False) -> Tuple[DataLoader, DataLoader]:
+                        distributed: bool = False,
+                        image_size: Tuple[int, int] = (256, 256)) -> Tuple[DataLoader, DataLoader]:
         """
         Get train and validation data loaders
         "the program will run entirely in hpc"
         """
-        self.logger.log_function_entry("get_data_loaders", 
-                                     train_ratio=train_ratio,
-                                     use_weighted_sampling=use_weighted_sampling)
+        self.logger.log_function_entry("get_data_loaders")
         
         if batch_size is None:
             batch_size = self.config.training.batch_size  # Fallback to config.training.batch_size; original used self.config.BATCH_SIZE but that's legacy, use dot notation for consistency
@@ -275,7 +426,9 @@ class FiberOpticsDataLoader:
             self.data_paths,
             transform=train_transform if use_augmentation else None,  # Added conditional; original always passed train_transform even if not use_augmentation
             load_into_memory=False,  # Load on demand for large datasets
-            max_samples_per_class=1000  # Limit for training efficiency
+            max_samples_per_class=1000,  # Limit for training efficiency
+            use_raw_images=self.use_raw_images,
+            image_size=image_size
         )
         
         # Split into train and validation
@@ -304,7 +457,9 @@ class FiberOpticsDataLoader:
                 self.data_paths,
                 transform=val_transform,
                 load_into_memory=False,
-                max_samples_per_class=1000
+                max_samples_per_class=1000,
+                use_raw_images=self.use_raw_images,
+                image_size=image_size
             )
             val_dataset = torch.utils.data.Subset(val_dataset_obj, val_indices)
         
@@ -469,7 +624,8 @@ class ReferenceDataLoader:
         self.logger.log_process_start("Loading reference images")
         
         # First try to load from reference folder
-        reference_path = Path(self.config.TENSORIZED_DATA_PATH).parent / "reference"
+        # Use the project root to find the reference folder
+        reference_path = Path(__file__).parent.parent / "reference"
         if reference_path.exists():
             # Map folder names to regions
             folder_to_region = {

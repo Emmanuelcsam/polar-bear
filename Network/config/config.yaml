@@ -297,7 +297,7 @@ monitoring:
   track_gradient_norms: true
   use_tensorboard: true
   tensorboard_dir: "../runs/hpc_experiment"
-  use_wandb: true
+  use_wandb: false
   wandb_project: "fiber-optics-hpc"
   wandb_entity: null
   enable_profiling: true

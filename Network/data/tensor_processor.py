@@ -58,10 +58,16 @@ class TensorProcessor:
         # Resize to standard size if needed
         target_size = tuple(self.config.data_processing.image_size)  # Convert list to tuple
         if image.shape[:2] != target_size:
-            # Replaced cv2.resize with scipy.misc.imresize or numpy, but since scipy is available, use scipy.ndimage.zoom for resize to avoid cv2 dependency.
-            from scipy.ndimage import zoom
-            zoom_factors = (target_size[0] / image.shape[0], target_size[1] / image.shape[1], 1)
-            image = zoom(image, zoom_factors, order=1)  # Bilinear interpolation (order=1); this fixes the cv2 dependency while maintaining resize functionality.
+            # Use PIL for resizing to avoid cv2 dependency
+            from PIL import Image as PILImage
+            # Convert numpy array to PIL Image
+            if image.dtype != np.uint8:
+                image = (image * 255).astype(np.uint8)
+            pil_image = PILImage.fromarray(image)
+            # Resize using PIL
+            pil_image = pil_image.resize(target_size, PILImage.BILINEAR)
+            # Convert back to numpy array
+            image = np.array(pil_image).astype(np.float32) / 255.0
             self.logger.debug(f"Resized image to: {target_size}")
         
         # Convert to tensor
@@ -175,7 +181,7 @@ class TensorProcessor:
         Calculate pixel position maps
         "another weight will be dependent on the average pixel position"
         """
-        self.logger.log_function_entry("calculate_pixel_positions", shape=tensor_shape)
+        self.logger.log_function_entry("calculate_pixel_positions")
         
         if len(tensor_shape) == 4:
             b, c, h, w = tensor_shape
@@ -218,7 +224,7 @@ class TensorProcessor:
         Load a .pt tensor file
         "I have a folder with a large database of .pt files"
         """
-        self.logger.log_function_entry("load_tensor_file", path=str(tensor_path))
+        self.logger.log_function_entry("load_tensor_file")
         
         if not tensor_path.exists():
             self.logger.error(f"Tensor file not found: {tensor_path}")

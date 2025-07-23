@@ -182,13 +182,16 @@ class UnifiedFiberOpticsSystem:
         self.optimizer = create_advanced_optimizer(self.network, self.config)
         
         # Initialize scheduler
+        # Use the internal optimizer for scheduler since SAMWithLookahead is a wrapper
+        scheduler_optimizer = self.optimizer.optimizer if hasattr(self.optimizer, 'optimizer') else self.optimizer
+        
         if optimizer_config.scheduler.type == "cosine":
             self.scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
-                self.optimizer, T_0=10, T_mult=2
+                scheduler_optimizer, T_0=10, T_mult=2
             )
         else:
             self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-                self.optimizer,
+                scheduler_optimizer,
                 patience=optimizer_config.scheduler.patience,
                 factor=optimizer_config.scheduler.factor
             )
