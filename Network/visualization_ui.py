@@ -1,8 +1,17 @@
 #!/usr/bin/env python3
 """
-Real-time Visualization UI for Fiber Optics Neural Network
-Compatible with Ubuntu Linux Wayland system
-Shows neural network processing in real-time with parameter tweaking
+Real-time Neural Network Monitor GUI for Fiber Optics System
+
+This is a standalone GTK3 application that provides:
+- Real-time visualization of neural network processing
+- Live monitoring of analysis results
+- Parameter controls for runtime tweaking
+- Statistics display (FPS, similarity scores, etc.)
+- Compatible with Wayland display server
+
+This is a STANDALONE application - run directly with: python visualization_ui.py
+Not imported by other modules.
+Requires the neural network model to be loaded for real-time processing.
 """
 
 import gi
@@ -197,7 +206,12 @@ class NeuralNetworkVisualizer(Gtk.Window):
             stats_grid.attach(value_widget, 1, i, 1, 1)
     
     def _create_parameter_controls(self):
-        """Create parameter adjustment controls"""
+        """Create parameter adjustment controls for RUNTIME tweaking only.
+        
+        These controls allow real-time adjustment of parameters while the
+        neural network is processing. Changes are not saved to config.yaml.
+        For persistent configuration changes, use config_visualizer.py instead.
+        """
         # Equation coefficients
         coeff_label = Gtk.Label(label="<b>Equation Coefficients (I=Ax1+Bx2+...)</b>")
         coeff_label.set_use_markup(True)

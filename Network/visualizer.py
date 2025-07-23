@@ -1,7 +1,15 @@
 #!/usr/bin/env python3
 """
-Visualization module for Fiber Optics Neural Network System
-Visualizes analysis results including segmentation, anomalies, and similarities
+Core Visualization Library for Fiber Optics Neural Network System
+
+This module provides the main visualization functionality for:
+- Analysis results (segmentation, anomalies, similarities)
+- Configuration overview and reporting
+- Static plots and visualizations
+- HTML report generation
+
+Used by: trainer.py, main.py
+GUI applications should import this module for visualization functionality.
 """
 
 import numpy as np
@@ -760,28 +768,28 @@ class FiberOpticsVisualizer:
         """
         self.logger.log_process_start("Configuration Report Generation")
         
-        html_content = """
+        html_content = f"""
         <html>
         <head>
             <title>Fiber Optics Neural Network Configuration Report</title>
             <style>
-                body { font-family: Arial, sans-serif; margin: 20px; }
-                h1 { color: #333; }
-                h2 { color: #666; border-bottom: 2px solid #ddd; padding-bottom: 5px; }
-                table { border-collapse: collapse; width: 100%; margin: 20px 0; }
-                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                th { background-color: #f2f2f2; font-weight: bold; }
-                tr:nth-child(even) { background-color: #f9f9f9; }
-                .section { margin: 20px 0; }
-                .highlight { background-color: #ffffcc; }
-                .warning { color: #ff6600; }
-                .info { color: #0066cc; }
+                body {{ font-family: Arial, sans-serif; margin: 20px; }}
+                h1 {{ color: #333; }}
+                h2 {{ color: #666; border-bottom: 2px solid #ddd; padding-bottom: 5px; }}
+                table {{ border-collapse: collapse; width: 100%; margin: 20px 0; }}
+                th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
+                th {{ background-color: #f2f2f2; font-weight: bold; }}
+                tr:nth-child(even) {{ background-color: #f9f9f9; }}
+                .section {{ margin: 20px 0; }}
+                .highlight {{ background-color: #ffffcc; }}
+                .warning {{ color: #ff6600; }}
+                .info {{ color: #0066cc; }}
             </style>
         </head>
         <body>
             <h1>Fiber Optics Neural Network Configuration Report</h1>
-            <p>Generated: {}</p>
-        """.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            <p>Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</p>
+        """
         
         # System Configuration
         html_content += """

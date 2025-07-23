@@ -1,8 +1,16 @@
 #!/usr/bin/env python3
 """
-Configuration Visualizer UI for Fiber Optics Neural Network
-Allows interactive modification of YAML configuration with real-time signal visualization
-Shows theoretical performance based on configuration analytics
+Interactive Configuration Editor GUI for Fiber Optics Neural Network System
+
+This is a standalone PyQt5 application that provides:
+- Interactive configuration editing with real-time validation
+- Signal visualization based on configuration parameters
+- System architecture diagram
+- Performance prediction based on settings
+- Export/import configuration functionality
+
+This is a STANDALONE application - run directly with: python config_visualizer.py
+Not imported by other modules.
 """
 
 import sys
@@ -643,7 +651,12 @@ class EquationVisualizationWidget(QWidget):
 
 
 class PerformanceMetricsWidget(QWidget):
-    """Widget for displaying real-time performance metrics"""
+    """Widget for displaying theoretical performance metrics based on configuration.
+    
+    Note: This shows PREDICTED performance based on configuration values,
+    not actual real-time neural network performance. For actual real-time
+    monitoring, use visualization_ui.py instead.
+    """
 
     def __init__(self, parent=None):
         super().__init__(parent)
