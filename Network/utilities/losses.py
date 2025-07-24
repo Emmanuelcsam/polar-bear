@@ -82,11 +82,20 @@ class FocalLoss(nn.Module):
         # Apply alpha weighting
         if self.alpha is not None:
             # Modified to handle multi-class alpha
-            # Original code used torch.where(target > 0), assuming binary, which fails for multi-class targets (0,1,2)
-            # Fixed by gathering alpha per class: alpha_t = torch.tensor(self.alpha, device=pred.device)[target]
-            # Assumes len(self.alpha) == num_classes
-            alpha_tensor = torch.tensor(self.alpha, dtype=torch.float32, device=pred.device)
-            alpha_t = alpha_tensor[target]
+            if isinstance(self.alpha, list):
+                # Multi-class case: create tensor and index by target class
+                alpha_tensor = torch.tensor(self.alpha, dtype=torch.float32, device=pred.device)
+                # Ensure we have enough alpha values for all classes
+                if len(self.alpha) < pred.shape[1]:
+                    # Pad with the last alpha value if not enough values provided
+                    alpha_tensor = torch.cat([
+                        alpha_tensor,
+                        alpha_tensor[-1].repeat(pred.shape[1] - len(self.alpha))
+                    ])
+                alpha_t = alpha_tensor[target]
+            else:
+                # Binary case: use alpha for positive class, (1-alpha) for negative
+                alpha_t = torch.where(target > 0, self.alpha, 1 - self.alpha)
             focal_weight = alpha_t * focal_weight
         
         # Focal loss

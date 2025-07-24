@@ -373,7 +373,7 @@ class StructuralSimilarityIndex(nn.Module):
             gauss = torch.tensor([
                 np.exp(-(x - window_size//2)**2 / (2.0*sigma**2))
                 for x in range(window_size)
-            ])
+            ], dtype=torch.float32)
             return gauss / gauss.sum()
         
         _1D_window = gaussian(window_size, 1.5).unsqueeze(1)
@@ -409,7 +409,7 @@ class StructuralSimilarityIndex(nn.Module):
             
             # Combine scales
             mssim = torch.stack(mssim, dim=1)
-            return (mssim * torch.tensor(weights, device=mssim.device)).sum(dim=1)
+            return (mssim * torch.tensor(weights, device=mssim.device, dtype=torch.float32)).sum(dim=1)
         else:
             return self._ssim(img1, img2)
     
@@ -508,6 +508,11 @@ class CombinedSimilarityMetric(nn.Module):
         
         # Optimal Transport (if features provided)
         if features1 is not None and features2 is not None:
+            # Ensure features are 3D [B, N, D]
+            if features1.dim() == 2:
+                features1 = features1.unsqueeze(1)  # [B, D] -> [B, 1, D]
+            if features2.dim() == 2:
+                features2 = features2.unsqueeze(1)  # [B, D] -> [B, 1, D]
             ot_dist = self.ot_similarity(features1, features2)
             results['ot_similarity'] = 1 - torch.clamp(ot_dist / 10, 0, 1)  # Normalize
         else:

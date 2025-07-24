@@ -148,14 +148,21 @@ class SAM(Optimizer):
 
     def _grad_norm(self):
         """Compute gradient norm across all parameters"""
+        # Collect all gradient norms
+        grad_norms = []
+        for group in self.param_groups:
+            for p in group['params']:
+                if p.grad is not None:
+                    grad_norms.append(p.grad.data.norm())
+        
+        # Handle empty case
+        if not grad_norms:
+            return torch.tensor(0.0)
+        
+        # Stack and compute norm
         shared_device = self.param_groups[0]['params'][0].device
         norm = torch.norm(
-            torch.stack([
-                p.grad.data.norm().to(shared_device)
-                for group in self.param_groups
-                for p in group['params']
-                if p.grad is not None
-            ])
+            torch.stack([g.to(shared_device) for g in grad_norms])
         )
         return norm
 
@@ -330,6 +337,23 @@ class SAMWithLookahead:
         
         self.logger.info("SAMWithLookahead optimizer initialized")
         print(f"[{datetime.now()}] SAMWithLookahead initialized successfully")
+    
+    def zero_grad(self):
+        """Zero gradients of all parameters"""
+        self.optimizer.zero_grad()
+    
+    def state_dict(self):
+        """Return optimizer state dict"""
+        return {
+            'sam_state': self.sam_optimizer.state_dict(),
+            'optimizer_state': self.optimizer.state_dict(),
+            'defaults': self.defaults
+        }
+    
+    def load_state_dict(self, state_dict):
+        """Load optimizer state dict"""
+        self.sam_optimizer.load_state_dict(state_dict['sam_state'])
+        self.optimizer.load_state_dict(state_dict['optimizer_state'])
 
     def step(self, closure):
         """

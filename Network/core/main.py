@@ -14,7 +14,6 @@ from pathlib import Path
 import sys
 import time
 import json
-import cv2
 from datetime import datetime
 from typing import Optional, Dict, List, Tuple, Union
 
@@ -672,9 +671,12 @@ class UnifiedFiberOpticsSystem:
         output_path.mkdir(parents=True, exist_ok=True)
         
         # Load and preprocess image
-        image = cv2.imread(image_path)
-        if image is None:
-            self.logger.error(f"Failed to load image: {image_path}")
+        from PIL import Image as PILImage
+        try:
+            image = PILImage.open(image_path).convert('RGB')
+            image = np.array(image)
+        except Exception as e:
+            self.logger.error(f"Failed to load image: {image_path}: {e}")
             return None
         
         # Convert to tensor

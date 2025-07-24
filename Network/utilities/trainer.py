@@ -266,9 +266,10 @@ class EnhancedTrainer:
             epoch_start = time.time()
             
             # Dynamic configuration updates
-            if self.config.check_for_updates():
-                self.logger.info("Configuration updated, reloading...")
-                self.config.reload()
+            # Removed check_for_updates call - not implemented in config
+            # if self.config.check_for_updates():
+            #     self.logger.info("Configuration updated, reloading...")
+            #     self.config.reload()
             
             # Log epoch start
             self.logger.log_epoch_start(epoch + 1, num_epochs)

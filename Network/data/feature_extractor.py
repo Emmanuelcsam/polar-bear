@@ -236,7 +236,7 @@ class MultiScaleFeatureExtractor(nn.Module):
         """
         Extract features at multiple scales with correlation
         """
-        self.logger.log_function_entry("forward", input_shape=x.shape)
+        self.logger.log_function_entry("forward")
         
         b = x.shape[0]  # Added extraction of batch size; original assumed B=1, causing broadcast errors for B>1
         
@@ -248,11 +248,20 @@ class MultiScaleFeatureExtractor(nn.Module):
             avg_gradient = avg_gradient.unsqueeze(-1)  # [B] -> [B,1]
         gradient_weights = self.gradient_weight_net(avg_gradient)  # [B, num_scales]
         
-        avg_positions = torch.stack([
-            position_info['average_x'],  # Assume these are [B] tensors
-            position_info['average_y'],
-            position_info['average_radial']
-        ], dim=1)  # [B,3]; original stacked without dim, but for batch need dim=1
+        # Handle position info that might be scalars
+        avg_x = position_info['average_x']
+        avg_y = position_info['average_y']
+        avg_radial = position_info['average_radial']
+        
+        # Convert scalars to tensors if needed
+        if not isinstance(avg_x, torch.Tensor) or avg_x.dim() == 0:
+            avg_x = torch.tensor([avg_x] * b, device=x.device, dtype=torch.float32)
+        if not isinstance(avg_y, torch.Tensor) or avg_y.dim() == 0:
+            avg_y = torch.tensor([avg_y] * b, device=x.device, dtype=torch.float32)
+        if not isinstance(avg_radial, torch.Tensor) or avg_radial.dim() == 0:
+            avg_radial = torch.tensor([avg_radial] * b, device=x.device, dtype=torch.float32)
+            
+        avg_positions = torch.stack([avg_x, avg_y, avg_radial], dim=1)  # [B,3]
         position_weights = self.position_weight_net(avg_positions)  # [B, num_scales]
         
         # Combined weights
@@ -471,7 +480,7 @@ class FeatureExtractionPipeline:
             for batch_idx in range(tensor.shape[0]):
                 mask = anomaly_locations[0] == batch_idx
                 locs = list(zip(anomaly_locations[2][mask][:5].tolist(), anomaly_locations[3][mask][:5].tolist()))
-                self.logger.log_anomaly_detection(len(locs), locs, batch_idx=batch_idx)  # Added batch_idx to log; assume logger handles
+                self.logger.log_anomaly_detection(len(locs), locs)  # Removed batch_idx; logger doesn't support it
         else:
             self.logger.log_anomaly_detection(0, [])
         

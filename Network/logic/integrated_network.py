@@ -33,7 +33,7 @@ from logic.architectures import (
     ResidualSEBlock, DeformableResidualBlock
 )
 from utilities.losses import CombinedAdvancedLoss
-from config.similarity import CombinedSimilarityMetric
+# from config.similarity import CombinedSimilarityMetric  # Moved to avoid circular import
 # from fiber_real_time_optimization import AdaptiveComputationModule
 from core.config_loader import get_config as get_advanced_config
 
@@ -269,22 +269,16 @@ class EnhancedIntegratedNetwork(nn.Module):
         
         # Adaptive computation modules (placeholder for now)
         if self.config.model.use_adaptive_computation:
-            # Simplified adaptive modules until full implementation
-            self.adaptive_modules = nn.ModuleList([
-                nn.Sequential(
-                    nn.Conv2d(self.config.model.base_channels * (2**i),
-                             self.config.model.base_channels * (2**i), 1),
-                    nn.ReLU()
-                )
-                for i in range(4)
-            ])
+            # Create a single adaptive module that handles variable channel sizes
+            self.adaptive_module = nn.Sequential(
+                nn.Conv2d(1, 1, 1, groups=1),  # Channel-wise 1x1 conv
+                nn.ReLU()
+            )
         
         # Enhanced segmentation network with attention
-        # Get feature channels from config
-        feature_channels = getattr(self.config, 'feature_channels', [64, 128, 256, 512])
-        if hasattr(self.config, 'model') and hasattr(self.config.model, 'feature_channels'):
-            feature_channels = self.config.model.feature_channels
-        seg_channels = sum(feature_channels)
+        # After attention gates, we only get backbone channels: [128, 256, 512, 1024]
+        # Total: 128 + 256 + 512 + 1024 = 1920
+        seg_channels = sum(self.backbone.out_channels)  # 1920
         self.segmentation_net = nn.ModuleList([
             MixedPrecisionLayer(
                 nn.Conv2d(seg_channels, 256, 1),
@@ -335,7 +329,8 @@ class EnhancedIntegratedNetwork(nn.Module):
         )
         
         # Combined similarity metric
-        self.similarity_metric = CombinedSimilarityMetric(self.config)
+        # Import postponed to avoid circular import issues
+        self.similarity_metric = None  # Will be initialized when needed
         
         # Loss function
         self.loss_fn = CombinedAdvancedLoss(self.config)
@@ -369,14 +364,14 @@ class EnhancedIntegratedNetwork(nn.Module):
         self.register_buffer('method_scores', torch.ones(7))
         self.method_score_ema = 0.9
         
-        # Attention gates for feature fusion
+        # Attention gates for feature fusion - Fixed to use backbone output channels
         self.attention_gates = nn.ModuleList([
             AttentionGate(
-                F_g=self.config.model.base_channels * (2**i),
-                F_l=self.config.model.base_channels * (2**i),
-                F_int=self.config.model.base_channels * (2**i) // 2
+                F_g=self.backbone.out_channels[i],
+                F_l=self.backbone.out_channels[i],
+                F_int=self.backbone.out_channels[i] // 2
             )
-            for i in range(4)
+            for i in range(len(self.backbone.out_channels))
         ])
         
         # Domain adaptation layer (if using)
@@ -492,7 +487,15 @@ class EnhancedIntegratedNetwork(nn.Module):
                 seg_features = layer(seg_features)
         segmentation_logits = seg_features
         
-        region_probs = F.softmax(segmentation_logits, dim=1)
+        # Upsample segmentation logits to original size for trend analysis
+        segmentation_logits_upsampled = F.interpolate(
+            segmentation_logits, 
+            size=(x.shape[2], x.shape[3]),  # Original image size
+            mode='bilinear', 
+            align_corners=False
+        )
+        
+        region_probs = F.softmax(segmentation_logits_upsampled, dim=1)
         
         # Trend analysis
         trend_results = self.trend_analyzer(
@@ -528,8 +531,8 @@ class EnhancedIntegratedNetwork(nn.Module):
         
         return {
             # Core outputs
-            'segmentation': segmentation_logits,
-            'region_probs': region_probs,
+            'segmentation': segmentation_logits,  # Keep original resolution for output
+            'region_probs': F.softmax(segmentation_logits, dim=1),  # Downsampled probs
             'anomaly_map': anomaly_results['final_anomaly_map'],
             'reconstruction': reconstructed,
             'final_similarity': final_similarity['score'],
@@ -562,16 +565,36 @@ class EnhancedIntegratedNetwork(nn.Module):
         target_size = backbone_features[-1].shape[-2:]
         
         combined = []
-        for bb_feat, ex_feat, attn_gate in zip(backbone_features, extracted_features, self.attention_gates):
+        # Only combine features that have matching indices
+        num_features = min(len(backbone_features), len(extracted_features), len(self.attention_gates))
+        
+        for i in range(num_features):
+            bb_feat = backbone_features[i]
+            ex_feat = extracted_features[i]
+            
             # Resize if needed
             if bb_feat.shape[-2:] != target_size:
                 bb_feat = F.interpolate(bb_feat, size=target_size, mode='bilinear', align_corners=False)
             if ex_feat.shape[-2:] != target_size:
                 ex_feat = F.interpolate(ex_feat, size=target_size, mode='bilinear', align_corners=False)
             
+            # Match channels if they don't match
+            if bb_feat.shape[1] != ex_feat.shape[1]:
+                # Use 1x1 conv to match channels
+                channel_matcher = nn.Conv2d(ex_feat.shape[1], bb_feat.shape[1], 1).to(ex_feat.device)
+                ex_feat = channel_matcher(ex_feat)
+            
             # Apply attention gate
+            attn_gate = self.attention_gates[i]
             gated_feat = attn_gate(bb_feat, ex_feat)
             combined.append(gated_feat)
+        
+        # Add any remaining backbone features without attention
+        for i in range(num_features, len(backbone_features)):
+            feat = backbone_features[i]
+            if feat.shape[-2:] != target_size:
+                feat = F.interpolate(feat, size=target_size, mode='bilinear', align_corners=False)
+            combined.append(feat)
         
         # Concatenate all features
         return torch.cat(combined, dim=1)
@@ -580,10 +603,16 @@ class EnhancedIntegratedNetwork(nn.Module):
         """Apply adaptive computation to features"""
         # This is a simplified version - full implementation would process
         # through multiple layers adaptively
-        if hasattr(self, 'adaptive_modules') and len(self.adaptive_modules) > 0:
-            # Simple adaptive processing
-            output = self.adaptive_modules[0](features)
-            return output
+        if hasattr(self, 'adaptive_module'):
+            # Apply channel-wise adaptive processing
+            # Process each channel independently
+            b, c, h, w = features.shape
+            processed = []
+            for i in range(c):
+                channel_feat = features[:, i:i+1, :, :]
+                processed_channel = self.adaptive_module(channel_feat)
+                processed.append(processed_channel)
+            return torch.cat(processed, dim=1)
         return features
     
     def _compute_advanced_similarity(self, embedding: torch.Tensor, 
@@ -606,6 +635,13 @@ class EnhancedIntegratedNetwork(nn.Module):
         reference_embedding = self.reference_embeddings[best_ref_idx].unsqueeze(0)
         
         # Compute advanced similarities
+        if self.similarity_metric is None:
+            # Lazy import to avoid circular dependencies
+            import sys
+            from pathlib import Path
+            sys.path.insert(0, str(Path(__file__).parent.parent))
+            from config.similarity import CombinedSimilarityMetric
+            self.similarity_metric = CombinedSimilarityMetric(self.config)
         advanced_sim = self.similarity_metric(image, image, embedding, reference_embedding)  # Use self as placeholder for ref_image
         
         return {
@@ -647,6 +683,11 @@ class EnhancedIntegratedNetwork(nn.Module):
                                   gradient_info: Dict,
                                   region_probs: torch.Tensor) -> Dict[str, torch.Tensor]:
         """Advanced anomaly detection"""
+        # Ensure same size for reconstruction error
+        if reconstructed.shape != original.shape:
+            reconstructed = F.interpolate(reconstructed, size=original.shape[-2:], 
+                                        mode='bilinear', align_corners=False)
+        
         # Basic reconstruction error
         reconstruction_diff = torch.abs(reconstructed - original)
         
@@ -685,7 +726,7 @@ class EnhancedIntegratedNetwork(nn.Module):
         for _ in range(self.config.advanced.dropout_samples):
             # Fixed placeholder pred = rand to actual model forward for realistic uncertainty
             # Original code used rand, which doesn't compute real uncertainty; fixed to run actual model forward with dropout enabled
-            pred = self.model(x)['segmentation']  # Use segmentation output for uncertainty
+            pred = self.forward(x)['segmentation']  # Use segmentation output for uncertainty
             predictions.append(pred)
         
         # Compute variance as uncertainty
@@ -757,7 +798,7 @@ class EnhancedIntegratedNetwork(nn.Module):
         boundaries = torch.sqrt(edges_x**2 + edges_y**2)
         boundaries = (boundaries > 0.1).float()
         
-        return boundaries
+        return boundaries.squeeze(1)  # Return [B, H, W] instead of [B, 1, H, W]
     
     def set_equation_coefficients(self, coefficients: Union[List[float], np.ndarray]):
         """Set equation coefficients dynamically"""

@@ -45,9 +45,11 @@ class TensorProcessor:
         print(f"[{datetime.now()}] TensorProcessor.image_to_tensor: Converting image to tensor")
         self.logger.log_function_entry("image_to_tensor")
         
-        # Load image if path is provided - removed cv2 loading code because opencv (cv2) is not available in the code interpreter libraries, preventing import errors; now assume input is always np.ndarray (as in test code), and raise error if path to avoid unhandled cases.
+        # Load image if path is provided
         if isinstance(image, (str, Path)):
-            raise ValueError("Image paths are not supported in this environment; provide np.ndarray instead.")  # Added this to prevent silent failures or import needs; aligns with test usage where image is np array.
+            from PIL import Image as PILImage
+            image = PILImage.open(str(image)).convert('RGB')
+            image = np.array(image)
         
         # Ensure image is numpy array
         if not isinstance(image, np.ndarray):

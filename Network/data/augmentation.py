@@ -13,7 +13,6 @@ import numpy as np
 from typing import Dict, List, Optional, Tuple, Union
 from datetime import datetime
 import random
-import cv2
 from scipy.ndimage import gaussian_filter, map_coordinates
 
 from core.statistical_config import get_statistical_config
@@ -302,9 +301,9 @@ class FiberOpticsAugmentation:
                 transforms.append(GridDistortion(num_steps=5, distort_limit=0.3, p=0.5))
             
             if 'optical_distortion' in aug_config['advanced_augmentations']:
-                # FIX: OpticalDistortion not defined; assuming it's similar to GridDistortion, but to avoid NameError, comment out until defined (add class or import). If in config.yaml, set advanced_augmentations without it.
-                # transforms.append(OpticalDistortion(distort_limit=0.05, shift_limit=0.05, p=0.5))
-                self.logger.warning("OpticalDistortion not defined; skipping.")
+                # OpticalDistortion not implemented, using GridDistortion as alternative
+                transforms.append(GridDistortion(num_steps=5, distort_limit=0.05, p=0.5))
+                self.logger.info("Using GridDistortion as alternative to OpticalDistortion")
             
             # Color augmentations
             if any(aug in aug_config['color_augmentations'] for aug in ['hue_saturation', 'rgb_shift']):
