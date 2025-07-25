@@ -35,13 +35,18 @@ class CombinedLoss(nn.Module):
     
     def __init__(self, config):
         super().__init__()
-        self.config = config
+        # Convert dict to Box if needed
+        if isinstance(config, dict):
+            from config import Box
+            self.config = Box(config)
+        else:
+            self.config = config
         
         # Initialize loss functions based on configuration
-        if config.loss.type == 'focal':
+        if self.config.loss.type == 'focal':
             self.classification_loss = FocalLoss(
-                alpha=config.loss.focal_alpha, 
-                gamma=config.loss.focal_gamma
+                alpha=self.config.loss.focal_alpha, 
+                gamma=self.config.loss.focal_gamma
             )
         else:
             self.classification_loss = nn.CrossEntropyLoss()
@@ -50,7 +55,7 @@ class CombinedLoss(nn.Module):
         self.similarity_loss = nn.CosineEmbeddingLoss()
         
         # Loss weights
-        self.weights = config.loss.weights
+        self.weights = self.config.loss.weights
     
     def forward(self, outputs, batch, device):
         """

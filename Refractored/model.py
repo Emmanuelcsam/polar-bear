@@ -45,7 +45,12 @@ class FiberOpticNet(nn.Module):
     
     def __init__(self, config):
         super().__init__()
-        self.config = config
+        # Convert dict to Box if needed
+        if isinstance(config, dict):
+            from config import Box
+            self.config = Box(config)
+        else:
+            self.config = config
         
         # Feature extractor backbone
         self._build_backbone()

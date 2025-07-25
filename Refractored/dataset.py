@@ -26,7 +26,11 @@ class FiberOpticsDataset(Dataset):
     """
     
     def __init__(self, config, mode='train'):
-        self.config = config.data
+        # Handle both dict and object config
+        if hasattr(config, 'data'):
+            self.config = config.data
+        else:
+            self.config = config['data']
         self.mode = mode
         self.logger = logging.getLogger(self.__class__.__name__)
         

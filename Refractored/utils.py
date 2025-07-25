@@ -271,16 +271,22 @@ def calculate_class_weights(dataset, num_classes):
         try:
             sample = dataset[i]
             label = sample['label']
+            if isinstance(label, torch.Tensor):
+                label = label.item()
             class_counts[label] += 1
         except:
             continue
     
     # Calculate inverse frequency weights
     total_samples = class_counts.sum()
-    class_weights = total_samples / (num_classes * class_counts)
-    
-    # Handle zero counts
-    class_weights[class_counts == 0] = 0
+    if total_samples > 0:
+        # Avoid division by zero
+        class_weights = torch.ones(num_classes)
+        for i in range(num_classes):
+            if class_counts[i] > 0:
+                class_weights[i] = total_samples / (num_classes * class_counts[i])
+    else:
+        class_weights = torch.ones(num_classes)
     
     return class_weights
 

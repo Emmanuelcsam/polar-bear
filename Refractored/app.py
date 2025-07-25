@@ -44,7 +44,10 @@ class FiberOpticAnalysisApp:
         
         # Use checkpoint from config if not provided
         if checkpoint_path is None:
-            checkpoint_path = self.config.webapp.default_checkpoint
+            if hasattr(self.config, 'webapp') and hasattr(self.config.webapp, 'default_checkpoint'):
+                checkpoint_path = self.config.webapp.default_checkpoint
+            else:
+                checkpoint_path = None
         
         # Load model
         self.model = self._load_model(checkpoint_path)
@@ -127,11 +130,15 @@ class FiberOpticAnalysisApp:
                 outputs = self.model(input_tensor, equation_coeffs=coeffs)
             
             # Create visualizations
+            colors = None
+            if hasattr(self.config, 'visualization') and hasattr(self.config.visualization, 'segmentation_colors'):
+                colors = self.config.visualization.segmentation_colors
+            
             segmentation_overlay = create_segmentation_overlay(
                 image.resize((self.config.data.image_size, self.config.data.image_size)),
                 outputs['region_logits'],
                 self.config.data.class_names,
-                self.config.visualization.segmentation_colors
+                colors
             )
             
             anomaly_heatmap = create_anomaly_heatmap(outputs['anomaly_map'])
@@ -326,11 +333,11 @@ class FiberOpticAnalysisApp:
         
         # Use config values if not provided
         if share is None:
-            share = self.config.webapp.share
+            share = self.config.webapp.share if hasattr(self.config, 'webapp') else False
         if server_name is None:
-            server_name = self.config.webapp.host
+            server_name = self.config.webapp.host if hasattr(self.config, 'webapp') else "127.0.0.1"
         if server_port is None:
-            server_port = self.config.webapp.port
+            server_port = self.config.webapp.port if hasattr(self.config, 'webapp') else 7860
         
         self.logger.info(f"Launching web interface on {server_name}:{server_port}")
         
