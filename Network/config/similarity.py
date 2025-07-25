@@ -9,7 +9,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union, Any
 from datetime import datetime
 import torchvision.models as models
 from scipy.optimize import linear_sum_assignment
@@ -26,12 +26,11 @@ if str(project_root) not in sys.path:
 
 # It's better to handle potential import errors gracefully.
 try:
-    from core.config_loader import get_config, ConfigManager
+    from core.config_loader import ConfigManager
     from core.logger import get_logger
 except ImportError:
     print("Could not import core modules. Running in standalone mode.")
     # Define dummy functions if core modules are not found, allowing the script to be parsed.
-    def get_config(): return None
     def get_logger(name):
         import logging
         return logging.getLogger(name)
@@ -55,26 +54,27 @@ class LearnedPerceptualSimilarity(nn.Module):
         print(f"[{datetime.now()}] Initializing LearnedPerceptualSimilarity")
         
         self.logger = get_logger("LPIPS")
-        self.logger.log_class_init("LearnedPerceptualSimilarity", net_type=net_type)
+        self.logger.info(f"Initializing LearnedPerceptualSimilarity with net_type={net_type}")
         
         self.spatial = spatial
         self.reduce_mean = reduce_mean
         
         # Initialize backbone network
-        # FIX: Changed pretrained=True to pretrained=False.
+        # FIX: Changed pretrained=True to weights=None.
         # REASON: The original code would fail in environments without internet access, as it cannot download
         # the pretrained model weights. This change allows the model to initialize with random weights,
         # preventing runtime errors and assuming the model will be trained later or weights loaded locally.
+        # The `pretrained` argument is deprecated in favor of `weights`.
         if net_type == 'vgg16':
-            net = models.vgg16(weights=None) # Changed from pretrained=True
+            net = models.vgg16(weights=None) 
             self.layers = [3, 8, 15, 22, 29]  # Conv layers before pooling
             self.channels = [64, 128, 256, 512, 512]
         elif net_type == 'vgg19':
-            net = models.vgg19(weights=None) # Changed from pretrained=True
+            net = models.vgg19(weights=None)
             self.layers = [3, 8, 17, 26, 35]
             self.channels = [64, 128, 256, 512, 512]
         elif net_type == 'alexnet': # FIX: Corrected the name from 'alex' to 'alexnet' to match torchvision.models
-            net = models.alexnet(weights=None) # Changed from pretrained=True
+            net = models.alexnet(weights=None)
             self.layers = [0, 3, 6, 8, 10]
             self.channels = [64, 192, 384, 256, 256]
         else:
@@ -82,16 +82,17 @@ class LearnedPerceptualSimilarity(nn.Module):
         
         # Extract feature layers
         self.net = nn.ModuleList()
-        if net_type.startswith('vgg'):
-            features = net.features
-            for i, layer_idx in enumerate(self.layers):
-                start_idx = self.layers[i-1] + 1 if i > 0 else 0
-                self.net.append(features[start_idx:layer_idx+1])
-        else:  # AlexNet
-            features = net.features
-            for i, layer_idx in enumerate(self.layers):
-                start_idx = self.layers[i-1] + 1 if i > 0 else 0
-                self.net.append(features[start_idx:layer_idx+1])
+        features = list(net.features.children())
+        prev_layer_idx = -1
+        for layer_idx in self.layers:
+            # Create a sequential module for the layer range
+            layer_modules = []
+            for i in range(prev_layer_idx + 1, layer_idx + 1):
+                if i < len(features):
+                    layer_modules.append(features[i])
+            if layer_modules:
+                self.net.append(nn.Sequential(*layer_modules))
+            prev_layer_idx = layer_idx
         
         # Freeze backbone
         for param in self.parameters():
@@ -174,14 +175,14 @@ class LearnedPerceptualSimilarity(nn.Module):
             lpips_dist = torch.cat(diffs, dim=1).mean(dim=1, keepdim=True)
         else:
             # Average over spatial dimensions
-            lpips_dist = 0
+            lpips_dist = torch.zeros(input1.shape[0], device=input1.device)
             for diff in diffs:
                 # FIX: Check if reduce_mean is True before calling mean().
                 # REASON: The original code always added the mean, ignoring the `reduce_mean` flag.
                 if self.reduce_mean:
-                    lpips_dist += diff.mean(dim=[2, 3])
+                    lpips_dist += diff.mean(dim=[2, 3]).squeeze()
                 else:
-                    lpips_dist += diff.sum(dim=[2, 3])
+                    lpips_dist += diff.sum(dim=[2, 3]).squeeze()
             
         return lpips_dist
 
@@ -212,7 +213,7 @@ class OptimalTransportSimilarity(nn.Module):
         print(f"[{datetime.now()}] Initializing OptimalTransportSimilarity")
         
         self.logger = get_logger("OptimalTransport")
-        self.logger.log_class_init("OptimalTransportSimilarity", epsilon=epsilon)
+        self.logger.info(f"Initializing OptimalTransportSimilarity with epsilon={epsilon}")
         
         self.epsilon = epsilon
         self.max_iter = max_iter
@@ -437,19 +438,20 @@ class StructuralSimilarityIndex(nn.Module):
         C2 = 0.03 ** 2
         
         # Mean
-        mu1 = F.conv2d(img1, self.window, padding=self.window_size//2, groups=self.num_channels)
-        mu2 = F.conv2d(img2, self.window, padding=self.window_size//2, groups=self.num_channels)
+        window_tensor = self.window.to(torch.float32)
+        mu1 = F.conv2d(img1, window_tensor, padding=self.window_size//2, groups=self.num_channels)
+        mu2 = F.conv2d(img2, window_tensor, padding=self.window_size//2, groups=self.num_channels)
         
         mu1_sq = mu1.pow(2)
         mu2_sq = mu2.pow(2)
         mu1_mu2 = mu1 * mu2
         
         # Variance and covariance
-        sigma1_sq = F.conv2d(img1*img1, self.window, padding=self.window_size//2, 
+        sigma1_sq = F.conv2d(img1*img1, window_tensor, padding=self.window_size//2, 
                            groups=self.num_channels) - mu1_sq
-        sigma2_sq = F.conv2d(img2*img2, self.window, padding=self.window_size//2, 
+        sigma2_sq = F.conv2d(img2*img2, window_tensor, padding=self.window_size//2, 
                            groups=self.num_channels) - mu2_sq
-        sigma12 = F.conv2d(img1*img2, self.window, padding=self.window_size//2, 
+        sigma12 = F.conv2d(img1*img2, window_tensor, padding=self.window_size//2, 
                          groups=self.num_channels) - mu1_mu2
         
         # SSIM
@@ -458,12 +460,14 @@ class StructuralSimilarityIndex(nn.Module):
         
         if self.use_edges:
             # Compute edge similarity
-            edges1_x = F.conv2d(img1, self.sobel_x, padding=1, groups=self.num_channels)
-            edges1_y = F.conv2d(img1, self.sobel_y, padding=1, groups=self.num_channels)
+            sobel_x_tensor = self.sobel_x
+            sobel_y_tensor = self.sobel_y
+            edges1_x = F.conv2d(img1, sobel_x_tensor, padding=1, groups=self.num_channels)
+            edges1_y = F.conv2d(img1, sobel_y_tensor, padding=1, groups=self.num_channels)
             edges1 = torch.sqrt(edges1_x**2 + edges1_y**2 + 1e-8)
             
-            edges2_x = F.conv2d(img2, self.sobel_x, padding=1, groups=self.num_channels)
-            edges2_y = F.conv2d(img2, self.sobel_y, padding=1, groups=self.num_channels)
+            edges2_x = F.conv2d(img2, sobel_x_tensor, padding=1, groups=self.num_channels)
+            edges2_y = F.conv2d(img2, sobel_y_tensor, padding=1, groups=self.num_channels)
             edges2 = torch.sqrt(edges2_x**2 + edges2_y**2 + 1e-8)
             
             # Edge SSIM
@@ -481,7 +485,7 @@ class CombinedSimilarityMetric(nn.Module):
     Provides comprehensive similarity assessment for fiber optics
     """
     
-    def __init__(self, config: Dict):
+    def __init__(self, config: Any):
         """Initialize combined metric"""
         super().__init__()
         print(f"[{datetime.now()}] Initializing CombinedSimilarityMetric")
@@ -494,29 +498,29 @@ class CombinedSimilarityMetric(nn.Module):
         # This makes the component rigid. By loading from the config, the entire behavior
         # can be controlled from config.yaml without code changes.
         self.lpips = LearnedPerceptualSimilarity(
-            net_type=self.config.similarity.lpips.network,
-            use_dropout=self.config.similarity.lpips.use_dropout,
-            spatial=self.config.similarity.lpips.spatial
+            net_type=getattr(config.similarity.lpips, 'network', 'vgg16'),
+            use_dropout=getattr(config.similarity.lpips, 'use_dropout', True),
+            spatial=getattr(config.similarity.lpips, 'spatial', False)
         )
         self.ot_similarity = OptimalTransportSimilarity(
-            epsilon=self.config.similarity.optimal_transport.epsilon,
-            max_iter=self.config.similarity.optimal_transport.max_iter,
-            metric=self.config.similarity.optimal_transport.metric
+            epsilon=getattr(config.similarity.optimal_transport, 'epsilon', 0.1),
+            max_iter=getattr(config.similarity.optimal_transport, 'max_iter', 100),
+            metric=getattr(config.similarity.optimal_transport, 'metric', 'euclidean')
         )
         self.ssim = StructuralSimilarityIndex(
-            window_size=self.config.similarity.ssim.window_size,
-            use_edges=self.config.similarity.ssim.use_edges,
-            multi_scale=self.config.similarity.ssim.multi_scale
+            window_size=getattr(config.similarity.ssim, 'window_size', 11),
+            use_edges=getattr(config.similarity.ssim, 'use_edges', True),
+            multi_scale=getattr(config.similarity.ssim, 'multi_scale', True)
         )
         
         # FIX: Combination weights are now loaded from the config object.
         # REASON: The original code used a hardcoded tensor [0.4, 0.3, 0.3].
         # This change makes the weighting of the different similarity scores configurable.
-        weights_dict = self.config.similarity.combination_weights
+        weights_dict = config.similarity.combination_weights
         self.combination_weights = nn.Parameter(torch.tensor([
-            weights_dict.lpips,
-            weights_dict.ssim,
-            weights_dict.optimal_transport
+            getattr(weights_dict, 'lpips', 0.4),
+            getattr(weights_dict, 'ssim', 0.3),
+            getattr(weights_dict, 'optimal_transport', 0.3)
         ]))
         
         self.logger.info("CombinedSimilarityMetric initialized")

@@ -1,0 +1,85 @@
+# config.yaml
+# Configuration file for the fiber optic analysis system
+
+system:
+  checkpoints_path: "./checkpoints"
+  mode: "train"  # Options: train, eval, optimize
+  checkpoint_path: null  # Path to checkpoint for evaluation/resuming training
+  seed: 42
+  verbose: false
+  config_path: "config.yaml"
+
+data:
+  path: "./fiber_optic_data" # Main folder containing subfolders for each class
+  num_workers: 4
+  image_size: 224
+  class_names: ["core", "cladding", "ferrule", "defects"] # Must match folder names
+  class_map: # For easy access in code
+    core: 0
+    cladding: 1
+    ferrule: 2
+    defects: 3
+
+model:
+  backbone: "resnet18"
+  image_size: 224
+  num_classes: 4 # Must match the number of class_names
+  embedding_dim: 128
+
+student_model:
+  backbone: "mobilenet_v3_small"
+  image_size: 224
+  num_classes: 4
+  embedding_dim: 64
+
+training:
+  num_epochs: 50
+  batch_size: 32
+  log_interval: 10
+  use_amp: true # Use Automatic Mixed Precision for speed
+
+optimizer:
+  learning_rate: 0.001
+  weight_decay: 0.0001
+
+loss:
+  type: "focal" # 'crossentropy' or 'focal'
+  focal_alpha: 0.25
+  focal_gamma: 2.0
+  weights:
+    classification: 1.0
+    anomaly: 0.7 # Increased weight based on statistical reports
+    similarity: 0.5
+
+# The equation for the final similarity score: S = A*x1 + B*x2 + C*x3
+# Updated based on statistical analysis showing high importance of anomaly detection.
+equation:
+  coefficients:
+    A: 0.4  # classification confidence
+    B: 0.4  # 1 - anomaly_score
+    C: 0.2  # embedding similarity
+
+similarity:
+  threshold: 0.7
+
+optimization:
+  prune_after_training: false
+  pruning_ratio: 0.3
+  distill_after_training: false
+  distillation_epochs: 10
+  temperature: 4.0
+  alpha: 0.7
+
+visualization:
+  segmentation_colors:
+    - [255, 0, 0]   # core (red)
+    - [0, 255, 0]   # cladding (green)
+    - [0, 0, 255]   # ferrule (blue)
+    - [255, 255, 0] # defects (yellow)
+
+# Web application settings
+webapp:
+  host: "127.0.0.1"
+  port: 7860
+  share: false
+  default_checkpoint: "best_model.pth"  # Default checkpoint to use if none specified

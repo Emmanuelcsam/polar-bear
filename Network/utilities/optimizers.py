@@ -15,404 +15,231 @@ from datetime import datetime
 from collections import defaultdict
 import copy
 
-from core.config_loader import get_config
-from core.logger import get_logger
+# FIX: To make this file runnable standalone for testing, added dummy logger.
+class DummyLogger:
+    def info(self, msg): print(msg)
+    def log_class_init(self, *args, **kwargs): pass
+    def log_function_entry(self, *args, **kwargs): pass
+    def log_function_exit(self, *args, **kwargs): pass
+
+# Import logger with fallback
+try:
+    from core.config_loader import get_config
+    from core.logger import get_logger
+except ImportError:
+    # Fallback for standalone testing
+    def get_logger(name): 
+        return DummyLogger()
 
 class SAM(Optimizer):
     """
-    Sharpness-Aware Minimization (SAM) optimizer
-    "Recent research (Foret et al., 2021) shows SAM improves generalization by finding flatter minima"
-    
-    Mathematical formulation:
-    Instead of: θ_new = θ - α∇L(θ)
-    SAM uses: θ_new = θ - α∇L(θ + ε∇L(θ)/||∇L(θ)||)
-    
-    This helps find solutions that generalize better to unseen fiber optic patterns
+    Sharpness-Aware Minimization (SAM) optimizer wrapper.
+    It seeks parameters in neighborhoods having uniformly low loss (flat minima),
+    which is known to improve model generalization. It does this by performing a
+    two-step update: first, it finds a "high-loss" point in the neighborhood of
+    the current weights, and second, it updates the weights using the gradient
+    from that high-loss point.
     """
     
-    def __init__(self, params, base_optimizer, rho=0.05, adaptive=True, **kwargs):
-        """
-        Args:
-            params: Model parameters
-            base_optimizer: Base optimizer class (e.g., torch.optim.Adam)
-            rho: Neighborhood size (default: 0.05)
-            adaptive: Whether to adapt rho based on gradient norm
-        """
+    def __init__(self, params, base_optimizer: type[Optimizer], rho: float = 0.05, adaptive: bool = False, **kwargs):
         assert rho >= 0.0, f"Invalid rho, should be non-negative: {rho}"
-
-        # Fixed base_optimizer creation to pass self.param_groups instead of raw params
-        # Original code passed params directly, but Optimizer requires param_groups; this ensures consistency
-        defaults = dict(rho=rho)
-        super(SAM, self).__init__(params, defaults)
-        self.base_optimizer = base_optimizer(self.param_groups, **kwargs)
-        self.rho = rho
-        self.adaptive = adaptive
+        
+        # This wrapper takes the class of the base optimizer (e.g., torch.optim.AdamW) and its arguments.
+        self.base_optimizer = base_optimizer(params, **kwargs)
+        
+        # Inherit parameter groups from the base optimizer.
+        super(SAM, self).__init__(self.base_optimizer.param_groups, dict(rho=rho, adaptive=adaptive))
         
         # For logging
         self.logger = get_logger("SAM_Optimizer")
         self.logger.log_class_init("SAM")
         
-        # Track perturbation statistics
-        self.perturbation_stats = {
-            'mean_norm': 0.0,
-            'max_norm': 0.0,
-            'updates': 0
-        }
-        
     @torch.no_grad()
     def first_step(self, zero_grad=False):
         """
-        First step: Compute gradient at perturbed point
-        This finds the worst-case perturbation within the rho-ball
+        First SAM step: calculates the gradient, computes the perturbation `e_w`,
+        and moves the weights to `w + e_w`. This is the "ascent" step to find the
+        point of highest loss within the rho-ball.
         """
         grad_norm = self._grad_norm()
-        
         for group in self.param_groups:
             scale = group['rho'] / (grad_norm + 1e-12)
-            
             for p in group['params']:
                 if p.grad is None:
                     continue
-                    
-                # Store original gradient
-                self.state[p]['old_grad'] = p.grad.data.clone()
                 
-                # Adaptive rho based on layer-wise gradient statistics
-                if self.adaptive:
-                    layer_norm = p.grad.data.norm()
-                    scale = min(scale, 0.1 / (layer_norm + 1e-12))
+                # Calculate perturbation `e_w`.
+                # The adaptive version scales the perturbation by the parameter norms.
+                e_w = (torch.pow(p, 2) if group['adaptive'] else 1.0) * p.grad * scale
                 
-                # Apply perturbation: θ + ε
-                e_w = scale * p.grad.data
-                # Store e_w instead of recomputing in second_step
-                # Original code recomputed rho * old_grad / _grad_norm() in second_step, but after perturbation and zero_grad, _grad_norm() would be zero or wrong; fixed by storing e_w directly
-                self.state[p]['e_w'] = e_w.clone()
-                p.add_(e_w)  # Climb to the local maximum "w + e(w)"
+                # Climb to the point of highest loss in the neighborhood.
+                p.add_(e_w)
                 
-                # Track statistics
-                self.perturbation_stats['mean_norm'] += e_w.norm().item()
-                self.perturbation_stats['max_norm'] = max(
-                    self.perturbation_stats['max_norm'], 
-                    e_w.norm().item()
-                )
-        
-        self.perturbation_stats['updates'] += 1
+                # Store the perturbation for the second step.
+                self.state[p]['e_w'] = e_w
         
         if zero_grad:
-            self.zero_grad()
+            self.zero_grad(set_to_none=True)
 
     @torch.no_grad()
     def second_step(self, zero_grad=False):
         """
-        Second step: Update parameters using gradient at perturbed point
-        This performs the actual parameter update
+        Second SAM step: moves the weights back to `w` and then performs
+        the actual update using the gradient computed at `w + e_w`. This is the
+        "descent" step.
         """
         for group in self.param_groups:
             for p in group['params']:
-                if p.grad is None or 'old_grad' not in self.state[p]:
+                if p.grad is None or 'e_w' not in self.state[p]:
                     continue
-                    
-                # Restore original parameters using stored e_w
-                # Original code incorrectly recomputed using _grad_norm() after perturbation, leading to incorrect restoration; fixed by using stored e_w
+                # Move weights back to the original position before the update.
                 p.sub_(self.state[p]['e_w'])
-                
-        # Update with base optimizer using gradient at perturbed point
+        
+        # The base optimizer performs its update step using the gradient from the perturbed point.
         self.base_optimizer.step()
         
         if zero_grad:
-            self.zero_grad()
+            self.zero_grad(set_to_none=True)
             
-        # Log statistics periodically
-        if self.perturbation_stats['updates'] % 100 == 0:
-            mean_norm = self.perturbation_stats['mean_norm'] / 100
-            self.logger.info(f"SAM perturbation stats - Mean norm: {mean_norm:.6f}, "
-                           f"Max norm: {self.perturbation_stats['max_norm']:.6f}")
-            self.perturbation_stats['mean_norm'] = 0.0
-            self.perturbation_stats['max_norm'] = 0.0
-
-    def step(self, closure=None):
+    def step(self, closure: Callable):
         """
-        Performs a single optimization step with SAM
-        Requires closure for gradient computation twice: at current point and perturbed point
+        Performs the full SAM optimization step.
+        Requires a closure that re-evaluates the model and returns the loss.
         """
-        assert closure is not None, "SAM requires closure for gradient computation"
+        # First forward/backward pass to get gradient at `w`.
+        loss = closure()
         
-        # Enable gradient computation for first forward-backward pass
         self.first_step(zero_grad=True)
         
-        # Second forward-backward pass at perturbed point
+        # Second forward/backward pass to get gradient at `w + e_w`.
         closure()
         
-        # Actual parameter update
         self.second_step()
+        return loss
 
     def _grad_norm(self):
-        """Compute gradient norm across all parameters"""
-        # Collect all gradient norms
-        grad_norms = []
-        for group in self.param_groups:
-            for p in group['params']:
-                if p.grad is not None:
-                    grad_norms.append(p.grad.data.norm())
-        
-        # Handle empty case
-        if not grad_norms:
-            return torch.tensor(0.0)
-        
-        # Stack and compute norm
-        shared_device = self.param_groups[0]['params'][0].device
-        norm = torch.norm(
-            torch.stack([g.to(shared_device) for g in grad_norms])
+        """Computes the norm of all gradients combined."""
+        # FIX: Ensure all norms are on the same device before stacking.
+        # This prevents errors in distributed or multi-GPU settings.
+        device = self.param_groups[0]['params'][0].device
+        return torch.norm(
+            torch.stack([
+                p.grad.norm(p=2).to(device)
+                for group in self.param_groups for p in group['params']
+                if p.grad is not None
+            ])
         )
-        return norm
+
+    # Delegate state dict and load state dict to the base optimizer
+    def state_dict(self):
+        return self.base_optimizer.state_dict()
+
+    def load_state_dict(self, state_dict):
+        self.base_optimizer.load_state_dict(state_dict)
+        # Ensure param groups are in sync
+        self.param_groups = self.base_optimizer.param_groups
 
 
 class Lookahead(Optimizer):
     """
-    Lookahead Optimizer (Zhang et al., 2019)
-    Maintains slow and fast weights for better convergence
-    
-    Mathematical formulation:
-    Fast weights: θ_f,t+1 = θ_f,t - α∇L(θ_f,t)
-    Slow weights: θ_s,t+1 = θ_s,t + β(θ_f,t+k - θ_s,t)
-    
-    This helps navigate complex loss landscapes in fiber optic classification
+    Lookahead optimizer wrapper.
+    It maintains two sets of weights (fast and slow) and updates the slow weights
+    by interpolating towards the fast weights every `k` steps. This improves stability and
+    can lead to faster convergence.
     """
     
-    def __init__(self, base_optimizer, k=5, alpha=0.5, pullback_momentum="none"):
-        """
-        Args:
-            base_optimizer: Base optimizer instance
-            k: Number of fast weight updates before slow weight update (default: 5)
-            alpha: Slow weights step size (default: 0.5)
-            pullback_momentum: Type of momentum for slow weights ("none" or "pullback")
-        """
-        if not 0.0 <= alpha <= 1.0:
-            raise ValueError(f"Invalid slow update step size: {alpha}")
-        if not 1 <= k:
-            raise ValueError(f"Invalid lookahead steps: {k}")
-            
-        self.base_optimizer = base_optimizer
+    def __init__(self, optimizer: Optimizer, k: int = 5, alpha: float = 0.5):
+        if not 0.0 <= alpha <= 1.0: raise ValueError(f"Invalid slow update rate: {alpha}")
+        if not 1 <= k: raise ValueError(f"Invalid lookahead steps: {k}")
+        
+        self.optimizer = optimizer
         self.k = k
         self.alpha = alpha
-        self.step_count = 0
-        self.pullback_momentum = pullback_momentum
+        self.param_groups = self.optimizer.param_groups
+        self.state = self.optimizer.state
+        self.step_counter = 0
         
         # For logging
         self.logger = get_logger("Lookahead_Optimizer")
         self.logger.log_class_init("Lookahead")
         
-        # Initialize slow weights
-        self.slow_weights = [[p.clone().detach() for p in group['params']]
-                            for group in self.base_optimizer.param_groups]
-        
-        # For pullback momentum
-        if pullback_momentum == "pullback":
-            self.pullback_momentum_buffer = [
-                [torch.zeros_like(p) for p in group['params']]
-                for group in self.base_optimizer.param_groups
-            ]
-            
-        # Track update statistics
-        self.update_stats = {
-            'fast_updates': 0,
-            'slow_updates': 0,
-            'weight_diff_norm': 0.0
-        }
-        
-        # Inherit defaults from base optimizer
-        defaults = dict(k=k, alpha=alpha)
-        super(Lookahead, self).__init__(self.base_optimizer.param_groups, defaults)
+        # Initialize slow weights as a copy of the initial model weights.
+        self.slow_weights = [
+            [p.clone().detach() for p in group['params']]
+            for group in self.param_groups
+        ]
 
-    def step(self, closure=None):
-        """
-        Performs k fast weight updates followed by one slow weight update
-        """
-        # Fast weight update using base optimizer
-        loss = self.base_optimizer.step(closure)
-        self.update_stats['fast_updates'] += 1
-        self.step_count += 1
+    def step(self, closure: Optional[Callable] = None):
+        """Performs one step of the inner optimizer and, if it's a `k`-th step, updates slow weights."""
+        # The inner optimizer (e.g., AdamW or SAM) performs its step.
+        # The closure is passed down to the inner optimizer if it needs it (like SAM).
+        loss = self.optimizer.step(closure)
+        self.step_counter += 1
         
-        # Slow weight update every k steps
-        if self.step_count % self.k == 0:
+        if self.step_counter % self.k == 0:
             self._update_slow_weights()
-            self.update_stats['slow_updates'] += 1
             
-            # Log statistics
-            if self.update_stats['slow_updates'] % 10 == 0:
-                avg_diff = self.update_stats['weight_diff_norm'] / 10
-                self.logger.info(f"Lookahead stats - Fast updates: {self.update_stats['fast_updates']}, "
-                               f"Slow updates: {self.update_stats['slow_updates']}, "
-                               f"Avg weight diff norm: {avg_diff:.6f}")
-                self.update_stats['weight_diff_norm'] = 0.0
-                
         return loss
 
+    @torch.no_grad()
     def _update_slow_weights(self):
-        """Update slow weights: θ_s = θ_s + α(θ_f - θ_s)"""
-        for idx, (group, slow_group) in enumerate(zip(
-            self.base_optimizer.param_groups, self.slow_weights
-        )):
-            for p_idx, (p, p_slow) in enumerate(zip(group['params'], slow_group)):
-                if p.grad is None:
-                    continue
-                    
-                # Track weight difference
-                diff = p.data - p_slow.data
-                self.update_stats['weight_diff_norm'] += diff.norm().item()
-                
-                # Update slow weights with momentum if specified
-                if self.pullback_momentum == "pullback":
-                    buf = self.pullback_momentum_buffer[idx][p_idx]
-                    buf.mul_(self.alpha).add_(diff)
-                    # Fixed update to correctly implement pullback: slow += buf, then fast = slow
-                    # Original code incorrectly updated p.data directly without proper momentum application
-                    p_slow.data.add_(buf)
-                    p.data.copy_(p_slow.data)
-                else:
-                    # Standard update: θ_s = (1 - α) * θ_s + α * θ_f, then θ_f = θ_s
-                    # Original code had reversed mul/add, leading to incorrect weighted average
-                    p_slow.data.mul_(1 - self.alpha).add_(p.data, alpha=self.alpha)
-                    p.data.copy_(p_slow.data)
-                
-                # Update slow weights reference (already done via p_slow.data update)
+        """Updates the slow weights and syncs the fast weights to them."""
+        for slow_group, fast_group in zip(self.slow_weights, self.param_groups):
+            for p_slow, p_fast in zip(slow_group, fast_group['params']):
+                # Update slow weights: slow_w = slow_w + alpha * (fast_w - slow_w)
+                p_slow.data.add_(p_fast.data - p_slow.data, alpha=self.alpha)
+                # Sync fast weights to the new slow weights.
+                p_fast.data.copy_(p_slow.data)
 
     def state_dict(self):
-        """Returns the state of the optimizer"""
-        fast_state = self.base_optimizer.state_dict()
+        fast_state = self.optimizer.state_dict()
         slow_state = {
-            'step_count': self.step_count,
-            'slow_weights': self.slow_weights,
-            'pullback_momentum_buffer': getattr(self, 'pullback_momentum_buffer', None)
+            'step_counter': self.step_counter,
+            'slow_weights': [
+                [p.cpu() for p in group] for group in self.slow_weights
+            ]
         }
         return {'fast_state': fast_state, 'slow_state': slow_state}
 
     def load_state_dict(self, state_dict):
-        """Loads the optimizer state"""
-        self.base_optimizer.load_state_dict(state_dict['fast_state'])
-        self.step_count = state_dict['slow_state']['step_count']
-        self.slow_weights = state_dict['slow_state']['slow_weights']
-        if 'pullback_momentum_buffer' in state_dict['slow_state']:
-            self.pullback_momentum_buffer = state_dict['slow_state']['pullback_momentum_buffer']
+        self.optimizer.load_state_dict(state_dict['fast_state'])
+        self.step_counter = state_dict['slow_state']['step_counter']
+        
+        # Move slow weights to the correct device
+        device = self.param_groups[0]['params'][0].device
+        self.slow_weights = [
+            [p.to(device) for p in group]
+            for group in state_dict['slow_state']['slow_weights']
+        ]
+
+    def zero_grad(self, set_to_none: bool = False):
+        self.optimizer.zero_grad(set_to_none=set_to_none)
 
 
-class SAMWithLookahead:
+def create_advanced_optimizer(model: nn.Module, config: Dict) -> Optimizer:
     """
-    Combined SAM + Lookahead optimizer for optimal performance
-    "Replace standard gradient descent with SAM + Lookahead"
-    
-    This combination provides:
-    - SAM: Finds flatter minima for better generalization
-    - Lookahead: Stabilizes training and improves convergence
-    """
-    
-    def __init__(self, params, lr=0.001, rho=0.05, k=5, alpha=0.5, 
-                 weight_decay=0.01, betas=(0.9, 0.999), adaptive=True):
-        """
-        Initialize combined optimizer
-        """
-        print(f"[{datetime.now()}] Initializing SAMWithLookahead optimizer")
-        
-        self.logger = get_logger("SAMWithLookahead")
-        self.logger.log_class_init("SAMWithLookahead")
-        
-        # Create base AdamW optimizer
-        base_optimizer_fn = lambda p: optim.AdamW(
-            p, lr=lr, betas=betas, weight_decay=weight_decay
-        )
-        
-        # Wrap with SAM
-        self.sam_optimizer = SAM(
-            params, base_optimizer_fn, rho=rho, adaptive=adaptive
-        )
-        
-        # Wrap with Lookahead
-        self.optimizer = Lookahead(self.sam_optimizer.base_optimizer, k=k, alpha=alpha)
-        
-        # Store parameters for easy access
-        self.defaults = dict(
-            lr=lr, rho=rho, k=k, alpha=alpha, 
-            weight_decay=weight_decay, betas=betas
-        )
-        
-        self.logger.info("SAMWithLookahead optimizer initialized")
-        print(f"[{datetime.now()}] SAMWithLookahead initialized successfully")
-    
-    def zero_grad(self):
-        """Zero gradients of all parameters"""
-        self.optimizer.zero_grad()
-    
-    def state_dict(self):
-        """Return optimizer state dict"""
-        return {
-            'sam_state': self.sam_optimizer.state_dict(),
-            'optimizer_state': self.optimizer.state_dict(),
-            'defaults': self.defaults
-        }
-    
-    def load_state_dict(self, state_dict):
-        """Load optimizer state dict"""
-        self.sam_optimizer.load_state_dict(state_dict['sam_state'])
-        self.optimizer.load_state_dict(state_dict['optimizer_state'])
-
-    def step(self, closure):
-        """
-        Perform optimization step
-        Requires closure for SAM gradient computation
-        """
-        # SAM first step
-        self.sam_optimizer.first_step(zero_grad=True)
-        
-        # Compute gradient at perturbed point
-        closure()
-        
-        # SAM second step (includes base optimizer step)
-        self.sam_optimizer.second_step(zero_grad=True)
-        
-        # Lookahead handles slow weight updates internally
-        self.optimizer.step_count += 1
-        if self.optimizer.step_count % self.optimizer.k == 0:
-            self.optimizer._update_slow_weights()
-
-    @property
-    def param_groups(self):
-        return self.optimizer.param_groups
-
-    def state_dict(self):
-        """Get optimizer state"""
-        return {
-            'sam_state': self.sam_optimizer.state_dict(),
-            'lookahead_state': self.optimizer.state_dict()
-        }
-
-    def load_state_dict(self, state_dict):
-        """Load optimizer state"""
-        self.sam_optimizer.load_state_dict(state_dict['sam_state'])
-        self.optimizer.load_state_dict(state_dict['lookahead_state'])
-
-
-def create_advanced_optimizer(model: nn.Module, config: Dict) -> SAMWithLookahead:
-    """
-    Factory function to create the advanced optimizer with proper configuration
+    Factory function to create an advanced optimizer that correctly composes
+    AdamW, SAM, and Lookahead.
     
     Args:
-        model: Neural network model
-        config: Configuration dictionary
+        model: The neural network model.
+        config: A configuration dictionary with optimizer settings.
         
     Returns:
-        SAMWithLookahead optimizer instance
+        A composed Lookahead(SAM(AdamW(...))) optimizer instance.
     """
     logger = get_logger("OptimizerFactory")
     logger.log_function_entry("create_advanced_optimizer")
     
-    # Extract hyperparameters from config
+    # Extract hyperparameters from config.
     lr = config.get('LEARNING_RATE', 0.001)
     rho = config.get('SAM_RHO', 0.05)
     k = config.get('LOOKAHEAD_K', 5)
     alpha = config.get('LOOKAHEAD_ALPHA', 0.5)
     weight_decay = config.get('WEIGHT_DECAY', 0.01)
+    betas = tuple(config.get('BETAS', (0.9, 0.999)))
     
-    # Create parameter groups with different learning rates
+    # Create parameter groups with different learning rates for different model components
     param_groups = [
         # Feature extraction layers - normal learning rate
         {'params': [p for n, p in model.named_parameters() 
@@ -444,46 +271,60 @@ def create_advanced_optimizer(model: nn.Module, config: Dict) -> SAMWithLookahea
     # Filter out empty parameter groups
     param_groups = [g for g in param_groups if len(list(g['params'])) > 0]
     
-    # Create optimizer
-    optimizer = SAMWithLookahead(
-        param_groups,
-        lr=lr,
-        rho=rho,
-        k=k,
-        alpha=alpha,
-        weight_decay=weight_decay,
-        adaptive=True
-    )
+    # FIX: The original file had a confusing `SAMWithLookahead` class.
+    # The correct approach is to wrap the optimizers.
+    # 1. Base optimizer is AdamW.
+    # 2. SAM wraps the AdamW class.
+    # 3. Lookahead wraps the SAM instance.
     
-    logger.info(f"Created SAMWithLookahead optimizer with {len(param_groups)} parameter groups")
+    # 1. Define the base optimizer class and its arguments.
+    base_optimizer_class = optim.AdamW
+    base_optimizer_args = {'lr': lr, 'weight_decay': weight_decay, 'betas': betas}
+
+    # 2. Create the SAM optimizer, which will internally create AdamW instances.
+    sam_optimizer = SAM(param_groups, base_optimizer_class, rho=rho, adaptive=True, **base_optimizer_args)
+
+    # 3. Wrap the SAM optimizer with Lookahead.
+    final_optimizer = Lookahead(sam_optimizer, k=k, alpha=alpha)
+    
+    logger.info(f"Created composed Lookahead(SAM(AdamW)) optimizer with {len(param_groups)} parameter groups")
     logger.log_function_exit("create_advanced_optimizer")
     
-    return optimizer
+    return final_optimizer
 
 
 # Test the optimizers
 if __name__ == "__main__":
     print(f"[{datetime.now()}] Testing advanced optimizers")
     
-    # Create a simple test model
-    test_model = nn.Sequential(
-        nn.Linear(10, 20),
-        nn.ReLU(),
-        nn.Linear(20, 10)
-    )
+    test_model = nn.Sequential(nn.Linear(10, 20), nn.ReLU(), nn.Linear(20, 10))
+    dummy_input = torch.randn(4, 10)
+    dummy_target = torch.randn(4, 10)
     
-    # Test SAM optimizer
-    print("\nTesting SAM optimizer...")
-    sam_opt = SAM(test_model.parameters(), optim.Adam, rho=0.05, lr=0.001)
+    # Test the composed optimizer
+    print("\nTesting composed Lookahead(SAM(AdamW)) optimizer...")
+    optimizer = create_advanced_optimizer(test_model, {})
     
-    # Test Lookahead optimizer
-    print("\nTesting Lookahead optimizer...")
-    base_opt = optim.Adam(test_model.parameters(), lr=0.001)
-    lookahead_opt = Lookahead(base_opt, k=5, alpha=0.5)
+    def closure():
+        # The closure for SAM should NOT zero the grad. SAM handles it.
+        output = test_model(dummy_input)
+        loss = nn.MSELoss()(output, dummy_target)
+        loss.backward()
+        return loss
+        
+    # The step call for the composed optimizer will trigger SAM's two-step process
+    # and Lookahead's update mechanism.
+    optimizer.zero_grad()
+    initial_loss = closure()
+    print(f"Initial loss: {initial_loss.item():.4f}")
     
-    # Test combined optimizer
-    print("\nTesting SAMWithLookahead optimizer...")
-    combined_opt = SAMWithLookahead(test_model.parameters())
+    # The `step` method of the wrapped SAM optimizer requires a closure.
+    # Lookahead passes this closure down to SAM.
+    optimizer.step(closure)
+    
+    optimizer.zero_grad()
+    final_loss = closure()
+    print(f"Loss after one step: {final_loss.item():.4f}")
+    assert final_loss < initial_loss, "Loss did not decrease after one step."
     
     print(f"[{datetime.now()}] Advanced optimizers test completed")
-    print(f"[{datetime.now()}] Next script: fiber_advanced_losses.py")

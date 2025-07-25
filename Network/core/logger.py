@@ -297,7 +297,7 @@ class FiberOpticsLogger(logging.Logger):
         self.function_call_depth += 1
         indent = "  " * self.function_call_depth
         
-        self.debug(f"{indent}→ Entering function: {func_name}")
+        self.debug(f"{indent}-> Entering function: {func_name}")
         
         # Log parameters (be careful with large objects)
         if args or kwargs:
@@ -313,7 +313,7 @@ class FiberOpticsLogger(logging.Logger):
         indent = "  " * self.function_call_depth
         self.function_call_depth = max(0, self.function_call_depth - 1)
         
-        self.debug(f"{indent}← Exiting function: {func_name}")
+        self.debug(f"{indent}<- Exiting function: {func_name}")
         if result is not None:
             self.debug(f"{indent}  Result: {repr(result)[:200]}")
         if duration is not None:
@@ -324,7 +324,7 @@ class FiberOpticsLogger(logging.Logger):
         indent = "  " * self.function_call_depth
         self.function_call_depth = max(0, self.function_call_depth - 1)
         
-        self.error(f"{indent}✗ Function '{func_name}' failed: {str(exception)}")
+        self.error(f"{indent}X Function '{func_name}' failed: {str(exception)}")
         if duration is not None:
             self.error(f"{indent}  Duration before error: {duration:.6f} seconds")
         self.debug(f"{indent}  Traceback: {traceback.format_exc()}")

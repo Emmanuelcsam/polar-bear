@@ -39,21 +39,26 @@ class FocalLoss(nn.Module):
         super().__init__()
         print(f"[{datetime.now()}] Initializing FocalLoss")
         
-        # Modified alpha to accept list for multi-class support
-        # Original code assumed binary classification with float alpha, but segmentation is multi-class (3 classes)
-        # This fixes by allowing alpha as list [alpha_class0, alpha_class1, alpha_class2] or float for binary
-        self.alpha = alpha if isinstance(alpha, list) else [alpha]
+        # Fix: Ensure alpha is a tensor for efficient indexing
+        if isinstance(alpha, list):
+            self.register_buffer('alpha', torch.tensor(alpha))
+        elif isinstance(alpha, (float, int)):
+            # For binary case, alpha is for positive class, 1-alpha for negative
+            self.register_buffer('alpha', torch.tensor([1-alpha, alpha]))
+        else:
+            self.alpha = None
+            
         self.gamma = gamma
         self.reduction = reduction
         
         self.logger = get_logger("FocalLoss")
         self.logger.log_class_init("FocalLoss", alpha=alpha, gamma=gamma)
         
-        # Track loss statistics
+        # Track loss statistics - fix type annotations
         self.stats = {
-            'easy_examples': 0,
-            'hard_examples': 0,
-            'total_examples': 0
+            'easy_examples': 0.0,
+            'hard_examples': 0.0,
+            'total_examples': 0.0
         }
         
     def forward(self, pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
@@ -70,50 +75,46 @@ class FocalLoss(nn.Module):
             pred = pred.permute(0, 2, 3, 1).reshape(-1, C)
             target = target.reshape(-1)
         
-        # Compute cross entropy loss
-        ce_loss = F.cross_entropy(pred, target, reduction='none')
-        
-        # Get probabilities
-        p = torch.exp(-ce_loss)
+        # Use log_softmax for numerical stability
+        log_p = F.log_softmax(pred, dim=-1)
+        # Gather the log probabilities of the correct class
+        log_p_t = log_p.gather(1, target.unsqueeze(1)).squeeze(1)
+        p_t = log_p_t.exp()
         
         # Focal term: (1 - p_t)^gamma
-        focal_weight = (1 - p) ** self.gamma
+        focal_weight = (1 - p_t) ** self.gamma
         
         # Apply alpha weighting
         if self.alpha is not None:
-            # Modified to handle multi-class alpha
-            if isinstance(self.alpha, list):
-                # Multi-class case: create tensor and index by target class
-                alpha_tensor = torch.tensor(self.alpha, dtype=torch.float32, device=pred.device)
-                # Ensure we have enough alpha values for all classes
-                if len(self.alpha) < pred.shape[1]:
-                    # Pad with the last alpha value if not enough values provided
-                    alpha_tensor = torch.cat([
-                        alpha_tensor,
-                        alpha_tensor[-1].repeat(pred.shape[1] - len(self.alpha))
-                    ])
-                alpha_t = alpha_tensor[target]
+            # Select alpha for each example based on its target class
+            # Ensure we have enough alpha values for all classes
+            if self.alpha.shape[0] < pred.shape[1]:
+                # Pad with the last alpha value if not enough values provided
+                alpha_padded = torch.cat([
+                    self.alpha,
+                    self.alpha[-1].repeat(pred.shape[1] - self.alpha.shape[0])
+                ])
+                alpha_t = alpha_padded[target]
             else:
-                # Binary case: use alpha for positive class, (1-alpha) for negative
-                alpha_t = torch.where(target > 0, self.alpha, 1 - self.alpha)
+                alpha_t = self.alpha[target]
             focal_weight = alpha_t * focal_weight
         
         # Focal loss
-        focal_loss = focal_weight * ce_loss
+        focal_loss = -log_p_t * focal_weight
         
         # Track statistics
         with torch.no_grad():
-            easy_mask = p > 0.5
+            easy_mask = p_t > 0.5
             self.stats['easy_examples'] += easy_mask.sum().item()
             self.stats['hard_examples'] += (~easy_mask).sum().item()
-            self.stats['total_examples'] += p.numel()
+            self.stats['total_examples'] += p_t.numel()
             
             # Log periodically
             if self.stats['total_examples'] > 10000:
                 easy_ratio = self.stats['easy_examples'] / self.stats['total_examples']
                 hard_ratio = self.stats['hard_examples'] / self.stats['total_examples']
                 self.logger.info(f"Focal Loss stats - Easy: {easy_ratio:.2%}, Hard: {hard_ratio:.2%}")
-                self.stats = {'easy_examples': 0, 'hard_examples': 0, 'total_examples': 0}
+                self.stats = {'easy_examples': 0.0, 'hard_examples': 0.0, 'total_examples': 0.0}
         
         # Reduction
         if self.reduction == 'mean':
@@ -332,22 +333,20 @@ class PerceptualLoss(nn.Module):
         
         # Load pretrained network
         if net == 'vgg16':
-            # Updated to use weights='DEFAULT' instead of deprecated pretrained=True
-            # Original code used deprecated pretrained arg; fixed to modern PyTorch API (as of 2025 knowledge cutoff, but aligns with post-1.10 changes)
-            vgg = models.vgg16(weights='DEFAULT').features
+            # Fix: Use the modern weights argument instead of deprecated pretrained
+            vgg = models.vgg16(weights=models.VGG16_Weights.IMAGENET1K_V1).features
             self.layers = [3, 8, 15, 22, 29]  # Conv layers before pooling
         elif net == 'vgg19':
-            vgg = models.vgg19(weights='DEFAULT').features
+            vgg = models.vgg19(weights=models.VGG19_Weights.IMAGENET1K_V1).features
             self.layers = [3, 8, 17, 26, 35]
         else:
             raise ValueError(f"Unsupported network: {net}")
         
-        # Extract feature layers
-        self.features = nn.ModuleList()
-        last_layer = 0
-        for layer in self.layers:
-            self.features.append(vgg[last_layer:layer+1])
-            last_layer = layer + 1
+        # Fix: Extract feature layers properly - create a sequential model
+        feature_layers = []
+        for i in range(max(self.layers) + 1):
+            feature_layers.append(vgg[i])
+        self.features = nn.Sequential(*feature_layers).eval()
         
         # Freeze parameters
         for param in self.parameters():
@@ -362,9 +361,17 @@ class PerceptualLoss(nn.Module):
             nn.Conv2d(512, 1, 1, bias=False)
         ])
         
-        # Initialize with uniform weights
+        # Fix: Initialize with uniform weights properly
         for layer in self.linear_layers:
             nn.init.constant_(layer.weight, 0.2)
+        
+        # Pre-computed ImageNet normalization values
+        self.register_buffer('mean', torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1))
+        self.register_buffer('std', torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1))
+    
+    def normalize_batch(self, x: torch.Tensor) -> torch.Tensor:
+        """Normalize a batch of images using ImageNet stats."""
+        return (x - self.mean) / self.std
     
     def forward(self, pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         """
@@ -374,54 +381,38 @@ class PerceptualLoss(nn.Module):
             pred: Predicted image [B, C, H, W]
             target: Target image [B, C, H, W]
         """
-        # Normalize to ImageNet statistics
-        mean = torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1).to(pred.device)
-        std = torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1).to(pred.device)
+        # Fix: Handle single-channel (grayscale) images by replicating to 3 channels
+        # The VGG network expects a 3-channel RGB image
+        if pred.shape[1] == 1:
+            pred = pred.repeat(1, 3, 1, 1)
+        if target.shape[1] == 1:
+            target = target.repeat(1, 3, 1, 1)
+
+        pred_norm = self.normalize_batch(pred)
+        target_norm = self.normalize_batch(target)
         
-        pred = (pred - mean) / std
-        target = (target - mean) / std
+        total_loss = torch.tensor(0.0, device=pred.device)
         
-        # Extract features
-        pred_features = []
-        target_features = []
+        # Extract features and compute L2 distance at specified layers
+        x_pred, x_target = pred_norm, target_norm
+        for i, layer in enumerate(self.features):
+            x_pred = layer(x_pred)
+            x_target = layer(x_target)
+            if i in self.layers:
+                # Normalize features channel-wise
+                feat_pred = F.normalize(x_pred, p=2, dim=1)
+                feat_target = F.normalize(x_target, p=2, dim=1)
+                # Compute squared L2 distance
+                diff = (feat_pred - feat_target) ** 2
+                
+                if self.spatial:
+                    # If spatial, we don't average over spatial dimensions yet
+                    total_loss += diff.sum(dim=1, keepdim=True)
+                else:
+                    # Average over all dimensions to get a scalar loss for this layer
+                    total_loss += diff.mean()
         
-        x_pred = pred
-        x_target = target
-        
-        for feature_layer in self.features:
-            x_pred = feature_layer(x_pred)
-            x_target = feature_layer(x_target)
-            pred_features.append(x_pred)
-            target_features.append(x_target)
-        
-        # Compute perceptual distance at each layer
-        diffs = []
-        for pred_feat, target_feat, linear in zip(pred_features, target_features, self.linear_layers):
-            # Normalize features
-            pred_feat = F.normalize(pred_feat, p=2, dim=1)
-            target_feat = F.normalize(target_feat, p=2, dim=1)
-            
-            # Squared difference
-            diff = (pred_feat - target_feat) ** 2
-            
-            # Weight and reduce channels
-            weighted_diff = linear(diff)
-            
-            if self.spatial:
-                diffs.append(weighted_diff)
-            else:
-                diffs.append(weighted_diff.mean(dim=[2, 3]))
-        
-        if self.spatial:
-            # Return spatial map
-            # Upsample all to same size
-            target_size = diffs[0].shape[2:]
-            for i in range(1, len(diffs)):
-                diffs[i] = F.interpolate(diffs[i], size=target_size, mode='bilinear', align_corners=False)
-            return torch.cat(diffs, dim=1).mean(dim=1, keepdim=True)
-        else:
-            # Return scalar
-            return torch.stack(diffs).mean(dim=0).mean()
+        return total_loss
 
 
 class CombinedAdvancedLoss(nn.Module):
@@ -452,11 +443,16 @@ class CombinedAdvancedLoss(nn.Module):
         self.logger = get_logger("CombinedAdvancedLoss")
         self.logger.log_class_init("CombinedAdvancedLoss")
         
-        # Determine mode from config
+        # Determine mode from config - fix type handling
         self.mode = "production"
-        if hasattr(config, 'runtime') and hasattr(config.runtime, 'mode'):
-            if config.runtime.mode in ['research', 'statistical']:
-                self.mode = 'research'
+        if config is not None:
+            if isinstance(config, dict):
+                runtime_config = config.get('runtime', {})
+                if isinstance(runtime_config, dict) and runtime_config.get('mode') in ['research', 'statistical']:
+                    self.mode = 'research'
+            elif hasattr(config, 'runtime') and hasattr(config.runtime, 'mode'):
+                if config.runtime.mode in ['research', 'statistical']:
+                    self.mode = 'research'
         
         # Initialize mathematical losses
         self.focal_seg = FocalLoss(alpha=0.25, gamma=2.0)  # For segmentation
@@ -518,9 +514,20 @@ class CombinedAdvancedLoss(nn.Module):
                 'method_accuracy': 0.10
             }
         
-        # Override with config if available
-        if hasattr(config, 'loss') and hasattr(config.loss, 'weights'):
-            self.weights.update(config.loss.weights.__dict__ if hasattr(config.loss.weights, '__dict__') else config.loss.weights)
+        # Override with config if available - fix type handling
+        if config is not None:
+            if isinstance(config, dict):
+                loss_config = config.get('loss', {})
+                if isinstance(loss_config, dict):
+                    weights_config = loss_config.get('weights', {})
+                    if isinstance(weights_config, dict):
+                        self.weights.update(weights_config)
+            elif hasattr(config, 'loss') and hasattr(config.loss, 'weights'):
+                weights_config = config.loss.weights
+                if hasattr(weights_config, '__dict__'):
+                    self.weights.update(weights_config.__dict__)
+                else:
+                    self.weights.update(weights_config)
         
         self.logger.info(f"Loss weights ({self.mode} mode): {self.weights}")
         
@@ -677,7 +684,7 @@ class CircularityLoss(nn.Module):
         
         # Calculate circularity for each mask
         batch_size = core_masks.shape[0]
-        circularity_loss = 0
+        circularity_loss = torch.tensor(0.0, device=masks.device)
         
         for i in range(batch_size):
             mask = core_masks[i, 0]
@@ -768,7 +775,7 @@ class ZoneRegressionLoss(nn.Module):
     
     def forward(self, pred: Dict[str, torch.Tensor], 
                 target: Dict[str, torch.Tensor]) -> torch.Tensor:
-        loss = 0
+        loss = torch.tensor(0.0, device=next(iter(pred.values())).device)
         
         # Basic regression loss
         for key in ['core_radius', 'cladding_radius', 'core_cladding_ratio']:
@@ -793,10 +800,10 @@ class ConsensusConsistencyLoss(nn.Module):
     
     def forward(self, method_predictions: List[torch.Tensor]) -> torch.Tensor:
         if len(method_predictions) < 2:
-            return torch.tensor(0.0)
+            return torch.tensor(0.0, device=method_predictions[0].device if method_predictions else torch.device('cpu'))
         
         # Calculate pairwise IoU
-        total_loss = 0
+        total_loss = torch.tensor(0.0, device=method_predictions[0].device)
         num_pairs = 0
         
         for i in range(len(method_predictions)):
@@ -813,7 +820,7 @@ class ConsensusConsistencyLoss(nn.Module):
                 total_loss += F.relu(self.min_agreement_ratio - iou)
                 num_pairs += 1
         
-        return total_loss / num_pairs if num_pairs > 0 else torch.tensor(0.0)
+        return total_loss / num_pairs if num_pairs > 0 else torch.tensor(0.0, device=method_predictions[0].device)
 
 
 class DefectSpecificLoss(nn.Module):
@@ -830,7 +837,7 @@ class DefectSpecificLoss(nn.Module):
     
     def forward(self, defect_preds: Dict[str, torch.Tensor], 
                 defect_targets: Dict[str, torch.Tensor]) -> torch.Tensor:
-        total_loss = 0
+        total_loss = torch.tensor(0.0, device=next(iter(defect_preds.values())).device)
         
         for defect_type, weight in self.defect_weights.items():
             if defect_type in defect_preds and defect_type in defect_targets:

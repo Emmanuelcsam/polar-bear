@@ -9,7 +9,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union, Any
 from datetime import datetime
 import cv2
 from scipy.stats import chi2
@@ -19,12 +19,26 @@ import sys
 from pathlib import Path
 
 # Add the project root directory to the Python path
-project_root = Path(__file__).parent.parent
-sys.path.append(str(project_root))
+project_root = Path(__file__).resolve().parent.parent
+if str(project_root) not in sys.path:
+    sys.path.append(str(project_root))
 
-from core.config_loader import get_config
-from core.logger import get_logger
-from core.statistical_config import get_statistical_config
+# Import with error handling for robustness
+try:
+    from core.config_loader import get_config
+    from core.logger import get_logger
+    from core.statistical_config import get_statistical_config
+except ImportError as e:
+    print(f"Warning: Could not import core modules: {e}")
+    # Provide fallback implementations
+    def get_config(*args, **kwargs) -> Any:
+        return None
+    def get_logger(name: str) -> Any:
+        import logging
+        logging.basicConfig(level=logging.INFO)
+        return logging.getLogger(name)
+    def get_statistical_config(*args, **kwargs) -> Any:
+        return None
 
 
 class MasterSimilarityLayer(nn.Module):
@@ -193,9 +207,9 @@ class ZoneParameterPredictor(nn.Module):
             predictions = predictions + 0.1 * refined  # Residual connection
         
         # Ensure physical constraints
-        core_radius = torch.clamp(predictions[..., 0], min=5.0, max=500.0)
-        cladding_radius = torch.clamp(predictions[..., 1], min=core_radius + 10.0, max=800.0)
-        ratio = torch.clamp(predictions[..., 2], min=0.05, max=1.0)
+        core_radius = torch.clamp(predictions[..., 0], min=torch.tensor(5.0), max=torch.tensor(500.0))
+        cladding_radius = torch.clamp(predictions[..., 1], min=core_radius + torch.tensor(10.0), max=torch.tensor(800.0))
+        ratio = torch.clamp(predictions[..., 2], min=torch.tensor(0.05), max=torch.tensor(1.0))
         
         return {
             'core_radius': core_radius,
@@ -748,19 +762,20 @@ class CorrelationGuidedAttention(nn.Module):
         K = self.key_proj(features)    # [B, N]
         V = self.value_proj(features)  # [B, N]
         
-        # Calculate attention scores as dot product (fixed to avoid shape mismatch and enable proper broadcasting)
-        scores = torch.sum(Q * K, dim=-1)  # Changed from matmul with unsqueeze to sum(Q * K, dim=-1) to compute a per-batch scalar score (global dot product similarity between Q and K vectors); this fixes the logic error where original unsqueeze led to [B,1] scores that made softmax meaningless and caused shape mismatch in attended calculation. Now scores is [B], representing overall feature similarity.
+        # Calculate attention scores using proper matrix multiplication
+        Q_expanded = Q.unsqueeze(2)  # [B, N, 1]
+        K_expanded = K.unsqueeze(1)  # [B, 1, N]
+        scores = torch.bmm(Q_expanded, K_expanded).squeeze(-1)  # [B, N]
         
-        # Apply correlation weighting
+        # Apply correlation weighting using the registered buffer
         correlation_weight = torch.matmul(self.correlation_matrix, K.T).T  # [B, N]
-        scores = scores * correlation_weight.mean(dim=-1)  # Adjusted to multiply by mean correlation weight per batch to incorporate matrix while keeping scores [B]; this ensures correlation influences the score without changing dimensionality, fixing the original broadcast issue.
+        scores = scores * correlation_weight.mean(dim=-1, keepdim=True)  # [B, N]
         
-        # Apply temperature and softmax (added unsqueeze for softmax to treat as [B,1] for single-value normalization, though it's effectively 1 after softmax)
-        scores = scores.unsqueeze(-1)  # [B,1] to allow softmax
-        attention = F.softmax(scores / self.temperature, dim=-1).squeeze(-1)  # [B]; softmax on single value is always 1, but this maintains the structure for potential expansion.
+        # Apply temperature and softmax
+        attention = F.softmax(scores / self.temperature, dim=-1)  # [B, N]
         
         # Apply attention to values
-        attended = attention.unsqueeze(-1) * V  # Changed from attention.unsqueeze(1) * V to attention.unsqueeze(-1) * V to fix shape mismatch: original [B,1,1] * [B,N] would fail to broadcast properly; now [B,1] unsqueeze(-1) -> [B,1], but since attention [B], unsqueeze(-1) [B,1], V [B,N], broadcasts as [B,N] correctly via elementwise multiplication.
+        attended = attention * V  # [B, N]
         
         # Output projection
         output = self.out_proj(attended)
@@ -912,7 +927,7 @@ class StatisticalAnomalyDetector(nn.Module):
     
     def forward(self, 
                 features: torch.Tensor,
-                image: torch.Tensor) -> Dict[str, torch.Tensor]:
+                image: torch.Tensor) -> Dict[str, Union[torch.Tensor, List[str]]]:
         """
         Perform comprehensive anomaly detection
         
@@ -1015,8 +1030,14 @@ class StatisticallyGuidedConvolution(nn.Module):
                 k = weight.shape[2]
                 kernel = torch.ones(k, k) * 0.1
                 kernel[k//2, k//2] = 1.0  # Strong center weight
-                kernel = F.gaussian_blur(kernel.unsqueeze(0).unsqueeze(0), 
-                                       kernel_size=k if k % 2 == 1 else k+1, sigma=k/4).squeeze()
+                # Apply Gaussian blur manually since F.gaussian_blur might not be available
+                kernel = kernel.unsqueeze(0).unsqueeze(0)  # [1, 1, k, k]
+                # Use conv2d with Gaussian weights for blur effect
+                gaussian_weights = torch.exp(-torch.arange(-k//2, k//2+1).float()**2 / (2 * (k/4)**2))
+                gaussian_weights = gaussian_weights / gaussian_weights.sum()
+                gaussian_kernel = gaussian_weights.unsqueeze(0) * gaussian_weights.unsqueeze(1)
+                gaussian_kernel = gaussian_kernel.unsqueeze(0).unsqueeze(0)  # [1, 1, k, k]
+                kernel = F.conv2d(kernel, gaussian_kernel, padding=k//2).squeeze()
                 
                 for c in range(weight.shape[1]):
                     weight[i, c] = kernel * torch.randn(1).item() * 0.1

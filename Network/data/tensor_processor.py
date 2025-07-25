@@ -7,7 +7,6 @@ Handles conversion between images and tensors, and basic tensor operations
 
 import torch
 import numpy as np
-import cv2
 from pathlib import Path
 from typing import Union, Tuple, Dict, List, Optional
 from datetime import datetime
@@ -48,8 +47,8 @@ class TensorProcessor:
         # Load image if path is provided
         if isinstance(image, (str, Path)):
             from PIL import Image as PILImage
-            image = PILImage.open(str(image)).convert('RGB')
-            image = np.array(image)
+            pil_image = PILImage.open(str(image)).convert('RGB')
+            image = np.array(pil_image)
         
         # Ensure image is numpy array
         if not isinstance(image, np.ndarray):
@@ -60,14 +59,14 @@ class TensorProcessor:
         # Resize to standard size if needed
         target_size = tuple(self.config.data_processing.image_size)  # Convert list to tuple
         if image.shape[:2] != target_size:
-            # Use PIL for resizing to avoid cv2 dependency
+            # Use PIL for resizing
             from PIL import Image as PILImage
             # Convert numpy array to PIL Image
             if image.dtype != np.uint8:
                 image = (image * 255).astype(np.uint8)
             pil_image = PILImage.fromarray(image)
             # Resize using PIL
-            pil_image = pil_image.resize(target_size, PILImage.BILINEAR)
+            pil_image = pil_image.resize(target_size, PILImage.Resampling.BILINEAR)
             # Convert back to numpy array
             image = np.array(pil_image).astype(np.float32) / 255.0
             self.logger.debug(f"Resized image to: {target_size}")
@@ -110,15 +109,18 @@ class TensorProcessor:
     
     def normalize_tensor(self, tensor: torch.Tensor) -> torch.Tensor:
         """Normalize tensor using standard values"""
-        for c in range(3):
-            tensor[c] = (tensor[c] - self.mean[c]) / self.std[c]
-        return tensor
+        # Ensure mean and std are on the same device as the tensor
+        mean = self.mean.to(tensor.device).view(3, 1, 1)
+        std = self.std.to(tensor.device).view(3, 1, 1)
+        return (tensor - mean) / std
     
     def denormalize_tensor(self, tensor: torch.Tensor) -> torch.Tensor:
         """Denormalize tensor"""
         tensor = tensor.clone()
-        for c in range(3):
-            tensor[c] = tensor[c] * self.std[c] + self.mean[c]
+        # Ensure mean and std are on the same device as the tensor
+        mean = self.mean.to(tensor.device).view(3, 1, 1)
+        std = self.std.to(tensor.device).view(3, 1, 1)
+        tensor = tensor * std + mean
         return torch.clamp(tensor, 0, 1)
     
     def calculate_gradient_intensity(self, tensor: torch.Tensor) -> Dict[str, torch.Tensor]:
@@ -141,20 +143,11 @@ class TensorProcessor:
         sobel_y = torch.tensor([[-1, -2, -1], [0, 0, 0], [1, 2, 1]], 
                               dtype=torch.float32, device=self.device).view(1, 1, 3, 3)
         
-        # Apply to each channel
-        grad_x_list = []
-        grad_y_list = []
-        
-        for c in range(3):
-            channel = tensor[:, c:c+1, :, :]
-            grad_x = torch.nn.functional.conv2d(channel, sobel_x, padding=1)
-            grad_y = torch.nn.functional.conv2d(channel, sobel_y, padding=1)
-            grad_x_list.append(grad_x)
-            grad_y_list.append(grad_y)
-        
-        # Combine gradients
-        grad_x = torch.cat(grad_x_list, dim=1)
-        grad_y = torch.cat(grad_y_list, dim=1)
+        # Convert to grayscale before applying sobel filter for a more standard gradient calculation
+        grayscale_tensor = tensor.mean(dim=1, keepdim=True)
+
+        grad_x = torch.nn.functional.conv2d(grayscale_tensor, sobel_x, padding=1)
+        grad_y = torch.nn.functional.conv2d(grayscale_tensor, sobel_y, padding=1)
         
         # Calculate magnitude
         gradient_magnitude = torch.sqrt(grad_x**2 + grad_y**2)
@@ -162,8 +155,8 @@ class TensorProcessor:
         # Calculate average gradient per sample in batch
         avg_gradient = gradient_magnitude.mean(dim=(1, 2, 3))  # Mean over C, H, W, keep batch
         
-        # Calculate gradient map (average across channels)
-        gradient_map = gradient_magnitude.mean(dim=1, keepdim=True)
+        # Gradient map is the single-channel magnitude map
+        gradient_map = gradient_magnitude
         
         results = {
             'gradient_x': grad_x,
@@ -258,7 +251,7 @@ class TensorProcessor:
     
     def save_tensor_file(self, tensor: torch.Tensor, save_path: Path, metadata: Optional[Dict] = None):
         """Save tensor to .pt file with metadata"""
-        self.logger.log_function_entry("save_tensor_file", path=str(save_path))
+        self.logger.log_function_entry("save_tensor_file")
         
         # Prepare data to save
         save_data = {
@@ -289,23 +282,23 @@ class TensorProcessor:
         
         multi_scale = []
         
-        for scale in self.config.SCALES:
+        # Assuming self.config.SCALES is defined in your config, e.g., [1.0, 0.5, 0.25]
+        scales = self.config.data_processing.get('scales', [1.0, 0.5])
+
+        for scale in scales:
             if scale == 1.0:
                 scaled = tensor
             else:
                 # Calculate new size
-                if tensor.dim() == 4:
-                    b, c, h, w = tensor.shape
-                else:
-                    c, h, w = tensor.shape
-                    b = 1
+                h, w = tensor.shape[-2:]
                 
                 new_h = int(h * scale)
                 new_w = int(w * scale)
                 
                 # Resize
+                input_tensor = tensor.unsqueeze(0) if tensor.dim() == 3 else tensor
                 scaled = torch.nn.functional.interpolate(
-                    tensor.unsqueeze(0) if tensor.dim() == 3 else tensor,
+                    input_tensor,
                     size=(new_h, new_w),
                     mode='bilinear',
                     align_corners=False
@@ -325,36 +318,34 @@ class TensorProcessor:
         Extract region mask for core, cladding, or ferrule
         "the network converges into three specific regions the core, cladding and ferrule"
         """
-        self.logger.log_function_entry("extract_region_mask", region=region_type)
+        self.logger.log_function_entry("extract_region_mask")
         
         # This is a placeholder - actual implementation would use trained model
         # For now, create simple circular masks based on region type
         
-        if tensor.dim() == 4:
-            b, c, h, w = tensor.shape
-        else:
-            c, h, w = tensor.shape
-            b = 1
+        h, w = tensor.shape[-2:]
         
         # Create coordinate grids
-        y, x = torch.meshgrid(torch.arange(h), torch.arange(w), indexing='ij')
+        y, x = torch.meshgrid(torch.arange(h, device=self.device), torch.arange(w, device=self.device), indexing='ij')
         center_y, center_x = h // 2, w // 2
         
         # Calculate distance from center
         dist = torch.sqrt((x - center_x)**2 + (y - center_y)**2).float()
         
         # Define region boundaries (these would be learned in actual implementation)
+        # These values should be configurable, e.g., from self.config
+        core_radius = self.config.data_processing.get('core_radius_ratio', 0.1) * h
+        cladding_radius = self.config.data_processing.get('cladding_radius_ratio', 0.3) * h
+
         if region_type == 'core':
-            mask = (dist < h * 0.1).float()
+            mask = (dist < core_radius).float()
         elif region_type == 'cladding':
-            mask = ((dist >= h * 0.1) & (dist < h * 0.3)).float()
+            mask = ((dist >= core_radius) & (dist < cladding_radius)).float()
         elif region_type == 'ferrule':
-            mask = (dist >= h * 0.3).float()
+            mask = (dist >= cladding_radius).float()
         else:
-            raise ValueError(f"Unknown region type: {region_type}")
-        
-        # Move to correct device
-        mask = mask.to(self.device)
+            self.logger.warning(f"Unknown region type: {region_type}, returning empty mask.")
+            mask = torch.zeros(h, w, device=self.device)
         
         self.logger.debug(f"Created {region_type} mask with coverage: {mask.mean().item():.2%}")
         self.logger.log_function_exit("extract_region_mask")
@@ -365,6 +356,9 @@ class TensorProcessor:
         """
         Calculate statistics for a tensor
         """
+        if tensor.numel() == 0:
+            return {'mean': 0.0, 'std': 0.0, 'min': 0.0, 'max': 0.0, 'shape': list(tensor.shape)}
+            
         return {
             'mean': float(tensor.mean().item()),
             'std': float(tensor.std().item()),

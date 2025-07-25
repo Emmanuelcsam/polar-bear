@@ -31,24 +31,36 @@ class ElasticTransform:
         if random.random() > self.p:
             return img
         
-        # Convert to numpy for processing
-        img_np = img.numpy()
+        # Add batch dimension if it's not there
+        is_batched = img.dim() == 4
+        if not is_batched:
+            img = img.unsqueeze(0)
+
+        # Convert to numpy for processing, but keep device info
+        device = img.device
+        img_np = img.cpu().numpy()
         shape = img_np.shape
         
         # Generate random displacement fields
-        dx = gaussian_filter((np.random.rand(*shape[-2:]) * 2 - 1), self.sigma) * self.alpha
-        dy = gaussian_filter((np.random.rand(*shape[-2:]) * 2 - 1), self.sigma) * self.alpha
+        dx = gaussian_filter((np.random.rand(*shape[-2:]) * 2 - 1), self.sigma, mode="constant", cval=0) * self.alpha
+        dy = gaussian_filter((np.random.rand(*shape[-2:]) * 2 - 1), self.sigma, mode="constant", cval=0) * self.alpha
         
         # Create coordinate map for resampling
         y, x = np.meshgrid(np.arange(shape[-2]), np.arange(shape[-1]), indexing='ij')
         indices = np.reshape(y + dy, (-1, 1)), np.reshape(x + dx, (-1, 1))
         
-        # Apply transformation to each channel
-        distorted = np.zeros_like(img_np)
-        for c in range(shape[0]):
-            distorted[c] = map_coordinates(img_np[c], indices, order=1, mode='reflect').reshape(shape[-2:])
+        # Apply transformation to each channel of each image in the batch
+        distorted_batch = np.zeros_like(img_np)
+        for i in range(shape[0]): # Iterate over batch
+            for c in range(shape[1]): # Iterate over channels
+                distorted_batch[i, c] = map_coordinates(img_np[i, c], indices, order=1, mode='reflect').reshape(shape[-2:])
+        
+        distorted_tensor = torch.from_numpy(distorted_batch).to(device)
+        
+        if not is_batched:
+            distorted_tensor = distorted_tensor.squeeze(0)
             
-        return torch.from_numpy(distorted)
+        return distorted_tensor
 
 
 class GridDistortion:
@@ -61,26 +73,56 @@ class GridDistortion:
     def __call__(self, img: torch.Tensor) -> torch.Tensor:
         if random.random() > self.p:
             return img
+
+        # Add batch dimension if it's not there for grid_sample
+        is_batched = img.dim() == 4
+        if not is_batched:
+            img = img.unsqueeze(0)
+
+        b, c, h, w = img.shape
         
-        h, w = img.shape[-2:]
+        # Create a normalized grid (-1 to 1)
+        y, x = torch.meshgrid(torch.linspace(-1, 1, h, device=img.device), 
+                             torch.linspace(-1, 1, w, device=img.device), 
+                             indexing='ij')
         
-        # Create a grid and apply random displacements
-        # This implementation is vectorized for efficiency.
-        y_steps = torch.linspace(0, h - 1, self.num_steps + 1, device=img.device)
-        x_steps = torch.linspace(0, w - 1, self.num_steps + 1, device=img.device)
+        # Create random displacement field
+        # Use a smaller grid and interpolate to avoid memory issues
+        grid_h, grid_w = self.num_steps + 1, self.num_steps + 1
+        displace_y = torch.rand(grid_h, grid_w, device=img.device) * 2 - 1
+        displace_x = torch.rand(grid_h, grid_w, device=img.device) * 2 - 1
         
-        source_points = []
-        for i in range(self.num_steps + 1):
-            for j in range(self.num_steps + 1):
-                source_points.append([x_steps[j], y_steps[i]])
-        source_points = torch.tensor(source_points, device=img.device)
+        # Scale displacements
+        displace_y *= self.distort_limit
+        displace_x *= self.distort_limit
         
-        # Add random displacement, but keep corners fixed
-        displacement = (torch.rand(source_points.shape, device=img.device) * 2 - 1) * self.distort_limit * (w / self.num_steps)
-        dest_points = source_points + displacement
+        # Keep borders fixed
+        displace_y[0, :] = displace_y[-1, :] = displace_y[:, 0] = displace_y[:, -1] = 0
+        displace_x[0, :] = displace_x[-1, :] = displace_x[:, 0] = displace_x[:, -1] = 0
         
-        # Apply thin plate spline interpolation for a smooth distortion
-        return TF.perspective(img, source_points.tolist(), dest_points.tolist())
+        # Interpolate to full image size
+        displace_y = F.interpolate(displace_y.unsqueeze(0).unsqueeze(0), 
+                                  size=(h, w), mode='bilinear', align_corners=False).squeeze()
+        displace_x = F.interpolate(displace_x.unsqueeze(0).unsqueeze(0), 
+                                  size=(h, w), mode='bilinear', align_corners=False).squeeze()
+        
+        # Apply displacements to the grid
+        y = y + displace_y
+        x = x + displace_x
+        
+        # Stack into flow field (N, H, W, 2) format
+        flow_field = torch.stack((y, x), dim=-1).unsqueeze(0)
+        
+        # Expand to match batch size
+        flow_field = flow_field.expand(b, h, w, 2)
+        
+        # Apply the distortion
+        distorted_img = F.grid_sample(img, flow_field, mode='bilinear', padding_mode='border', align_corners=False)
+        
+        if not is_batched:
+            distorted_img = distorted_img.squeeze(0)
+
+        return distorted_img
 
 class AddSyntheticDefects:
     """Adds synthetic defects (scratches, digs, blobs) to images."""
@@ -113,7 +155,9 @@ class AddSyntheticDefects:
         mask[ys, xs] = 1.0
         
         # Apply a blur to create thickness and smoother edges
-        kernel = T.GaussianBlur(kernel_size=width | 1, sigma=float(width) / 4.0)
+        # Ensure kernel size is odd
+        kernel_size = width if width % 2 == 1 else width + 1
+        kernel = T.GaussianBlur(kernel_size=kernel_size, sigma=float(width) / 4.0)
         mask = kernel(mask.unsqueeze(0)).squeeze(0)
 
         intensity = random.uniform(0.3, 0.7)
@@ -126,13 +170,19 @@ class AddSyntheticDefects:
         
         radius = random.randint(params['min_radius'], params['max_radius'])
         intensity = random.uniform(*params['intensity_range'])
-        cx, cy = random.randint(radius, w - radius - 1), random.randint(radius, h - radius - 1)
+        
+        # Ensure center is within bounds
+        cx = random.randint(radius, w - radius - 1) if w > 2 * radius else w // 2
+        cy = random.randint(radius, h - radius - 1) if h > 2 * radius else h // 2
         
         # Vectorized circle creation
         y, x = torch.meshgrid(torch.arange(h, device=img.device), torch.arange(w, device=img.device), indexing='ij')
         dist = torch.sqrt((x - cx) ** 2 + (y - cy) ** 2)
         mask = (dist <= radius).float()
         
+        # Add a soft edge to the dig
+        mask = T.GaussianBlur(kernel_size=3, sigma=1.0)(mask.unsqueeze(0)).squeeze(0)
+
         return img * (1 - mask * intensity)
     
     def add_blob(self, img: torch.Tensor) -> torch.Tensor:
@@ -202,6 +252,7 @@ class FiberOpticsAugmentation:
 
         # Normalization is always applied
         if aug_config.get('normalization') == 'imagenet_stats':
+            # Note: Custom normalization stats might be better for fiber optic images
             transforms.append(T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]))
         
         return T.Compose(transforms)
@@ -212,20 +263,59 @@ class FiberOpticsAugmentation:
 
 # Example usage and testing block
 if __name__ == "__main__":
+    # This requires a dummy config setup to run standalone
+    from unittest.mock import MagicMock
+    get_statistical_config = MagicMock()
+    get_statistical_config.return_value = {
+        'augmentation_settings': {
+            'basic_augmentations': ['horizontal_flip', 'vertical_flip', 'rotation_15', 'brightness_contrast'],
+            'advanced_augmentations': ['elastic_transform', 'grid_distortion'],
+            'color_augmentations': ['hue_saturation'],
+            'noise_augmentations': ['gaussian_noise', 'blur'],
+            'add_synthetic_defects': True,
+            'defect_probability': 0.5,
+            'synthetic_scratch_params': {'min_length': 20, 'max_length': 100, 'min_width': 1, 'max_width': 3},
+            'synthetic_dig_params': {'min_radius': 2, 'max_radius': 8, 'intensity_range': (0.3, 0.8)},
+            'normalization': 'imagenet_stats'
+        }
+    }
+
     pipeline = FiberOpticsAugmentation()
     logger = get_logger("AugmentationTest")
     logger.log_process_start("Augmentation Test")
 
     # Create a dummy test tensor
-    test_tensor = torch.randn(2, 3, 256, 256)  # Test with batch size > 1
+    test_tensor = torch.rand(2, 3, 256, 256)  # Test with batch size > 1, use rand for [0,1] range
     
-    # Apply augmentations
+    # Test individual components
+    logger.info("Testing individual augmentation components...")
+    
+    # Test ElasticTransform
+    elastic = ElasticTransform(p=1.0)  # Force application
+    elastic_result = elastic(test_tensor)
+    assert elastic_result.shape == test_tensor.shape, "ElasticTransform shape mismatch"
+    logger.info("ElasticTransform test passed")
+    
+    # Test GridDistortion
+    grid_dist = GridDistortion(p=1.0)  # Force application
+    grid_result = grid_dist(test_tensor)
+    assert grid_result.shape == test_tensor.shape, "GridDistortion shape mismatch"
+    logger.info("GridDistortion test passed")
+    
+    # Test AddSyntheticDefects
+    defects = AddSyntheticDefects(p=1.0)  # Force application
+    defects_result = defects(test_tensor)
+    assert defects_result.shape == test_tensor.shape, "AddSyntheticDefects shape mismatch"
+    logger.info("AddSyntheticDefects test passed")
+    
+    # Apply full augmentation pipeline
     augmented_tensor = pipeline(test_tensor)
     
     # Log results
     logger.info(f"Input shape: {test_tensor.shape}")
     logger.info(f"Output shape: {augmented_tensor.shape}")
-    logger.info(f"Augmentation pipeline applied successfully.")
+    assert test_tensor.shape == augmented_tensor.shape, "Output shape must match input shape"
+    logger.info("Full augmentation pipeline test passed")
     
     logger.log_process_end("Augmentation Test")
     print(f"[{datetime.now()}] Augmentation test completed successfully.")

@@ -23,11 +23,33 @@ import sys
 from pathlib import Path
 
 # Add the project root directory to the Python path
-project_root = Path(__file__).parent.parent
-sys.path.append(str(project_root))
+# FIX: Corrected path to be more robust, assuming this file is in a subdirectory like 'logic'
+project_root = Path(__file__).resolve().parent.parent
+if str(project_root) not in sys.path:
+    sys.path.append(str(project_root))
 
-from core.config_loader import get_config
-from core.logger import get_logger
+# FIX: Wrapped imports in a try-except block for robustness if run standalone
+try:
+    from core.config_loader import get_config
+    from core.logger import get_logger
+except ImportError:
+    # Provide dummy functions if core modules are not found
+    print("Warning: core.config_loader and core.logger not found. Using dummy implementations.")
+    from easydict import EasyDict
+    def get_config():
+        return EasyDict({
+            'ANOMALY_THRESHOLD': 0.5,
+            'get_device': lambda: torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        })
+    def get_logger(name):
+        import logging
+        logging.basicConfig(level=logging.INFO)
+        logger = logging.getLogger(name)
+        # Add dummy methods if they don't exist to prevent crashes
+        for method in ['log_class_init', 'log_function_entry', 'log_function_exit', 'info', 'log_process_start', 'log_process_end', 'log_anomaly_detection', 'log_script_transition']:
+            if not hasattr(logger, method):
+                setattr(logger, method, lambda *args, **kwargs: None)
+        return logger
 
 class AnomalyDetector(nn.Module):
     """
@@ -116,8 +138,11 @@ class AnomalyDetector(nn.Module):
         anomaly_probs = torch.sigmoid(anomaly_logits)
         
         # Suppress anomalies at region boundaries
-        # FIX: Added unsqueeze(1) to region_boundaries to make [B,1,H,W] for cat with gradient_map [B,1,H,W] (fixes dim mismatch RuntimeError).
-        edge_input = torch.cat([gradient_map, region_boundaries.unsqueeze(1)], dim=1)
+        # FIX: Ensure region_boundaries has a channel dimension for concatenation.
+        # It is expected to be [B, H, W], so unsqueeze(1) makes it [B, 1, H, W] to match gradient_map.
+        if region_boundaries.dim() == 3:
+            region_boundaries = region_boundaries.unsqueeze(1)
+        edge_input = torch.cat([gradient_map, region_boundaries], dim=1)
         edge_suppression = self.edge_suppressor(edge_input)
         
         # Apply suppression
@@ -239,7 +264,8 @@ class AnomalyDetector(nn.Module):
         
         # Calculate Mahalanobis distance
         try:
-            # FIX: Added device=features.device to eye for device match (avoids RuntimeError if cov on CPU, features on GPU).
+            # FIX: Ensured torch.eye is created on the same device as the features to prevent a RuntimeError
+            # if the model is on GPU and the buffer (running_cov) is on CPU.
             cov_inv = torch.linalg.inv(self.running_cov + 1e-6 * torch.eye(
                 self.feature_dim, device=features.device
             ))
@@ -248,6 +274,7 @@ class AnomalyDetector(nn.Module):
             )
         except:
             # Fallback to simple L2 distance if covariance is singular
+            print("Warning: Covariance matrix is singular. Falling back to L2 distance.")
             mahalanobis = torch.norm(centered, dim=1)
         
         return mahalanobis
@@ -390,12 +417,15 @@ class StructuralAnomalyDetector:
         """Calculate local anomaly heatmap"""
         # Local statistics
         kernel_size = 15
-        # FIX: Ensure diff_map is [1,1,H,W] if dim==2 for avg_pool2d (adds unsqueeze if needed, fixes RuntimeError on dim).
-        if diff_map.dim() == 2:
+        # FIX: Ensure diff_map has batch and channel dimensions for avg_pool2d.
+        # This prevents a RuntimeError if the input is 2D or 3D.
+        if diff_map.dim() == 2: # [H, W] -> [1, 1, H, W]
             pooled_input = diff_map.unsqueeze(0).unsqueeze(0)
-        else:
+        elif diff_map.dim() == 3: # [B, H, W] -> [B, 1, H, W]
             pooled_input = diff_map.unsqueeze(1)
-        
+        else:
+            pooled_input = diff_map
+
         local_mean = F.avg_pool2d(
             pooled_input,
             kernel_size,
@@ -409,7 +439,7 @@ class StructuralAnomalyDetector:
                 kernel_size,
                 stride=1,
                 padding=kernel_size//2
-            ) - local_mean ** 2
+            ) - local_mean ** 2 + 1e-8 # Add epsilon for stability
         )
         
         # Z-score
@@ -451,9 +481,15 @@ class RegionBoundaryDetector:
         region_boundaries = boundaries * gradient_edges
         
         # Dilate boundaries to account for transition zones
+        # FIX: Ensure region_boundaries has correct dimensions for conv2d
+        if region_boundaries.dim() == 2:  # [H, W]
+            region_boundaries = region_boundaries.unsqueeze(0).unsqueeze(0)  # [1, 1, H, W]
+        elif region_boundaries.dim() == 3:  # [B, H, W]
+            region_boundaries = region_boundaries.unsqueeze(1)  # [B, 1, H, W]
+        
         kernel = torch.ones(1, 1, 5, 5, device=boundaries.device)
         dilated_boundaries = F.conv2d(
-            region_boundaries.unsqueeze(1),
+            region_boundaries,
             kernel,
             padding=2
         )
@@ -518,67 +554,71 @@ class DefectLocator:
         self.logger.log_function_entry("locate_defects")
         
         # Threshold anomaly map
-        binary_map = (anomaly_map > self.config.ANOMALY_THRESHOLD).float()
+        # FIX: Ensure anomaly_map has a batch dimension for consistent processing
+        if anomaly_map.dim() == 2: # H, W
+            anomaly_map = anomaly_map.unsqueeze(0) # 1, H, W
+        if anomaly_map.dim() == 3: # B, H, W or C, H, W
+             # Assuming single channel if 3D
+            anomaly_map = anomaly_map.unsqueeze(1) if anomaly_map.shape[0] > 1 else anomaly_map.unsqueeze(0)
+
+        binary_map = (anomaly_map > self.config.anomaly.threshold).float()
         
-        # Convert to numpy for connected components
-        if binary_map.dim() > 2:
-            binary_map = binary_map.squeeze()
+        # Process each item in the batch
+        batch_defects = []
+        for i in range(binary_map.shape[0]):
+            binary_np = binary_map[i].squeeze().cpu().numpy().astype(np.uint8)
+            
+            # Find connected components
+            num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(binary_np)
+            
+            defects = []
+            
+            for label_id in range(1, num_labels):  # Skip background (0)
+                # Get defect properties from stats
+                x_min, y_min, width, height, area = stats[label_id]
+                center_x, center_y = centroids[label_id]
+                
+                # Check size
+                if area < min_size:
+                    continue
+                
+                # Get defect mask
+                defect_mask = (labels == label_id)
+                
+                # Get defect type if available
+                defect_type = 'unknown'
+                confidence = 0.0
+                
+                if defect_probs is not None:
+                    # defect_probs is [C, H, W] for a single batch item
+                    current_defect_probs = defect_probs[i] if defect_probs.dim() == 4 else defect_probs
+                    defect_region_probs = current_defect_probs[:, defect_mask].mean(dim=1)
+                    type_idx = defect_region_probs.argmax().item()
+                    defect_type = self.defect_types[type_idx]
+                    confidence = defect_region_probs[type_idx].item()
+                
+                # Get severity
+                severity = anomaly_map[i, 0, defect_mask].mean().item()
+                
+                defect_info = {
+                    'id': label_id,
+                    'type': defect_type,
+                    'confidence': confidence,
+                    'severity': severity,
+                    'location': (int(center_x), int(center_y)),
+                    'bounding_box': (x_min, y_min, x_min + width, y_min + height),
+                    'size': int(area),
+                    'mask': defect_mask
+                }
+                
+                defects.append(defect_info)
+            batch_defects.append(defects)
+
+        self.logger.info(f"Located {sum(len(d) for d in batch_defects)} defects across batch")
+        self.logger.log_function_exit("locate_defects")
         
-        binary_np = binary_map.cpu().numpy().astype(np.uint8)
-        
-        # Find connected components
-        num_labels, labels = cv2.connectedComponents(binary_np)
-        
-        defects = []
-        
-        for label_id in range(1, num_labels):  # Skip background (0)
-            # Get defect mask
-            defect_mask = (labels == label_id)
-            
-            # Check size
-            if defect_mask.sum() < min_size:
-                continue
-            
-            # Get bounding box
-            coords = np.where(defect_mask)
-            y_min, y_max = coords[0].min(), coords[0].max()
-            x_min, x_max = coords[1].min(), coords[1].max()
-            
-            # Get center
-            center_y = (y_min + y_max) // 2
-            center_x = (x_min + x_max) // 2
-            
-            # Get defect type if available
-            defect_type = 'unknown'
-            confidence = 0.0
-            
-            if defect_probs is not None:
-                # Get average probabilities in defect region
-                defect_region_probs = defect_probs[:, y_min:y_max+1, x_min:x_max+1].mean(dim=[1, 2])
-                type_idx = defect_region_probs.argmax().item()
-                defect_type = self.defect_types[type_idx]
-                confidence = defect_region_probs[type_idx].item()
-            
-            # Get severity
-            severity = anomaly_map[defect_mask].mean().item()
-            
-            defect_info = {
-                'id': label_id,
-                'type': defect_type,
-                'confidence': confidence,
-                'severity': severity,
-                'location': (center_x, center_y),
-                'bounding_box': (x_min, y_min, x_max, y_max),
-                'size': defect_mask.sum(),
-                'mask': defect_mask
-            }
-            
-            defects.append(defect_info)
-        
-        self.logger.info(f"Located {len(defects)} defects")
-        self.logger.log_function_exit("locate_defects", f"{len(defects)} defects")
-        
-        return defects
+        # Return defects for the first batch item for simplicity, or handle batches as needed
+        return batch_defects[0] if len(batch_defects) == 1 else batch_defects
 
 class ComprehensiveAnomalyDetector:
     """
@@ -622,9 +662,8 @@ class ComprehensiveAnomalyDetector:
         region_boundaries = self.boundary_detector.detect_boundaries(region_probs, gradient_map)
         
         # Neural network based detection
-        # FIX: unsqueeze(1) instead of unsqueeze(0) to make [B,1,H,W] matching gradient_map [B,1,H,W] (fixes shape mismatch in cat).
         neural_results = self.neural_detector(
-            input_tensor, reference_tensor, gradient_map, region_boundaries.unsqueeze(1)
+            input_tensor, reference_tensor, gradient_map, region_boundaries
         )
         
         # Structural similarity based detection
@@ -640,9 +679,18 @@ class ComprehensiveAnomalyDetector:
         )
         
         # Locate individual defects
+        # FIX: Made defect probability handling more robust for different batch sizes.
+        if combined_anomaly_map.shape[0] == 1:
+            defect_probs_for_locator = neural_results['defect_type_probs'].squeeze(0)
+            anomaly_map_for_locator = combined_anomaly_map.squeeze(0)
+        else:
+            # Handle batch > 1 case if locator is extended, for now, use first item
+            defect_probs_for_locator = neural_results['defect_type_probs'][0]
+            anomaly_map_for_locator = combined_anomaly_map[0]
+
         defects = self.defect_locator.locate_defects(
-            combined_anomaly_map,
-            neural_results['defect_type_probs'].squeeze(0) if neural_results['defect_type_probs'].dim() > 3 else neural_results['defect_type_probs']
+            anomaly_map_for_locator,
+            defect_probs_for_locator
         )
         
         # Log results
@@ -690,7 +738,8 @@ if __name__ == "__main__":
     
     # Log results
     logger.info(f"Detected {results['defect_count']} defects")
-    logger.info(f"Anomaly map range: [{results['anomaly_map'].min():.4f}, {results['anomaly_map'].max():.4f}]")
+    if results['anomaly_map'].numel() > 0:
+      logger.info(f"Anomaly map range: [{results['anomaly_map'].min():.4f}, {results['anomaly_map'].max():.4f}]")
     
     for i, defect in enumerate(results['defects'][:3]):
         logger.info(f"Defect {i+1}: type={defect['type']}, severity={defect['severity']:.4f}, location={defect['location']}")

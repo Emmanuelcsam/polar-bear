@@ -18,11 +18,28 @@ import sys
 from pathlib import Path
 
 # Add the project root directory to the Python path
-project_root = Path(__file__).parent.parent
-sys.path.append(str(project_root))
+# FIX: Corrected path to be more robust, assuming this file is in a subdirectory like 'logic'
+project_root = Path(__file__).resolve().parent.parent
+if str(project_root) not in sys.path:
+    sys.path.append(str(project_root))
 
-from core.config_loader import get_config
-from core.logger import get_logger
+# FIX: Wrapped imports in a try-except block for robustness if run standalone
+try:
+    from core.config_loader import get_config
+    from core.logger import get_logger
+except ImportError:
+    # Provide dummy functions if core modules are not found
+    print("Warning: core.config_loader and core.logger not found. Using dummy implementations.")
+    def get_config(): return None
+    def get_logger(name):
+        import logging
+        logging.basicConfig(level=logging.INFO)
+        logger = logging.getLogger(name)
+        # Add dummy methods if they don't exist to prevent crashes
+        for method in ['log_class_init', 'info']:
+            if not hasattr(logger, method):
+                setattr(logger, method, lambda *args, **kwargs: None)
+        return logger
 
 
 class SEBlock(nn.Module):
@@ -122,16 +139,16 @@ class DeformableConv2d(nn.Module):
         
         self.in_channels = in_channels
         self.out_channels = out_channels
-        self.kernel_size = kernel_size
-        self.stride = stride
-        self.padding = padding
-        self.dilation = dilation
+        self.kernel_size = kernel_size if isinstance(kernel_size, tuple) else (kernel_size, kernel_size)
+        self.stride = stride if isinstance(stride, tuple) else (stride, stride)
+        self.padding = padding if isinstance(padding, tuple) else (padding, padding)
+        self.dilation = dilation if isinstance(dilation, tuple) else (dilation, dilation)
         self.groups = groups
         self.num_deformable_groups = num_deformable_groups
         
         # Regular convolution weight
         self.weight = nn.Parameter(torch.Tensor(
-            out_channels, in_channels // groups, kernel_size, kernel_size
+            out_channels, in_channels // groups, self.kernel_size[0], self.kernel_size[1]
         ))
         
         if bias:
@@ -143,20 +160,20 @@ class DeformableConv2d(nn.Module):
         # For each position, learn 2D offset for each kernel position
         self.offset_conv = nn.Conv2d(
             in_channels,
-            2 * num_deformable_groups * kernel_size * kernel_size,
-            kernel_size=kernel_size,
-            stride=stride,
-            padding=padding,
+            2 * num_deformable_groups * self.kernel_size[0] * self.kernel_size[1],
+            kernel_size=self.kernel_size,
+            stride=self.stride,
+            padding=self.padding,
             bias=True
         )
         
         # Modulation learning network (optional importance weights)
         self.modulator_conv = nn.Conv2d(
             in_channels,
-            num_deformable_groups * kernel_size * kernel_size,
-            kernel_size=kernel_size,
-            stride=stride,
-            padding=padding,
+            num_deformable_groups * self.kernel_size[0] * self.kernel_size[1],
+            kernel_size=self.kernel_size,
+            stride=self.stride,
+            padding=self.padding,
             bias=True
         )
         
@@ -168,16 +185,17 @@ class DeformableConv2d(nn.Module):
         nn.init.kaiming_uniform_(self.weight, a=math.sqrt(5))
         if self.bias is not None:
             fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.weight)
-            bound = 1 / math.sqrt(fan_in)
-            nn.init.uniform_(self.bias, -bound, bound)
+            if fan_in > 0:
+                bound = 1 / math.sqrt(fan_in)
+                nn.init.uniform_(self.bias, -bound, bound)
         
         # Initialize offset to zero (no deformation initially)
         nn.init.constant_(self.offset_conv.weight, 0.)
         nn.init.constant_(self.offset_conv.bias, 0.)
         
-        # Initialize modulator to one (all positions equally important)
+        # Initialize modulator to a neutral state
         nn.init.constant_(self.modulator_conv.weight, 0.)
-        nn.init.constant_(self.modulator_conv.bias, 1.)
+        nn.init.constant_(self.modulator_conv.bias, 0.)
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -192,8 +210,8 @@ class DeformableConv2d(nn.Module):
         # Learn offsets for each position
         offset = self.offset_conv(x)
         
-        # Learn importance weights (modulation)
-        modulator = torch.sigmoid(self.modulator_conv(x))
+        # Learn importance weights (modulation), scaled to be in [0, 2]
+        modulator = 2. * torch.sigmoid(self.modulator_conv(x))
         
         # Apply deformable convolution
         # Note: PyTorch's deform_conv2d expects offset shape [B, 2*K*K, H, W]
@@ -241,13 +259,13 @@ class CBAM(nn.Module):
         
     def _build_channel_attention(self, channels: int, reduction: int) -> nn.Module:
         """Build channel attention module"""
-        return nn.Sequential(
-            nn.AdaptiveAvgPool2d(1),
-            nn.Conv2d(channels, channels // reduction, 1, bias=False),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(channels // reduction, channels, 1, bias=False),
-            nn.Sigmoid()
+        # FIX: Using MLP for channel attention as in original paper
+        mlp = nn.Sequential(
+            nn.Linear(channels, channels // reduction, bias=False),
+            nn.ReLU(),
+            nn.Linear(channels // reduction, channels, bias=False)
         )
+        return mlp
     
     def _build_spatial_attention(self, kernel_size: int) -> nn.Module:
         """Build spatial attention module"""
@@ -267,20 +285,26 @@ class CBAM(nn.Module):
         Returns:
             Attention-weighted features [B, C, H, W]
         """
+        b, c, _, _ = x.shape
         # Channel attention
-        ca_weight = self.channel_attention(x)
-        x = x * ca_weight
+        avg_pool_flat = F.adaptive_avg_pool2d(x, 1).view(b, c)
+        max_pool_flat = F.adaptive_max_pool2d(x, 1).view(b, c)
+        
+        avg_out = self.channel_attention(avg_pool_flat)
+        max_out = self.channel_attention(max_pool_flat)
+        
+        ca_weight = torch.sigmoid(avg_out + max_out).view(b, c, 1, 1)
+        x_ca = x * ca_weight
         
         # Spatial attention
-        # Concatenate mean and max across channels
-        avg_pool = torch.mean(x, dim=1, keepdim=True)
-        max_pool, _ = torch.max(x, dim=1, keepdim=True)
-        concat = torch.cat([avg_pool, max_pool], dim=1)
+        avg_pool_sa = torch.mean(x_ca, dim=1, keepdim=True)
+        max_pool_sa, _ = torch.max(x_ca, dim=1, keepdim=True)
+        concat = torch.cat([avg_pool_sa, max_pool_sa], dim=1)
         
         sa_weight = self.spatial_attention(concat)
-        x = x * sa_weight
+        x_out = x_ca * sa_weight
         
-        return x
+        return x_out
 
 
 class EfficientChannelAttention(nn.Module):
@@ -347,10 +371,13 @@ class ResidualSEBlock(nn.Module):
         self.conv2 = nn.Conv2d(out_channels, out_channels, 3, 1, 1, bias=False)
         self.bn2 = nn.BatchNorm2d(out_channels)
         
-        if reduction is not None:  # Added conditional to handle reduction=None; previously, passing None to SEBlock would raise TypeError since SEBlock expects int
+        # FIX: This logic correctly handles cases where SE is disabled.
+        # If `reduction` is None or 0, `nn.Identity` is used, which acts as a pass-through layer.
+        # This prevents a TypeError that would occur if None was passed to SEBlock.
+        if reduction is not None and reduction > 0:
             self.se = SEBlock(out_channels, reduction)
         else:
-            self.se = nn.Identity()  # Use Identity if no SE to avoid errors in forward pass; this ensures compatibility when use_se=False in FiberOpticsBackbone
+            self.se = nn.Identity()
         
         # Shortcut connection
         self.shortcut = nn.Sequential()
@@ -480,7 +507,7 @@ class FiberOpticsBackbone(nn.Module):
                         in_ch if j == 0 else out_ch,
                         out_ch,
                         stride if j == 0 else 1,
-                        reduction=16 if use_se else None  # Use None to disable SE
+                        reduction=16 if use_se else 0  # Use 0 to disable SE
                     )
                 blocks.append(block)
             
@@ -533,32 +560,32 @@ if __name__ == "__main__":
     # Test SE block
     print("\nTesting SE Block...")
     se = SEBlock(64, reduction=16)
-    x = torch.randn(2, 64, 32, 32)
-    out = se(x)
-    print(f"SE output shape: {out.shape}")
+    x_se = torch.randn(2, 64, 32, 32)
+    out_se = se(x_se)
+    print(f"SE output shape: {out_se.shape}")
     
     # Test Deformable Conv
     print("\nTesting Deformable Conv2d...")
     deform_conv = DeformableConv2d(64, 128, kernel_size=3)
-    x = torch.randn(2, 64, 32, 32)
-    out = deform_conv(x)
-    print(f"Deformable Conv output shape: {out.shape}")
+    x_deform = torch.randn(2, 64, 32, 32)
+    out_deform = deform_conv(x_deform)
+    print(f"Deformable Conv output shape: {out_deform.shape}")
     
     # Test CBAM
     print("\nTesting CBAM...")
     cbam = CBAM(64)
-    x = torch.randn(2, 64, 32, 32)
-    out = cbam(x)
-    print(f"CBAM output shape: {out.shape}")
+    x_cbam = torch.randn(2, 64, 32, 32)
+    out_cbam = cbam(x_cbam)
+    print(f"CBAM output shape: {out_cbam.shape}")
     
     # Test full backbone
     print("\nTesting FiberOpticsBackbone...")
     backbone = FiberOpticsBackbone()
-    x = torch.randn(2, 3, 256, 256)
-    features = backbone(x)
+    x_backbone = torch.randn(2, 3, 256, 256)
+    features = backbone(x_backbone)
     print(f"Backbone output scales: {len(features)}")
     for i, feat in enumerate(features):
         print(f"  Scale {i}: {feat.shape}")
     
     print(f"[{datetime.now()}] Advanced architecture components test completed")
-    print(f"[{datetime.now()}] Next script: fiber_hybrid_optimizer.py")
+    print(f"[{datetime.now()}] Next script: integrated_network.py")

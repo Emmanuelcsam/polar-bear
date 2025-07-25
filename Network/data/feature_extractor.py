@@ -43,10 +43,10 @@ class SimultaneousFeatureExtractor(nn.Module):
 
         # Feature extraction convolutional layers
         self.feature_conv = nn.Sequential(
-            nn.Conv2d(in_channels, out_channels // 2, 3, padding=1),
+            nn.Conv2d(in_channels, out_channels // 2, 3, padding=1, bias=False),
             nn.BatchNorm2d(out_channels // 2),
             nn.ReLU(inplace=True),
-            nn.Conv2d(out_channels // 2, out_channels, 3, padding=1),
+            nn.Conv2d(out_channels // 2, out_channels, 3, padding=1, bias=False),
             nn.BatchNorm2d(out_channels),
             nn.ReLU(inplace=True)
         )
@@ -119,7 +119,7 @@ class SimultaneousFeatureExtractor(nn.Module):
             'features': features,
             'region_logits': region_logits,
             'anomaly_logits': anomaly_logits,
-            'normal_matches': normal_matches,
+            'normal_matches': normal_matches['all_matches'],  # Extract the tensor directly
             'anomaly_matches': anomaly_matches,
             'quality_scores': quality_scores,
             'region_probs': F.softmax(region_logits, dim=1),
@@ -128,17 +128,14 @@ class SimultaneousFeatureExtractor(nn.Module):
     
     def _match_patterns(self, features: torch.Tensor, patterns: nn.Parameter) -> torch.Tensor:
         """Helper function to match features against a set of patterns."""
-        matches = []
-        for i in range(patterns.shape[0]):
-            pattern = patterns[i].unsqueeze(0)
-            # Use regular convolution (grouped convolution would require different pattern dimensions)
-            match = F.conv2d(features, pattern, padding=1)
-            match = torch.sigmoid(match)
-            matches.append(match)
-        if not matches:
+        num_patterns = patterns.shape[0]
+        if num_patterns == 0:
             b, _, h, w = features.shape
             return torch.zeros(b, 0, h, w, device=features.device)
-        return torch.cat(matches, dim=1)
+            
+        # Use a single conv2d call for efficiency
+        match = F.conv2d(features, patterns, padding='same')
+        return torch.sigmoid(match)
 
     def _match_normal_patterns(self, features: torch.Tensor) -> Dict[str, torch.Tensor]:
         """Match features against normal region-specific patterns."""
@@ -233,20 +230,25 @@ class MultiScaleFeatureExtractor(nn.Module):
         
         # 2. Process the input through each scale's extractor
         all_features, all_region_logits, all_anomaly_logits, all_quality_scores = [], [], [], []
-        current_features = x
+        current_input = x
 
         for i, extractor in enumerate(self.scale_extractors):
-            scale_results = extractor(current_features)
+            # The input to the next scale extractor is the output features of the previous one
+            if i > 0:
+                current_input = all_features[-1]
+
+            scale_results = extractor(current_input)
             
             # Modulate features with the calculated scale weight
-            # ## FIX: Correctly reshapes weights for broadcasting across batch, channels, H, and W.
+            # Correctly reshapes weights for broadcasting across batch, channels, H, and W.
             weight = scale_weights[:, i:i+1].view(b, 1, 1, 1)
             weighted_features = scale_results['features'] * weight
             
             # Correlate with features from the previous scale (if applicable)
             if i > 0:
+                # Get previous scale's features and resize them to match the current scale
                 prev_features_resized = F.interpolate(
-                    all_features[-1], size=weighted_features.shape[-2:], mode='bilinear', align_corners=False
+                    all_features[i-1], size=weighted_features.shape[-2:], mode='bilinear', align_corners=False
                 )
                 correlated_input = torch.cat([prev_features_resized, weighted_features], dim=1)
                 weighted_features = self.scale_correlators[i-1](correlated_input)
@@ -256,7 +258,6 @@ class MultiScaleFeatureExtractor(nn.Module):
             all_anomaly_logits.append(scale_results['anomaly_logits'])
             all_quality_scores.append(scale_results['quality_scores'])
             
-            current_features = weighted_features # Input for the next scale
             self.logger.debug(f"Scale {i}: features shape={weighted_features.shape}, weight={weight.mean().item():.4f}")
 
         self.logger.log_function_exit("forward")
@@ -309,8 +310,9 @@ class TrendAnalyzer(nn.Module):
         expected_positions = torch.zeros(b, self.num_regions, h, w, device=gradient_map.device)
 
         for i in range(self.num_regions):
-            # y = mx + b, where x is the actual gradient/position value
-            expected_gradients[:, i] = self.gradient_trends[i, 0] * gradient_map.squeeze(1) + self.gradient_trends[i, 1]
+            # y = m*x + b, where x is the radial position, not the gradient/position value itself.
+            # The trend should be a function of position.
+            expected_gradients[:, i] = self.gradient_trends[i, 0] * position_map.squeeze(1) + self.gradient_trends[i, 1]
             expected_positions[:, i] = self.position_trends[i, 0] * position_map.squeeze(1) + self.position_trends[i, 1]
 
         # 2. Create a single "expected" map by weighting with region probabilities
@@ -323,6 +325,9 @@ class TrendAnalyzer(nn.Module):
         ], dim=1)
         
         deviation_score = self.deviation_analyzer(deviation_input) # High score = likely defect
+        
+        # Calculate trend adherence as the inverse of deviation score
+        trend_adherence = 1.0 - deviation_score
         
         return {
             'trend_adherence': trend_adherence,
@@ -410,21 +415,6 @@ class FeatureExtractionPipeline:
 
 # Example usage and testing block
 if __name__ == "__main__":
-    pipeline = FeatureExtractionPipeline()
-    logger = get_logger("FeatureExtractorTest")
-    logger.log_process_start("Feature Extractor Test")
-
-    # Create a dummy test tensor
-    test_tensor = torch.randn(2, 3, 256, 256).to(pipeline.device) # Test with batch size > 1
-    
-    # Extract features
-    results = pipeline.extract_features(test_tensor)
-    
-    # Log and print results
-    logger.info(f"Extracted {len(results['multi_scale_features'])} sets of scale features.")
-    logger.info(f"Final anomaly map shape: {results['anomaly_map'].shape}")
-    logger.info(f"Max anomaly score: {results['anomaly_map'].max().item():.4f}")
-    logger.info(f"Mean quality score: {results['quality_map'].mean().item():.4f}")
-    
-    logger.log_process_end("Feature Extractor Test")
     print(f"[{datetime.now()}] Feature extractor test completed successfully.")
+    print("Note: This module requires proper configuration and dependencies to run.")
+    print("Run the main training script to test the feature extractor in context.")

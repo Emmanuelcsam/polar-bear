@@ -1,0 +1,50 @@
+
+        <html>
+        <head>
+            <title>Fiber Optics Neural Network Configuration Report</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                h1 { color: #333; }
+                h2 { color: #666; border-bottom: 2px solid #ddd; padding-bottom: 5px; }
+                table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                th { background-color: #f2f2f2; font-weight: bold; }
+                tr:nth-child(even) { background-color: #f9f9f9; }
+                .section { margin: 20px 0; }
+                .highlight { background-color: #ffffcc; }
+                .warning { color: #ff6600; }
+                .info { color: #0066cc; }
+            </style>
+        </head>
+        <body>
+            <h1>Fiber Optics Neural Network Configuration Report</h1>
+            <p>Generated: 2025-07-25 11:07:34</p>
+        
+            <div class="section">
+                <h2>System Configuration</h2>
+                <table>
+                    <tr><th>Parameter</th><th>Value</th><th>Description</th></tr>
+        <tr><td>Device</td><td>cuda</td><td>Compute device (cuda/cpu)</td></tr><tr><td>GPU ID</td><td>0</td><td>GPU device ID</td></tr><tr><td>Workers</td><td>2</td><td>Number of data loading workers</td></tr><tr><td>Log Level</td><td>DEBUG</td><td>Logging verbosity</td></tr><tr><td>Data Path</td><td>./dataset</td><td>Dataset location</td></tr><tr><td>Checkpoints</td><td>../checkpoints</td><td>Model checkpoint directory</td></tr><tr><td>Results</td><td>../results</td><td>Results output directory</td></tr></table></div>
+            <div class="section">
+                <h2>Model Architecture</h2>
+                <table>
+                    <tr><th>Parameter</th><th>Value</th><th>Impact</th></tr>
+        <tr><td>Architecture</td><td>advanced</td><td>Model complexity level</td></tr><tr><td>Base Channels</td><td>32</td><td>Model capacity (higher = more parameters)</td></tr><tr><td>Blocks</td><td>[2, 2, 2, 2]</td><td>Network depth configuration</td></tr><tr><td>SE Blocks</td><td>True</td><td>Squeeze-and-Excitation attention</td></tr><tr><td>CBAM</td><td>True</td><td>Convolutional Block Attention Module</td></tr><tr><td>Deformable Conv</td><td>True</td><td>Adaptive receptive fields</td></tr><tr><td>Embedding Dim</td><td>512</td><td>Feature representation size</td></tr></table></div>
+            <div class="section">
+                <h2>Training Configuration</h2>
+                <table>
+                    <tr><th>Parameter</th><th>Value</th><th>Recommendation</th></tr>
+        <tr><td>Epochs</td><td>5</td><td>Increase for better convergence</td></tr><tr><td>Batch Size</td><td>8</td><td>Larger = faster but more memory</td></tr><tr><td>Learning Rate</td><td>0.002</td><td>Start high, decrease if unstable</td></tr><tr><td>Optimizer</td><td>sam_lookahead</td><td>AdamW recommended for stability</td></tr><tr><td>Mixed Precision</td><td>True</td><td>Enable for 2x speedup</td></tr><tr><td>Gradient Accumulation</td><td>4</td><td>Simulate larger batches</td></tr></table></div>
+            <div class="section">
+                <h2>Performance Analysis</h2>
+                <ul>
+        <li>Estimated Parameters: ~256,000</li><li>Memory Usage (BS=8): ~0.0GB</li><li>Target FPS: 60</li><li class="info">Mixed Precision Training: ENABLED (2x speedup expected)</li></ul></div>
+            <div class="section">
+                <h2>Equation Configuration</h2>
+                <p>Master Equation: S(R) = A×x₁ + B×x₂ + C×x₃ + D×x₄ + E×x₅</p>
+                <table>
+                    <tr><th>Component</th><th>Weight</th><th>Meaning</th></tr>
+        <tr><td>A - Reference Similarity</td><td>1.2</td><td>Comparison with reference fibers</td></tr><tr><td>B - Trend Adherence</td><td>1.0</td><td>Consistency with expected patterns</td></tr><tr><td>C - Inverse Anomaly Score</td><td>0.8</td><td>Quality/defect detection</td></tr><tr><td>D - Segmentation Confidence</td><td>1.0</td><td>Region detection accuracy</td></tr><tr><td>E - Reconstruction Similarity</td><td>0.6</td><td>Feature preservation</td></tr></table></div>
+        </body>
+        </html>
+        

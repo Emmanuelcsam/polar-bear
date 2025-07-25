@@ -22,15 +22,31 @@ from datetime import datetime
 from typing import Dict, List, Tuple, Any, Optional
 import math
 
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
+# PyQt5 imports
+try:
+    from PyQt5.QtWidgets import (
+        QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSlider, QSpinBox, QDoubleSpinBox,
+        QCheckBox, QFrame, QTextEdit, QPushButton, QMainWindow, QTabWidget, QScrollArea,
+        QGroupBox, QSplitter, QStatusBar, QApplication, QMessageBox, QFileDialog, QAction
+    )
+    from PyQt5.QtCore import pyqtSignal, Qt, QTimer
+    from PyQt5.QtGui import QFont
+except ImportError:
+    print("PyQt5 is required but not installed. Please install it with: pip install PyQt5")
+    sys.exit(1)
 
+# Matplotlib imports with compatibility fixes
 import matplotlib
 matplotlib.use('Qt5Agg')
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+try:
+    from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+except ImportError:
+    # Fallback for newer matplotlib versions
+    from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 from matplotlib.animation import FuncAnimation
 
 
@@ -78,7 +94,7 @@ class SystemArchitectureVisualizer:
 
         # Draw components
         for comp, pos in positions.items():
-            rect = plt.Rectangle((pos[0]-0.4, pos[1]-0.3), 0.8, 0.6,
+            rect = Rectangle((pos[0]-0.4, pos[1]-0.3), 0.8, 0.6,
                                fill=True, facecolor='lightblue',
                                edgecolor='darkblue', linewidth=2)
             ax.add_patch(rect)
@@ -634,7 +650,9 @@ class EquationVisualizationWidget(QWidget):
         # Visualize coefficient weights
         labels = list(coefficients.keys())
         values = list(coefficients.values())
-        colors = plt.cm.viridis(np.linspace(0.2, 0.8, len(labels)))
+        # Use a different colormap that's more widely available
+        # Use a simple color palette that's always available
+        colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd'][:len(labels)]
 
         bars = ax_weights.bar(labels, values, color=colors, edgecolor='black', linewidth=2)
         ax_weights.set_ylabel('Coefficient Value', fontsize=12)
@@ -663,9 +681,14 @@ class EquationVisualizationWidget(QWidget):
         contributions = [v * 0.8 for v in values]  # Simulated contributions
         pie_data = [abs(c) for c in contributions]
 
-        wedges, texts, autotexts = ax_contrib.pie(pie_data, labels=[f'{components["x" + subscript_map[i+1]]}\n({labels[i]})'
+        pie_result = ax_contrib.pie(pie_data, labels=[f'{components["x" + subscript_map[i+1]]}\n({labels[i]})'
                                                                     for i in range(len(labels))],
                                                 autopct='%1.1f%%', colors=colors)
+        # Handle variable number of return values
+        if len(pie_result) == 2:
+            wedges, texts = pie_result
+        else:
+            wedges, texts, autotexts = pie_result
         ax_contrib.set_title('Component Contributions to Final Score', fontsize=14)
 
         self.canvas.draw()

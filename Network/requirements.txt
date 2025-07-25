@@ -21,6 +21,7 @@ PyQt5>=5.15.0
 
 # Configuration
 PyYAML>=6.0
+easydict>=1.9.0
 
 # Experiment Tracking
 wandb>=0.12.0

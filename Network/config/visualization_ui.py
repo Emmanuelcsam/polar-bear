@@ -30,11 +30,11 @@ from typing import Dict, List, Optional, Tuple, Any
 from pathlib import Path
 
 import sys
-from pathlib import Path
 
 # Add the project root directory to the Python path
-project_root = Path(__file__).parent.parent
-sys.path.append(str(project_root))
+project_root = Path(__file__).resolve().parent.parent
+if str(project_root) not in sys.path:
+    sys.path.append(str(project_root))
 
 # Import our modules
 from core.config_loader import ConfigManager, get_config
@@ -324,7 +324,7 @@ class NeuralNetworkVisualizer(Gtk.Window):
             
             self.logger.info("Neural network model loaded")
         except Exception as e:
-            self.logger.error(f"Failed to load model: {e}")
+            self.logger.error(f"Failed to load model: {e}", exc_info=True)
             self._show_error_dialog(f"Failed to load model: {e}")
     
     def _on_load_image(self, widget):
@@ -371,7 +371,7 @@ class NeuralNetworkVisualizer(Gtk.Window):
             self.logger.info(f"Loaded image: {filename}")
             
         except Exception as e:
-            self.logger.error(f"Error loading image: {e}")
+            self.logger.error(f"Error loading image: {e}", exc_info=True)
             self._show_error_dialog(f"Error loading image: {e}")
     
     def _on_toggle_processing(self, widget):
@@ -414,10 +414,13 @@ class NeuralNetworkVisualizer(Gtk.Window):
                 start_time = time.time()
                 
                 # Apply current intensity to image
-                adjusted_image = self._apply_intensity(
-                    self.current_image, 
-                    self.current_intensity
-                )
+                if self.current_image is not None:
+                    adjusted_image = self._apply_intensity(
+                        self.current_image, 
+                        self.current_intensity
+                    )
+                else:
+                    continue
                 
                 # Process through neural network
                 results = self._process_image(adjusted_image)
@@ -445,7 +448,7 @@ class NeuralNetworkVisualizer(Gtk.Window):
                     time.sleep(target_time - process_time)
                 
             except Exception as e:
-                self.logger.error(f"Processing error: {e}")
+                self.logger.error(f"Processing error: {e}", exc_info=True)
                 self.update_queue.put(('error', str(e)))
                 break
     
@@ -465,6 +468,8 @@ class NeuralNetworkVisualizer(Gtk.Window):
         
         # Convert to tensor
         image_tensor = self.tensor_processor.image_to_tensor(image)
+        if self.model is None:
+            raise RuntimeError("Model not initialized")
         image_tensor = image_tensor.unsqueeze(0).to(self.model.device)
         
         # Forward pass
@@ -474,16 +479,15 @@ class NeuralNetworkVisualizer(Gtk.Window):
         # Convert outputs to visualizable format
         results = {
             'image': image,
-            'features': self._visualize_features(outputs['multi_scale_features']),
-            'segmentation': self._visualize_segmentation(outputs['segmentation']),
-            'anomaly': self._visualize_anomaly(outputs['anomaly_map']),
+            'features': self._visualize_features(outputs.get('multi_scale_features')),
+            'segmentation': self._visualize_segmentation(outputs.get('segmentation')),
+            'anomaly': self._visualize_anomaly(outputs.get('anomaly_map')),
             'reference': self._visualize_reference(outputs),
-            'reconstruction': self._tensor_to_image(outputs['reconstruction']),
+            'reconstruction': self._tensor_to_image(outputs.get('reconstruction')),
             'final': self._create_final_visualization(outputs),
             'stats': {
-                'similarity': outputs['final_similarity'][0].item(),
-                'anomaly_score': outputs['anomaly_map'][0].mean().item(),
-                # Updated to use measured time instead of default 0, fixing the logic error where computation_time was always reported as 0ms in the UI statistics.
+                'similarity': outputs.get('final_similarity', [torch.tensor(0.0)])[0].item(),
+                'anomaly_score': outputs.get('anomaly_map', torch.zeros(1))[0].mean().item(),
                 'computation_time': time.time() - start_time,
                 'memory_usage': torch.cuda.memory_allocated() if torch.cuda.is_available() else 0
             }
@@ -491,12 +495,10 @@ class NeuralNetworkVisualizer(Gtk.Window):
         
         return results
     
-    def _visualize_features(self, features: List[torch.Tensor]) -> np.ndarray:
+    def _visualize_features(self, features: Optional[List[torch.Tensor]]) -> np.ndarray:
         """Visualize multi-scale features"""
-        # Added check for empty features list to prevent IndexError if the model outputs no features (e.g., due to config changes or model errors),
-        # which could crash the UI during real-time processing.
         if not features:
-            return np.zeros((256, 256, 3), dtype=np.uint8)  # Return blank image to avoid crash
+            return np.zeros((256, 256, 3), dtype=np.uint8)
         
         # Take first scale features
         feat = features[0][0]  # [C, H, W]
@@ -505,9 +507,8 @@ class NeuralNetworkVisualizer(Gtk.Window):
         feat_avg = feat.mean(dim=0).cpu().numpy()
         
         # Normalize to 0-255
-        # Added epsilon to denominator to prevent division by zero if feat_avg.max() == feat_avg.min() (flat features, e.g., all zeros),
-        # which would cause NaN values and invalid image data.
-        feat_norm = (feat_avg - feat_avg.min()) / (feat_avg.max() - feat_avg.min() + 1e-8)
+        feat_range = feat_avg.max() - feat_avg.min()
+        feat_norm = (feat_avg - feat_avg.min()) / (feat_range + 1e-8)
         feat_vis = (feat_norm * 255).astype(np.uint8)
         
         # Apply colormap
@@ -515,8 +516,11 @@ class NeuralNetworkVisualizer(Gtk.Window):
         
         return feat_colored
     
-    def _visualize_segmentation(self, segmentation: torch.Tensor) -> np.ndarray:
+    def _visualize_segmentation(self, segmentation: Optional[torch.Tensor]) -> np.ndarray:
         """Visualize segmentation results"""
+        if segmentation is None:
+            return np.zeros((256, 256, 3), dtype=np.uint8)
+        
         # Get class predictions
         seg_pred = segmentation[0].argmax(dim=0).cpu().numpy()
         
@@ -532,8 +536,11 @@ class NeuralNetworkVisualizer(Gtk.Window):
         
         return seg_colored
     
-    def _visualize_anomaly(self, anomaly_map: torch.Tensor) -> np.ndarray:
+    def _visualize_anomaly(self, anomaly_map: Optional[torch.Tensor]) -> np.ndarray:
         """Visualize anomaly detection results"""
+        if anomaly_map is None:
+            return np.zeros((256, 256, 3), dtype=np.uint8)
+        
         # Get anomaly map
         anomaly = anomaly_map[0].cpu().numpy()
         
@@ -561,8 +568,8 @@ class NeuralNetworkVisualizer(Gtk.Window):
         # Create simple visualization showing similarity score
         img = np.ones((256, 256, 3), dtype=np.uint8) * 255
         
-        similarity = outputs['final_similarity'][0].item()
-        meets_threshold = outputs['meets_threshold'][0].item()
+        similarity = outputs.get('final_similarity', [torch.tensor(0.0)])[0].item()
+        meets_threshold = outputs.get('meets_threshold', [False])[0].item()
         
         # Draw similarity bar
         bar_height = int(similarity * 200)
@@ -576,36 +583,43 @@ class NeuralNetworkVisualizer(Gtk.Window):
         
         return img
     
-    def _tensor_to_image(self, tensor: torch.Tensor) -> np.ndarray:
+    def _tensor_to_image(self, tensor: Optional[torch.Tensor]) -> np.ndarray:
         """Convert tensor to displayable image"""
+        if tensor is None:
+            return np.zeros((256, 256, 3), dtype=np.uint8)
+        
         img = tensor[0].cpu().numpy()
         img = np.transpose(img, (1, 2, 0))
-        img = (img * 255).astype(np.uint8)
+        img = np.clip(img * 255, 0, 255).astype(np.uint8)
         return img
     
     def _create_final_visualization(self, outputs: Dict) -> np.ndarray:
         """Create final combined visualization"""
-        # Added check for 'reconstruction' and 'anomaly_map' keys to prevent KeyError if model outputs are incomplete
-        # (e.g., due to config changes disabling certain features), avoiding UI crashes during processing.
-        if 'reconstruction' not in outputs or 'anomaly_map' not in outputs:
-            return np.zeros((256, 256, 3), dtype=np.uint8)  # Return blank image
+        reconstruction = outputs.get('reconstruction')
+        anomaly_map = outputs.get('anomaly_map')
+        if reconstruction is None or anomaly_map is None:
+            return np.zeros((256, 256, 3), dtype=np.uint8)
         
         # Overlay anomalies on original image
-        img = self._tensor_to_image(outputs['reconstruction'])
-        anomaly = outputs['anomaly_map'][0].cpu().numpy()
+        img = self._tensor_to_image(reconstruction)
+        anomaly = anomaly_map[0].cpu().numpy()
         
         # Threshold anomalies
         threshold = self.config.anomaly.threshold
-        anomaly_mask = anomaly > threshold
+        anomaly_mask = (anomaly > threshold).astype(np.uint8)
         
-        # Highlight anomalies in red
-        # Added shape check and resize if anomaly_mask shape doesn't match img (potential mismatch from model outputs),
-        # preventing IndexError when assigning to img[anomaly_mask].
+        # Ensure mask and image dimensions match before overlaying
         if anomaly_mask.shape != img.shape[:2]:
-            anomaly_mask = cv2.resize(anomaly_mask.astype(np.uint8), (img.shape[1], img.shape[0]), interpolation=cv2.INTER_NEAREST).astype(bool)
-        img[anomaly_mask] = [255, 0, 0]
+            anomaly_mask = cv2.resize(anomaly_mask, (img.shape[1], img.shape[0]), interpolation=cv2.INTER_NEAREST)
         
-        return img
+        # Create heatmap overlay
+        anomaly_norm = (anomaly - anomaly.min()) / (anomaly.max() - anomaly.min() + 1e-8)
+        anomaly_vis = (anomaly_norm * 255).astype(np.uint8)
+        heatmap = cv2.applyColorMap(anomaly_vis, cv2.COLORMAP_HOT)
+        blended = cv2.addWeighted(img, 0.7, heatmap, 0.3, 0)
+        blended[anomaly_mask > 0] = [255, 0, 0]  # Highlight significant anomalies
+        
+        return blended
     
     def _update_ui(self):
         """Update UI with processing results"""
