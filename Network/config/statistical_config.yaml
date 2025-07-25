@@ -1,0 +1,355 @@
+# Statistical Configuration for Fiber Optics Neural Network
+# Configuration settings for statistical integration components
+# Based on findings from comprehensive statistical analysis
+
+# Global dataset statistics from global_statistics.json
+dataset_statistics:
+  total_images: 65606
+  num_classes: 40
+  imbalance_ratio: 34571.0
+  samples_per_class_mean: 1640.15
+  samples_per_class_std: 5448.92
+  dominant_class: "dirty-image"
+  dominant_class_samples: 34571
+
+# Statistical feature extraction settings
+statistical_features:
+  enabled: true
+  feature_dim: 88  # 88-dimensional feature vector
+  extract_glcm: true
+  glcm_distances: [1, 2, 3]
+  glcm_angles: [0, 45, 90, 135]
+  extract_lbp: true
+  lbp_radii: [1, 2, 3, 5]
+  extract_morphological: true
+  morph_kernel_sizes: [3, 5, 7, 11]
+  extract_statistical: true
+  extract_topological: true
+  use_pca: true
+  pca_components: 12  # 95% variance explained
+  # Advanced distribution metrics from advanced-separation-statistics.json
+  extract_distribution_metrics: true
+  distribution_metrics: ["skewness", "kurtosis", "jarque_bera", "sem", "mad", "trimmed_mean", "gini", "cv"]
+  pc1_variance_explained: 0.453  # Overall image degradation
+  pc2_variance_explained: 0.181  # Fine-grained textural anomalies
+
+# Master similarity equation settings
+similarity_settings:
+  enabled: true
+  learnable_weights: true
+  initial_weights:
+    center_x: 0.362261
+    center_y: 0.202874
+    core_radius: 0.164540
+    cladding_radius: 0.270316
+    core_cladding_ratio: 0.000001
+    num_valid_results: 0.000008
+  similarity_threshold: 0.7  # From goal.txt
+
+# Zone parameter prediction settings
+zone_prediction:
+  enabled: true
+  use_regression_models: true
+  learnable_refinement: true
+  core_radius_range: [5.0, 500.0]
+  cladding_radius_range: [14.0, 800.0]
+  ratio_range: [0.05, 1.0]
+  physical_constraints: true
+  # Linear regression models from statistics
+  core_radius_model:
+    intercept: 181.278193
+    coefficients:
+      accuracy_adaptive_intensity: -25.380857
+      accuracy_computational_separation: 77.136231
+      accuracy_geometric_approach: -11.234236
+      accuracy_guess_approach: 16.665568
+      accuracy_hough_separation: -129.820486
+      accuracy_threshold_separation: 10.694743
+      accuracy_unified_core_cladding_detector: -39.121880
+    r_squared: 0.5745
+  cladding_radius_model:
+    intercept: 313.894572
+    coefficients:
+      accuracy_adaptive_intensity: -5.826730
+      accuracy_computational_separation: 102.567323
+      accuracy_geometric_approach: -70.932718
+      accuracy_guess_approach: -14.220535
+      accuracy_hough_separation: -75.585671
+      accuracy_threshold_separation: -5.723188
+      accuracy_unified_core_cladding_detector: -70.009830
+    r_squared: 0.4290
+  core_cladding_ratio_model:
+    intercept: 0.600998
+    coefficients:
+      accuracy_adaptive_intensity: -0.051924
+      accuracy_computational_separation: 0.079397
+      accuracy_geometric_approach: 0.128683
+      accuracy_guess_approach: 0.026918
+      accuracy_hough_separation: -0.383285
+      accuracy_threshold_separation: 0.042756
+      accuracy_unified_core_cladding_detector: 0.032219
+    r_squared: 0.5231
+
+# Consensus module settings
+consensus_settings:
+  enabled: true
+  num_methods: 7
+  min_agreement_ratio: 0.3
+  iou_threshold: 0.6
+  circularity_threshold: 0.85
+  use_weighted_voting: true
+  update_method_scores: true
+  learning_rate: 0.1  # For exponential moving average
+
+# Anomaly detection settings
+anomaly_detection:
+  enabled: true
+  use_mahalanobis: true
+  threshold_multiplier: 2.5
+  min_defect_size: 10
+  max_defect_size: 5000
+  detect_specific_defects: true
+  defect_types: ["scratch", "dig", "blob"]
+  severity_thresholds:
+    CRITICAL: 0.9
+    HIGH: 0.7
+    MEDIUM: 0.5
+    LOW: 0.3
+    NEGLIGIBLE: 0.1
+  # Anomaly prediction models from statistics
+  confidence_model:
+    intercept: 110.5
+    coefficients:
+      SSIM_Index: -25.0
+      Mahalanobis_Distance: 15.2
+      Total_Scratches: -0.002
+      Total_Anomaly_Regions: 0.05
+    r_squared: 0.88
+  ssim_scratch_model:
+    intercept: 0.92
+    coefficient: -0.00015  # SSIM = -0.00015 * Total_Scratches + 0.92
+    r_squared: 0.72
+
+# Correlation-guided attention settings
+correlation_attention:
+  enabled: true
+  num_features: 19  # Core statistical features
+  use_learned_correlations: true
+  temperature: 1.0
+  key_correlations:
+    - ["center_x", "center_y", 0.9088]
+    - ["core_radius", "cladding_radius", 0.7964]
+    - ["core_radius", "core_cladding_ratio", 0.6972]
+    - ["core_radius", "accuracy_hough", -0.6945]
+    # Additional strong correlations from analysis
+    - ["center_x", "center_distance_from_origin", 0.988]
+    - ["center_y", "center_distance_from_origin", 0.962]
+    - ["core_radius", "core_area", 0.933]
+    - ["cladding_radius", "cladding_area", 0.958]
+    - ["cladding_area", "cladding_core_area_diff", 0.887]
+    - ["Total_Scratches", "SSIM_Index", -0.85]
+
+# Loss function settings
+loss_settings:
+  loss_type: "composite"  # 'composite', 'iou', 'similarity', etc.
+  loss_weights:
+    segmentation: 1.0
+    iou: 0.5
+    circularity: 0.1
+    similarity: 0.3
+    correlation: 0.1
+    anomaly: 0.5
+    zone_regression: 0.3
+    method_accuracy: 0.2
+    consensus: 0.2
+    defect_specific: 0.3
+  use_focal_loss: true
+  focal_gamma: 2.0
+  focal_alpha: 0.25
+  # Class imbalance handling from global_statistics.json
+  use_class_weights: true
+  class_imbalance_ratio: 34571.0
+  num_classes: 40
+  balance_strategy: "effective_number"  # or 'inverse_frequency'
+  beta: 0.99  # for effective number of samples
+
+# Training settings specific to statistical components
+training_settings:
+  pretrain_statistical: true  # Pretrain statistical components
+  pretrain_epochs: 10
+  freeze_base_network: false
+  statistical_lr_multiplier: 2.0  # Higher LR for statistical components
+  update_reference_statistics: true
+  reference_update_frequency: 100  # Update every N batches
+  use_knowledge_distillation: true
+  distillation_temperature: 3.0
+  distillation_alpha: 0.7
+  # From neural_network_config.json
+  batch_size: 128
+  initial_lr: 0.001
+  scheduler: "cosine_annealing"
+  min_lr: 1e-5
+  epochs: 50
+  early_stopping_patience: 10
+  optimizer: "AdamW"
+  use_mixup: true
+  mixup_alpha: 0.1
+
+# Method-specific settings (from separation.py analysis)
+method_settings:
+  adaptive_intensity:
+    initial_score: 0.7
+    vulnerable: true
+    avg_accuracy: 0.2325
+    std: 0.2724
+  computational_separation:
+    initial_score: 0.8
+    vulnerable: false
+    avg_accuracy: 0.2687
+    std: 0.3134
+  geometric_approach:
+    initial_score: 0.9
+    vulnerable: false
+    avg_accuracy: 0.7485
+    std: 0.3222
+  guess_approach:
+    initial_score: 0.6
+    vulnerable: true
+    avg_accuracy: 0.6086
+    std: 0.3289
+  hough_separation:
+    initial_score: 0.5
+    vulnerable: false
+    avg_accuracy: 0.5812
+    std: 0.3557
+  threshold_separation:
+    initial_score: 0.4
+    vulnerable: true
+    avg_accuracy: 0.4539
+    std: 0.4094
+  unified_core_cladding_detector:
+    initial_score: 0.85
+    vulnerable: false
+    avg_accuracy: 0.3277
+    std: 0.1911
+
+# Data augmentation settings for statistical robustness
+augmentation_settings:
+  statistical_augmentation: true
+  add_synthetic_defects: true
+  defect_probability: 0.3
+  synthetic_scratch_params:
+    min_length: 20
+    max_length: 100
+    min_width: 1
+    max_width: 3
+  synthetic_dig_params:
+    min_radius: 3
+    max_radius: 15
+    intensity_range: [0.3, 0.7]
+  synthetic_blob_params:
+    min_area: 50
+    max_area: 500
+    irregularity: 0.3
+  # Advanced augmentation from neural_network_config.json
+  normalization: "imagenet_stats"
+  resize_strategy: "resize_then_crop"
+  basic_augmentations: ["horizontal_flip", "vertical_flip", "rotation_15", "brightness_contrast"]
+  advanced_augmentations: ["elastic_transform", "grid_distortion", "optical_distortion"]
+  color_augmentations: ["hue_saturation", "rgb_shift", "channel_shuffle"]
+  noise_augmentations: ["gaussian_noise", "blur", "jpeg_compression"]
+  use_randaugment: true
+
+# Evaluation metrics settings
+evaluation_settings:
+  metrics:
+    - "iou"
+    - "dice"
+    - "accuracy"
+    - "precision"
+    - "recall"
+    - "f1"
+    - "mahalanobis_distance"
+    - "circularity"
+    - "method_agreement"
+    - "anomaly_detection_rate"
+  save_visualizations: true
+  visualization_frequency: 50  # Every N batches
+  log_statistical_features: true
+  track_method_performance: true
+
+# Integration settings
+integration_settings:
+  integration_mode: "full"  # 'full', 'partial', 'ablation'
+  use_statistical_features: true
+  use_similarity_matching: true
+  use_zone_prediction: true
+  use_consensus: true
+  use_anomaly_detection: true
+  use_correlation_attention: true
+  statistical_feature_weight: 0.3  # Weight for statistical features in fusion
+
+# Reference model settings
+reference_settings:
+  num_reference_embeddings: 100
+  embedding_dim: 256
+  update_embeddings: true
+  embedding_momentum: 0.99
+  use_archetype_images: true
+  archetype_update_frequency: 1000
+
+# Hardware optimization settings
+optimization_settings:
+  use_mixed_precision: true
+  gradient_checkpointing: true
+  statistical_component_device: "cuda:0"  # Can be different from main network
+  parallel_feature_extraction: true
+  cache_statistical_features: true
+  cache_size: 1000
+
+# Network architecture recommendations from neural_network_config.json
+architecture_recommendations:
+  use_vision_transformer: true  # Recommended in statistics
+  vit_config:
+    patch_size: 16
+    embed_dim: 768
+  cnn_architecture:
+    type: "ConvNet"
+    layers:
+      - conv: 64
+        kernel: 3
+        pool: 2
+      - conv: 128
+        kernel: 3
+        pool: 2
+      - conv: 256
+        kernel: 3
+        pool: 2
+      - conv: 512
+        kernel: 3
+        pool: 2
+      - fc: [1024, 512, 40]
+    dropout_rates: [0.2, 0.3, 0.4]
+  resnet_config:
+    variant: "ResNet34"
+    pretrained: false
+
+# Ensemble settings from statistics
+ensemble_settings:
+  use_ensemble: true
+  ensemble_size: 5
+  strategies:
+    - "different_architectures"
+    - "different_initializations"
+    - "cross_validation_folds"
+  voting_strategy: "weighted"  # weighted by individual model performance
+  ensemble_learning_rate: 0.001
+
+# Logging and debugging
+debug_settings:
+  log_level: "INFO"
+  save_intermediate_features: false
+  visualize_correlations: true
+  plot_method_scores: true
+  save_consensus_masks: true
+  track_feature_statistics: true 

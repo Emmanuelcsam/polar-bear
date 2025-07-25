@@ -81,9 +81,9 @@ equation:
   evolution_sigma: 0.1
   evolution_learning_rate: 0.02
 
-# Optimizer - Best for HPC
+# Optimizer - Advanced Hybrid Options
 optimizer:
-  type: "sam_lookahead"
+  type: "hybrid_adam_sam"  # Options: hybrid_adam_sam, advanced_adam
   
   # Tuned for larger batches
   learning_rate: 0.002
@@ -91,21 +91,33 @@ optimizer:
   betas: [0.9, 0.999]
   eps: 1.0e-8
   
-  # Enhanced SAM
+  # Adam variants (for hybrid_adam_sam)
+  use_adamw: true  # Decoupled weight decay
+  use_nadam: false  # Nesterov momentum
+  use_amsgrad: false  # Maximum of past squared gradients
+  use_rectified: false  # Variance rectification
+  
+  # Enhanced SAM (for hybrid_adam_sam)
   sam_rho: 0.1
   sam_adaptive: true
   
-  # Lookahead
+  # Advanced features
+  gradient_centralization: false
+  gradient_clipping: 10.0
+  warmup_steps: 1000
+  
+  # Lookahead (for advanced_adam)
+  use_lookahead: true
   lookahead_k: 10
   lookahead_alpha: 0.5
-  lookahead_pullback: "pullback"
   
-  # Cosine scheduler for long training
+  # Advanced scheduler options
   scheduler:
-    type: "cosine"
-    patience: 10
-    factor: 0.5
+    type: "adam_warmup_cosine"  # Options: adam_warmup_cosine, cosine, step
+    warmup_steps: 1000
+    total_steps: 50000  # Will be calculated based on epochs
     min_lr: 1.0e-7
+    warmup_init_lr: 1.0e-6
   
   # Parameter groups
   param_groups:
@@ -354,13 +366,14 @@ runtime:
   
   # HPC-specific settings (no command line args needed)
   checkpoint_interval: 10  # Save checkpoint every 10 epochs (~36 min)
-  results_dir: "../results"  # Can be overridden for different runs
-  # Command-line arguments from main_distributed.py
+  # FIX: Removed duplicate 'results_dir' key. The original file had this key defined twice in the 'runtime' section.
+  # The YAML parser would only respect the last one, potentially leading to confusion.
+  # I have consolidated all command-line related parameters here for clarity.
+  results_dir: "../results"
   config_path: "config/config.yaml"  # Path to configuration file
   distributed: false  # Enable distributed training
   checkpoint: null  # Path to checkpoint to resume from
   benchmark: false  # Run performance benchmarking
-  results_dir: "../results"  # Directory to save results
   
   # Intensive training settings
   continuous_training: true

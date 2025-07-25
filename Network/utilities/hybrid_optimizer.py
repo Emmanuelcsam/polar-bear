@@ -134,16 +134,15 @@ class AdvancedAdam(Optimizer):
         Gradient centralization to improve training stability
         "Research shows gradient centralization can accelerate training and improve generalization"
         """
-        if gc_conv_only:
-            # Only centralize gradients for convolutional layers
-            if len(gradient.shape) > 3:
-                # FIX: Added check if dims non-empty before mean (avoids nan if empty tensor).
-                if all(s > 0 for s in gradient.shape[1:]):
-                    gradient.add_(-gradient.mean(dim=tuple(range(1, len(gradient.shape))),
-                                keepdim=True))
-        else:
-            # Centralize all gradients
-            if gradient.numel() > 0:
+        # Only centralize gradients for convolutional layers (more than 3 dimensions)
+        if gc_conv_only and len(gradient.shape) <= 3:
+            return gradient
+            
+        # FIX: Ensure tensor is not empty before calling mean to avoid NaN
+        if gradient.numel() > 1:
+            if len(gradient.shape) > 3:  # For Conv layers
+                gradient.add_(-gradient.mean(dim=tuple(range(1, len(gradient.shape))), keepdim=True))
+            else:  # For other layers
                 gradient.add_(-gradient.mean())
         return gradient
     
@@ -166,10 +165,10 @@ class AdvancedAdam(Optimizer):
         
         # Gradient clipping if specified
         if self.gradient_clipping is not None:
-            torch.nn.utils.clip_grad_norm_(
-                [p for group in self.param_groups for p in group['params']],
-                self.gradient_clipping
-            )
+            # FIX: Filter out params without gradients before clipping
+            params_to_clip = [p for group in self.param_groups for p in group['params'] if p.grad is not None]
+            if params_to_clip:
+                torch.nn.utils.clip_grad_norm_(params_to_clip, self.gradient_clipping)
         
         # Track global step
         self.stats['step'] += 1
@@ -201,7 +200,7 @@ class AdvancedAdam(Optimizer):
                 
                 # Apply gradient centralization if enabled
                 if group['gradient_centralization']:
-                    grad = self._centralize_gradient(p.grad.data.clone())
+                    grad = self._centralize_gradient(p.grad.data)
                 else:
                     grad = p.grad.data
                     
@@ -216,8 +215,6 @@ class AdvancedAdam(Optimizer):
                     state['exp_avg_sq'] = torch.zeros_like(p, memory_format=torch.preserve_format)
                     if group['amsgrad']:
                         state['max_exp_avg_sq'] = torch.zeros_like(p, memory_format=torch.preserve_format)
-                    if group['rectified']:
-                        state['rho_inf'] = 2.0 / (1.0 - beta2) - 1.0
                 
                 exp_avgs.append(state['exp_avg'])
                 exp_avg_sqs.append(state['exp_avg_sq'])
@@ -281,81 +278,60 @@ class AdvancedAdam(Optimizer):
         Functional API for Adam step
         Supports all variants: Adam, AdamW, NAdam, AMSGrad, RectifiedAdam
         """
+        # Reset update norm for this step
+        self.stats['update_norm'] = 0.0
+
         for i, param in enumerate(params):
             grad = grads[i]
             exp_avg = exp_avgs[i]
             exp_avg_sq = exp_avg_sqs[i]
             step = state_steps[i]
             
-            # Update biased first moment estimate
+            # Decoupled weight decay (AdamW)
+            if weight_decay != 0 and decoupled_wd:
+                param.data.mul_(1 - lr * weight_decay)
+
+            # Update biased first and second moment estimates
             exp_avg.mul_(beta1).add_(grad, alpha=1 - beta1)
-            
-            # Update biased second raw moment estimate
-            exp_avg_sq.mul_(beta2).addcmul_(grad, grad, value=1 - beta2)
+            exp_avg_sq.mul_(beta2).addcmul_(grad, grad.conj(), value=1 - beta2)
             
             if amsgrad:
-                # Maintains max of all past squared gradients
                 torch.maximum(max_exp_avg_sqs[i], exp_avg_sq, out=max_exp_avg_sqs[i])
-                # Use max for normalizing running avg of gradient
-                denominator = max_exp_avg_sqs[i].sqrt().add_(eps)
+                denom = max_exp_avg_sqs[i].sqrt().add_(eps)
             else:
-                denominator = exp_avg_sq.sqrt().add_(eps)
+                denom = exp_avg_sq.sqrt().add_(eps)
             
-            # Bias correction
             bias_correction1 = 1 - beta1 ** step
             bias_correction2 = 1 - beta2 ** step
             
+            step_size = lr / bias_correction1
+            
+            # Rectified Adam (RAdam) logic
             if rectified:
-                # RectifiedAdam: adaptive momentum
-                rho_inf = 2.0 / (1.0 - beta2) - 1.0
-                rho_t = rho_inf - 2 * step * (beta2 ** step) / bias_correction2
+                rho_inf = 2 / (1 - beta2) - 1
+                rho_t = rho_inf - 2 * step * (beta2 ** step) / (1 - beta2 ** step)
                 
-                # Compute variance rectification term
-                if rho_t > 4:
-                    rect_term = math.sqrt(
-                        (rho_t - 4) * (rho_t - 2) * rho_inf /
-                        ((rho_inf - 4) * (rho_inf - 2) * rho_t)
-                    )
-                    
-                    # Adaptive learning rate
-                    step_size = lr * rect_term * math.sqrt(bias_correction2) / bias_correction1
-                    
-                    if nadam:
-                        # NAdam update with rectification
-                        momentum = beta1 * exp_avg + (1 - beta1) * grad
-                        param.addcdiv_(momentum, denominator, value=-step_size)
-                    else:
-                        # Standard rectified update
-                        param.addcdiv_(exp_avg, denominator, value=-step_size)
-                else:
-                    # Variance is not rectified, use simpler update
-                    step_size = lr / bias_correction1
-                    param.add_(exp_avg, alpha=-step_size)
-            else:
-                # Standard Adam variants
-                step_size = lr * math.sqrt(bias_correction2) / bias_correction1
-                
-                if nadam:
-                    # NAdam: use Nesterov momentum
-                    momentum = beta1 * exp_avg + (1 - beta1) * grad
-                    param.addcdiv_(momentum, denominator, value=-step_size)
-                else:
-                    # Standard Adam update
-                    param.addcdiv_(exp_avg, denominator, value=-step_size)
-            
-            # Weight decay
-            if weight_decay != 0:
-                if decoupled_wd:
-                    # AdamW: decoupled weight decay
-                    param.add_(param, alpha=-lr * weight_decay)
-                else:
-                    # Standard L2 weight decay
-                    param.add_(param, alpha=-weight_decay)
-            
-            # Track update norm
-            # FIX: Use (step_size * (exp_avg / denominator)).norm() to avoid div by zero if denominator zero (rare, but add eps already in denom).
-            self.stats['update_norm'] += (step_size * (exp_avg / denominator)).norm().item() ** 2
-        
+                if rho_t > 5.0:  # Use adaptive momentum
+                    r_t = math.sqrt(((rho_t - 4) * (rho_t - 2) * rho_inf) / ((rho_inf - 4) * (rho_inf - 2) * rho_t))
+                    update = exp_avg / (denom * math.sqrt(bias_correction2)) * r_t
+                else:  # Use un-adapted momentum
+                    update = exp_avg
+            else:  # Standard Adam / NAdam / AdamW
+                update = exp_avg / (denom / math.sqrt(bias_correction2))
+
+            # Nesterov-style update (NAdam)
+            if nadam:
+                update = (beta1 * update) + ((1 - beta1) / bias_correction1) * (grad / denom)
+
+            param.data.add_(update, alpha=-step_size)
+
+            # Standard L2 weight decay (not decoupled)
+            if weight_decay != 0 and not decoupled_wd:
+                param.data.add_(param.data, alpha=-weight_decay * lr)
+
+            # FIX: Calculate update norm correctly and accumulate
+            self.stats['update_norm'] += (step_size * update.norm()).item() ** 2
+
         self.stats['update_norm'] = math.sqrt(self.stats['update_norm'])
         self.stats['effective_lr'] = lr
     
@@ -437,7 +413,11 @@ class HybridAdamSAM(Optimizer):
             'eps': eps,
             'weight_decay': weight_decay,
             'gradient_centralization': gradient_centralization,
-            'warmup_steps': warmup_steps
+            'warmup_steps': warmup_steps,
+            'decoupled_wd': False,
+            'nadam': False,
+            'amsgrad': False,
+            'rectified': False
         }
         
         # Set variant-specific flags
@@ -459,7 +439,7 @@ class HybridAdamSAM(Optimizer):
         
         # Initialize with SAM defaults
         self.param_groups = self.base_optimizer.param_groups
-        defaults = dict(rho=sam_rho)
+        defaults = dict(rho=sam_rho, adaptive=sam_adaptive)
         super(HybridAdamSAM, self).__init__(self.param_groups, defaults)
         
         # Track SAM statistics
@@ -473,7 +453,7 @@ class HybridAdamSAM(Optimizer):
     
     @torch.no_grad()
     def first_step(self, zero_grad=False):
-        """SAM first step: compute gradient at perturbed point"""
+        """SAM first step: perturb weights to find a point of higher loss"""
         grad_norm = self._grad_norm()
         
         for group in self.param_groups:
@@ -483,102 +463,68 @@ class HybridAdamSAM(Optimizer):
                 if p.grad is None:
                     continue
                 
-                # Store original gradient
+                # Store original gradient for stats and parameter restoration
                 self.state[p]['old_grad'] = p.grad.data.clone()
                 
-                # Adaptive scaling
+                e_w = p.grad.data * scale
                 if self.adaptive:
-                    grad_norm_layer = p.grad.data.norm()
-                    # FIX: min(scale, ...) but ensure grad_norm_layer >0 with +1e-12 (avoids div by zero if layer grad zero).
-                    scale = min(scale, 0.1 / (grad_norm_layer + 1e-12))
+                    # Adaptive scaling per layer
+                    param_norm = torch.norm(p.data)
+                    grad_norm_layer = torch.norm(p.grad.data)
+                    # FIX: Use a robust scaling factor
+                    e_w = e_w * param_norm / (grad_norm_layer + 1e-12)
                 
-                # Perturb parameters
-                e_w = scale * p.grad.data
                 p.add_(e_w)
-                
-                # Store perturbation for second_step
-                self.state[p]['e_w'] = e_w.clone()
-                
-                # Track statistics
-                self.sam_stats['perturbation_norm'] += e_w.norm().item()
+                self.state[p]['e_w'] = e_w
         
         if zero_grad:
-            self.zero_grad()
-    
+            self.zero_grad(set_to_none=True)  # Use set_to_none for performance
+
     @torch.no_grad()
     def second_step(self, zero_grad=False):
-        """SAM second step: restore parameters and update with Adam"""
+        """SAM second step: restore original weights and perform update with new gradient"""
         for group in self.param_groups:
             for p in group['params']:
-                if p.grad is None or 'old_grad' not in self.state[p]:
+                if p.grad is None or 'e_w' not in self.state[p]:
                     continue
-                
-                # Compute gradient similarity (for monitoring)
-                cos_sim = torch.nn.functional.cosine_similarity(
-                    p.grad.data.flatten(),
-                    self.state[p]['old_grad'].flatten(),
-                    dim=0
-                )
-                self.sam_stats['gradient_similarity'] += cos_sim.item()
-                
-                # Restore original parameters
-                # FIX: Store perturbation e_w in first_step and subtract it directly in second_step
-                if 'e_w' in self.state[p]:
-                    p.sub_(self.state[p]['e_w'])
-                else:
-                    # Fallback if e_w not stored (shouldn't happen)
-                    p.sub_(group['rho'] * self.state[p]['old_grad'] / (self._grad_norm(stored_grads=True) + 1e-12))
+                # FIX: Restore original parameters by subtracting the stored perturbation
+                # The original code had a fallback that was incorrect. This is more robust.
+                p.sub_(self.state[p]['e_w'])
         
-        # Update with base Adam optimizer
+        # The base optimizer (AdvancedAdam) now uses the gradient from the perturbed point
         self.base_optimizer.step()
         
         if zero_grad:
-            self.zero_grad()
-    
-    def step(self, closure):
-        """
-        Performs a single optimization step
-        Requires closure for gradient computation
-        """
-        assert closure is not None, "HybridAdamSAM requires closure"
+            self.zero_grad(set_to_none=True)
+
+    def step(self, closure: Callable):
+        """Performs a single optimization step, requiring a closure to re-evaluate loss"""
+        assert closure is not None, "HybridAdamSAM requires a closure"
         
-        # SAM first step
+        # The closure should compute the loss and call .backward()
+        # This first call gets the gradient at the original weights
+        loss = closure()
+        
         self.first_step(zero_grad=True)
         
-        # Compute gradient at perturbed point
+        # This second call gets the gradient at the perturbed weights
         closure()
         
-        # SAM second step with Adam update
         self.second_step()
         
-        # Log statistics periodically
-        if self.base_optimizer.stats['step'] % 100 == 0:
-            num_params = sum(1 for group in self.param_groups for p in group['params'] if p.grad is not None)
-            avg_similarity = self.sam_stats['gradient_similarity'] / max(num_params, 1)
-            self.logger.info(f"SAM stats - Perturbation norm: {self.sam_stats['perturbation_norm']:.6f}, "
-                           f"Gradient similarity: {avg_similarity:.4f}")
-            self.sam_stats['perturbation_norm'] = 0.0
-            self.sam_stats['gradient_similarity'] = 0.0
-    
-    def _grad_norm(self, stored_grads=False):
-        """Compute gradient norm across all parameters"""
-        # Collect all gradient norms
-        grad_norms = []
-        for group in self.param_groups:
-            for p in group['params']:
-                if stored_grads and 'old_grad' in self.state[p]:
-                    grad_norms.append(self.state[p]['old_grad'].norm())
-                elif p.grad is not None:
-                    grad_norms.append(p.grad.data.norm())
-        
-        # Handle empty case
-        if not grad_norms:
-            return torch.tensor(0.0)
-        
-        # Stack and compute norm
+        return loss
+
+    def _grad_norm(self):
+        """Compute the norm of the gradient across all parameters"""
+        # FIX: Use a shared device to avoid device mismatch errors
         shared_device = self.param_groups[0]['params'][0].device
+        # This combines all parameter gradients into a single vector to compute the total norm
         norm = torch.norm(
-            torch.stack([g.to(shared_device) for g in grad_norms])
+            torch.stack([
+                p.grad.norm(p=2).to(shared_device)
+                for group in self.param_groups for p in group['params']
+                if p.grad is not None
+            ])
         )
         return norm
     
@@ -680,7 +626,7 @@ def create_hybrid_optimizer(model: nn.Module, config: Dict) -> Union[AdvancedAda
             adam_variant = 'rectified'
         
         optimizer = HybridAdamSAM(
-            param_groups,
+            model.parameters(),  # HybridAdamSAM handles param grouping internally via base_optimizer
             lr=lr,
             betas=betas,
             eps=eps,
@@ -770,45 +716,47 @@ if __name__ == "__main__":
     class TestModel(nn.Module):
         def __init__(self):
             super().__init__()
-            self.conv1 = nn.Conv2d(3, 64, 3)
-            self.conv2 = nn.Conv2d(64, 128, 3)
-            self.fc = nn.Linear(128 * 28 * 28, 10)
+            self.conv1 = nn.Conv2d(3, 64, 3, padding=1)
+            self.conv2 = nn.Conv2d(64, 128, 3, padding=1)
+            self.fc = nn.Linear(128 * 8 * 8, 10)
+            self.pool = nn.MaxPool2d(2, 2)
             
         def forward(self, x):
-            x = torch.relu(self.conv1(x))
-            x = torch.relu(self.conv2(x))
+            x = self.pool(torch.relu(self.conv1(x)))
+            x = self.pool(torch.relu(self.conv2(x)))
             x = x.view(x.size(0), -1)
             x = self.fc(x)
             return x
     
     test_model = TestModel()
-    
-    # Test Advanced Adam with different variants
-    print("\nTesting Advanced Adam variants...")
-    
-    # Test AdamW
-    print("Testing AdamW...")
-    adamw_opt = AdvancedAdam(test_model.parameters(), lr=0.001, decoupled_wd=True)
-    
-    # Test NAdam
-    print("Testing NAdam...")
-    nadam_opt = AdvancedAdam(test_model.parameters(), lr=0.001, nadam=True)
-    
-    # Test AMSGrad
-    print("Testing AMSGrad...")
-    amsgrad_opt = AdvancedAdam(test_model.parameters(), lr=0.001, amsgrad=True)
-    
-    # Test RectifiedAdam
-    print("Testing RectifiedAdam...")
-    rectified_opt = AdvancedAdam(test_model.parameters(), lr=0.001, rectified=True)
-    
-    # Test Hybrid Adam-SAM
+    dummy_input = torch.rand(4, 3, 32, 32)
+    dummy_target = torch.randint(0, 10, (4,))
+
+    def closure():
+        opt.zero_grad()
+        output = test_model(dummy_input)
+        loss = torch.nn.functional.cross_entropy(output, dummy_target)
+        loss.backward()
+        return loss
+
     print("\nTesting Hybrid Adam-SAM...")
-    hybrid_opt = HybridAdamSAM(test_model.parameters(), adam_variant="adamw")
-    
-    # Test scheduler
+    opt = HybridAdamSAM(test_model.parameters(), adam_variant="adamw")
+    loss_before = closure().item()
+    opt.step(closure)
+    loss_after = closure().item()
+    print(f"HybridAdamSAM: Loss before={loss_before:.4f}, Loss after={loss_after:.4f}")
+    assert loss_after < loss_before, "HybridAdamSAM failed to reduce loss"
+
     print("\nTesting Adam warmup cosine scheduler...")
-    scheduler = AdamWarmupCosineScheduler(adamw_opt, warmup_steps=100, total_steps=1000)
+    base_opt = AdvancedAdam(test_model.parameters(), lr=0.01)
+    scheduler = AdamWarmupCosineScheduler(base_opt, warmup_steps=100, total_steps=1000)
+    lrs = []
+    for _ in range(1000):
+        scheduler.step()
+        lrs.append(scheduler.get_last_lr()[0])
+    
+    print(f"Scheduler LR range: {min(lrs):.6f} to {max(lrs):.6f}")
+    assert lrs[0] > 0 and lrs[-1] == 0.0, "Scheduler did not behave as expected"
     
     print(f"\n[{datetime.now()}] Hybrid optimizers test completed")
     print(f"[{datetime.now()}] Next script: fiber_enhanced_trainer.py")

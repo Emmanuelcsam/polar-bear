@@ -15,8 +15,46 @@ from datetime import datetime
 import json
 import os
 from collections import OrderedDict
+import copy
 
 # from core.logger import get_logger  # Avoid circular import
+
+
+class NestedDict(OrderedDict):
+    """
+    Dictionary subclass that allows dot notation access
+    Makes configuration more convenient to use
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for key, value in self.items():
+            self[key] = value
+    
+    def __getattr__(self, key):
+        try:
+            return self[key]
+        except KeyError:
+            raise AttributeError(f"Configuration key '{key}' not found in the YAML file.")
+    
+    def __setattr__(self, key, value):
+        self[key] = value
+    
+    def __setitem__(self, key, value):
+        super().__setitem__(key, self._convert(value))
+    
+    def _convert(self, value):
+        """Recursively convert dicts and lists of dicts to NestedDicts."""
+        if isinstance(value, dict):
+            return NestedDict(value)
+        elif isinstance(value, list):
+            return [self._convert(item) for item in value]
+        return value
+    
+    def __delattr__(self, key):
+        try:
+            del self[key]
+        except KeyError:
+            raise AttributeError(f"No attribute '{key}'")
 
 
 class ConfigLoader:
@@ -38,7 +76,7 @@ class ConfigLoader:
         self.config_path = Path(config_path)
         
         # Load configuration
-        self.config = self._load_config()
+        self.config: NestedDict = self._load_config()
         
         # Validate configuration
         self._validate_config()
@@ -48,7 +86,7 @@ class ConfigLoader:
         
         # Track modifications
         self.modifications = []
-        self.original_config = self.__class__._deep_copy(self.config)
+        self.original_config = copy.deepcopy(self.config)
         
         # Legacy compatibility - fixed parameters
         self.INPUT_SIZE = (256, 256)
@@ -77,7 +115,7 @@ class ConfigLoader:
         
         print(f"[{datetime.now()}] Configuration loaded from {config_path}")
     
-    def _load_config(self) -> Dict:
+    def _load_config(self) -> NestedDict:
         """Load configuration from YAML file"""
         if not self.config_path.exists():
             print(f"[{datetime.now()}] ERROR: Configuration file not found: {self.config_path}")
@@ -90,6 +128,10 @@ class ConfigLoader:
             # Convert to nested dictionary with dot notation access
             config = self.__class__._create_nested_dict(config)
             
+            # Ensure we return a NestedDict, not a list
+            if isinstance(config, list):
+                raise ValueError("Configuration file should contain a dictionary, not a list")
+            
             return config
             
         except yaml.YAMLError as e:
@@ -97,7 +139,7 @@ class ConfigLoader:
             raise
     
     @staticmethod
-    def _create_nested_dict(d: Union[Dict, List]) -> Union['NestedDict', List]:
+    def _create_nested_dict(d: Union[Dict, List]) -> Union[NestedDict, List]:
         """Create nested dictionary with dot notation access"""
         if isinstance(d, dict):
             return NestedDict({k: ConfigLoader._create_nested_dict(v) for k, v in d.items()})
@@ -142,20 +184,11 @@ class ConfigLoader:
         # This would use watchdog or similar library in production
         self.last_modified = os.path.getmtime(self.config_path)
     
-    @staticmethod
-    def _deep_copy(obj):
-        """Deep copy configuration object"""
-        if isinstance(obj, dict):
-            return {k: ConfigLoader._deep_copy(v) for k, v in obj.items()}
-        elif isinstance(obj, list):
-            return [ConfigLoader._deep_copy(item) for item in obj]
-        else:
-            return obj
-    
     def reload(self):
         """Reload configuration from file"""
         print(f"[{datetime.now()}] Reloading configuration...")
-        self.config = self._load_config()
+        new_config = self._load_config()
+        self.config = new_config
         self._validate_config()
         print(f"[{datetime.now()}] Configuration reloaded")
     
@@ -181,7 +214,10 @@ class ConfigLoader:
         try:
             value = self.config
             for part in key.split('.'):
-                value = value[part]
+                if isinstance(value, (dict, NestedDict)):
+                    value = value[part]
+                else:
+                    return default
             return value
         except (KeyError, TypeError):
             return default
@@ -208,7 +244,9 @@ class ConfigLoader:
         parts = key.split('.')
         obj = self.config
         for part in parts[:-1]:
-            obj = obj.setdefault(part, NestedDict())
+            if part not in obj:
+                obj[part] = NestedDict()
+            obj = obj[part]
         obj[parts[-1]] = value
         
         # Validate after change
@@ -249,7 +287,7 @@ class ConfigLoader:
     def save_modifications(self, path: Optional[str] = None):
         """Save configuration modifications to file"""
         if path is None:
-            path = self.config_path.with_suffix('.modifications.json')
+            path = str(self.config_path.with_suffix('.modifications.json'))
         
         with open(path, 'w') as f:
             json.dump(self.modifications, f, indent=2, default=str)
@@ -259,7 +297,7 @@ class ConfigLoader:
     def export_current_config(self, path: Optional[str] = None):
         """Export current configuration to new file"""
         if path is None:
-            path = self.config_path.with_suffix('.current.yaml')
+            path = str(self.config_path.with_suffix('.current.yaml'))
         
         # Convert NestedDict back to regular dict
         config_dict = self.__class__._to_dict(self.config)
@@ -282,7 +320,7 @@ class ConfigLoader:
     def reset_to_original(self):
         """Reset configuration to original values"""
         print(f"[{datetime.now()}] Resetting configuration to original values")
-        self.config = self.__class__._deep_copy(self.original_config)
+        self.config = copy.deepcopy(self.original_config)
         self.modifications = []
     
     def get_diff(self) -> Dict:
@@ -341,7 +379,7 @@ class ConfigLoader:
     def save_config_json(self, path: Optional[str] = None):
         """Save configuration as JSON (alternative format)"""
         if path is None:
-            path = self.config_path.with_suffix('.json')
+            path = str(self.config_path.with_suffix('.json'))
         
         with open(path, 'w') as f:
             json.dump(self._to_dict(self.config), f, indent=2)
@@ -355,69 +393,6 @@ class ConfigLoader:
         
         self.config = self.__class__._create_nested_dict(config_dict)
         print(f"[{datetime.now()}] Configuration loaded from JSON: {path}")
-    
-
-
-class NestedDict(OrderedDict):
-    """
-    Dictionary subclass that allows dot notation access
-    Makes configuration more convenient to use
-    """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        for key, value in self.items():
-            self[key] = value
-    
-    def __getattr__(self, key):
-        try:
-            return self[key]
-        except KeyError:
-            # Handle special cases for backward compatibility
-            if key == 'REGION_CATEGORIES':
-                return {
-                    'core': ['core-batch-1', 'core-batch-2', 'core-batch-3', 'core-batch-4',
-                            'core-batch-5', 'core-batch-6', 'core-batch-7', 'core-batch-8',
-                            'large-core-batch'],
-                    'cladding': ['50-cladding', '91-cladding', 'cladding-batch-1',
-                                'cladding-batch-3', 'cladding-batch-4', 'cladding-batch-5',
-                                'cladding-features-batch-1'],
-                    'ferrule': ['ferrule-batch-1', 'ferrule-batch-2', 'ferrule-batch-3',
-                              'ferrule-batch-4'],
-                    'defects': ['dirty-image', '19700101000222-scratch.jpg',
-                              '19700101000223-scratch.jpg', '19700101000237-scratch.jpg',
-                              '91-scratched', 'scratch-library-bmp']
-                }
-            elif key == 'TENSORIZED_DATA_PATH':
-                return Path('data/tensorized')
-            elif key == 'BATCH_SIZE':
-                return self.get('training', {}).get('batch_size', 16)
-            elif key == 'NUM_WORKERS':
-                return self.get('system', {}).get('num_workers', 4)
-            elif key == 'PIN_MEMORY':
-                return True
-            elif key == 'ANOMALY_THRESHOLD':
-                return self.get('anomaly', {}).get('threshold', 0.3)
-            raise AttributeError(f"No attribute '{key}'")
-    
-    def __setattr__(self, key, value):
-        self[key] = value
-    
-    def __setitem__(self, key, value):
-        super().__setitem__(key, self._convert(value))
-    
-    def _convert(self, value):
-        """Recursively convert dicts and lists of dicts to NestedDicts."""
-        if isinstance(value, dict):
-            return NestedDict(value)
-        elif isinstance(value, list):
-            return [self._convert(item) for item in value]
-        return value
-    
-    def __delattr__(self, key):
-        try:
-            del self[key]
-        except KeyError:
-            raise AttributeError(f"No attribute '{key}'")
 
 
 class ConfigManager:
@@ -427,12 +402,12 @@ class ConfigManager:
     """
     
     _instance = None
-    _config_loader = None
+    _config_loader: Optional[ConfigLoader] = None
     
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-            cls._instance.initialize(*args, **kwargs)
+            cls._instance._config_loader = None
         return cls._instance
     
     def __getattr__(self, name):

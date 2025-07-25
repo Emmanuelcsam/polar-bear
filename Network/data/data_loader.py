@@ -592,29 +592,55 @@ class FiberOpticsDataLoader:
     
     def get_streaming_loader(self, batch_size: int = 1) -> DataLoader:
         """
-        Get streaming data loader for real-time processing
-        "or multiple images for batch processing or realtime processing"
+        Get a streaming data loader for real-time processing
+        Returns a single batch at a time for continuous processing
         """
-        # Create dataset with minimal loading
+        self.logger.info("Creating streaming data loader")
+        
+        # Use a small subset for streaming
+        streaming_paths = self._collect_data_paths()[:100]  # Limit to 100 samples for streaming
+        
+        if not streaming_paths:
+            self.logger.warning("No data paths available for streaming")
+            return None
+        
+        # Create dataset
         dataset = FiberOpticsDataset(
-            self.data_paths,
+            data_paths=streaming_paths,
+            transform=self._get_transforms(use_augmentation=False),
             load_into_memory=False,
-            max_samples_per_class=100  # Small subset for streaming
+            use_raw_images=self.config.get('data.use_raw_images', False)
         )
         
-        # Create loader optimized for streaming
+        # Create loader
         loader = DataLoader(
             dataset,
             batch_size=batch_size,
-            shuffle=False,
-            num_workers=1,  # Single worker for streaming
-            pin_memory=False,  # No pinning for streaming
-            drop_last=False
+            shuffle=False,  # Sequential processing for streaming
+            num_workers=0,  # Single worker for real-time
+            pin_memory=torch.cuda.is_available()
         )
         
-        self.logger.info(f"Created streaming loader with batch_size={batch_size}")
-        
+        self.logger.info(f"Streaming loader created with {len(dataset)} samples")
         return loader
+    
+    def get_test_loader(self, batch_size: Optional[int] = None) -> DataLoader:
+        """
+        Get a test data loader for evaluation and benchmarking
+        Uses a separate test split or validation data as test data
+        """
+        self.logger.info("Creating test data loader")
+        
+        # Use validation data as test data if no separate test split
+        _, test_loader = self.get_data_loaders(
+            train_ratio=0.8,
+            batch_size=batch_size or self.config.training.batch_size,
+            use_weighted_sampling=False,  # No weighting for testing
+            use_augmentation=False  # No augmentation for testing
+        )
+        
+        self.logger.info("Test loader created from validation split")
+        return test_loader
 
 class ReferenceDataLoader:
     """

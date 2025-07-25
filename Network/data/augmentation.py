@@ -85,7 +85,8 @@ class GridDistortion:
 class AddSyntheticDefects:
     """Adds synthetic defects (scratches, digs, blobs) to images."""
     def __init__(self, config: Optional[Dict] = None, p: float = 0.3):
-        self.config = config or get_statistical_config().augmentation_settings
+        stat_config = get_statistical_config()
+        self.config = config or stat_config.get('augmentation_settings', {})
         self.p = p
         self.logger = get_logger("AddSyntheticDefects")
     
@@ -157,13 +158,14 @@ class AddSyntheticDefects:
 class FiberOpticsAugmentation:
     """Complete augmentation pipeline for fiber optic images."""
     def __init__(self, config: Optional[Dict] = None, is_training: bool = True):
-        self.config = config or get_statistical_config()
+        stat_config = get_statistical_config()
+        self.config = config or stat_config
         self.is_training = is_training
         self.logger = get_logger("FiberOpticsAugmentation")
         self.transforms = self._build_transforms()
     
     def _build_transforms(self) -> T.Compose:
-        aug_config = self.config.augmentation_settings
+        aug_config = self.config.get('augmentation_settings', {})
         transforms = []
 
         if self.is_training:
