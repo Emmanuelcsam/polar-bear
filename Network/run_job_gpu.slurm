@@ -1,30 +1,30 @@
 #!/bin/tcsh
 #SBATCH --job-name=fiber_optics_nn
-#SBATCH -N 1                     # Number of nodes
-#SBATCH -n 64                    # Total number of cores
-#SBATCH --ntasks-per-node=64    # Cores per node (Kuro has 64)
-#SBATCH -t 12:00:00             # Walltime (48 hours max for Kuro)
-#SBATCH -N1 -n8
-#SBATCH --gpus=2
-#SBATCH --mem=256G              # Memory per node
+#SBATCH --partition=hima        # Use hima partition for GPU access
+#SBATCH -N 1                    # Number of nodes
+#SBATCH -n 16                   # Number of cores (adjust based on GPU node)
+#SBATCH --constraint=v100       # Request V100 GPU (hi07) - fastest option
+#SBATCH -t 12:00:00            # Walltime (12 hours)
+#SBATCH --gres=gpu:1           # Request 1 GPU
 #SBATCH --mail-type=BEGIN,END,FAIL
-#SBATCH --mail-user=ecsampson@wm.edu   # Update if different
-#SBATCH -o slurm-%j.out         # Standard output
-#SBATCH -e slurm-%j.err         # Standard error
+#SBATCH --mail-user=ecsampson@wm.edu
+#SBATCH -o slurm-%j.out
+#SBATCH -e slurm-%j.err
 
 # Job description
-echo "Starting Fiber Optics Neural Network Training on W&M HPC - Kuro"
+echo "Starting Fiber Optics Neural Network Training on W&M HPC - Hima GPU Node"
 echo "Job ID: $SLURM_JOB_ID"
 echo "Node: $SLURM_NODELIST"
 echo "Date: `date`"
 echo "User: $USER"
+echo "Hostname: `hostname`"
 set start_time = `date +%s`
 
-# Check node load before starting (optional but recommended)
+# Check node load before starting
 ckload 0.05
 
-# Your code is already in scr10, so go there directly
-cd /sciclone/scr10/$USER/polar-bear
+# Navigate to the work directory on scratch filesystem
+cd /sciclone/scr10/$USER/polar-bear/Network
 
 # Verify we're in the right place
 if (! -d core) then
@@ -37,6 +37,12 @@ endif
 module purge
 module load miniforge3/24.9.2-0
 
+# Load CUDA module if available
+module load cuda
+
+# Source the SciClone tcsh configuration
+source /usr/local/etc/sciclone.cshrc
+
 # Add user's local bin to PATH (where pip installed packages)
 setenv PATH ${HOME}/.local/bin:${PATH}
 
@@ -44,7 +50,7 @@ setenv PATH ${HOME}/.local/bin:${PATH}
 echo "Activating polar-bear-env..."
 set VENV_PATH = /sciclone/scr-lst/$USER/polar-bear-env
 
-# It appears to be a regular Python venv based on your prompt
+# Activate Python virtual environment for tcsh
 if (-f $VENV_PATH/bin/activate.csh) then
     source $VENV_PATH/bin/activate.csh
 else
@@ -57,19 +63,23 @@ echo "Python location: `which python`"
 echo "Python version: `python --version`"
 echo "PATH: $PATH"
 
-# Check if PyTorch is installed
-python -c "import torch; print(f'PyTorch version: {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}')"
+# Check if PyTorch is installed and can see GPUs
+echo "Checking PyTorch and GPU availability..."
+python -c "import torch; print(f'PyTorch version: {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}'); print(f'GPU count: {torch.cuda.device_count()}'); print(f'Current GPU: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else \"No GPU\"}')"
 if ($status != 0) then
-    echo "ERROR: PyTorch still not found after installation!"
+    echo "ERROR: PyTorch not found!"
     echo "Checking pip list..."
     pip list | grep torch
     exit 1
 endif
 
-# Set environment variables for optimal CPU performance
-setenv OMP_NUM_THREADS 16      # Use multiple threads per process
-setenv MKL_NUM_THREADS 16      # Intel MKL threading
-setenv NUMEXPR_NUM_THREADS 16
+# Set environment variables for optimal GPU performance
+setenv OMP_NUM_THREADS 8       # Use 8 threads per process
+setenv MKL_NUM_THREADS 8       # Intel MKL threading
+setenv NUMEXPR_NUM_THREADS 8
+
+# CUDA environment variables
+setenv CUDA_VISIBLE_DEVICES 0  # Use first GPU
 
 # Create necessary directories if they don't exist
 mkdir -p logs checkpoints results output statistics
@@ -101,21 +111,17 @@ else if (! -e reference) then
     ln -s /sciclone/data10/$USER/polar-bear/reference reference
 endif
 
-# Use HPC-specific config file
-if (-f config/config_hpc_kuro.yaml) then
-    # Backup original config
-    if (-f config/config.yaml) then
-        cp config/config.yaml config/config.yaml.original
-    endif
-    # Use HPC config
-    cp config/config_hpc_kuro.yaml config/config.yaml
-    echo "Using HPC-specific configuration"
-else
-    echo "Warning: config/config_hpc_kuro.yaml not found, using default config"
-    # Ensure config uses CPU (since Kuro has no GPU)
-    if (-f config/config.yaml) then
-        sed -i 's/device: "cuda"/device: "cpu"/' config/config.yaml
-    endif
+# Use the original config.yaml that has CUDA enabled
+if (-f config/config.yaml.original) then
+    cp config/config.yaml.original config/config.yaml
+    echo "Restored original GPU-enabled configuration"
+endif
+
+# Ensure config uses CUDA
+if (-f config/config.yaml) then
+    sed -i 's/device: "cpu"/device: "cuda"/' config/config.yaml
+    # Also adjust batch size for GPU memory
+    sed -i 's/batch_size: 8/batch_size: 16/' config/config.yaml
 endif
 
 # Validate data availability
@@ -133,7 +139,6 @@ if ($has_images == 0 && $has_tensors == 0) then
     echo "Please ensure either:"
     echo "  1. Image files exist in: /sciclone/data10/$USER/polar-bear/dataset/"
     echo "  2. Tensor files (.pt) exist in: /sciclone/data10/$USER/polar-bear/reference/"
-    echo "See HPC_SETUP.md for detailed instructions."
     exit 1
 else
     if ($has_images > 0) then
@@ -146,8 +151,8 @@ else
     endif
 endif
 
-# Run the main program with CPU optimization
-echo "Starting training on CPU..."
+# Run the main program with GPU optimization
+echo "Starting training on GPU..."
 
 # Update config for this specific run
 sed -i "s|results_dir: \"../results\"|results_dir: \"results/run_${SLURM_JOB_ID}\"|" config/config.yaml
@@ -170,19 +175,9 @@ if ($exit_status == 0) then
     if (-f checkpoints/best_model.pth) then
         cp checkpoints/best_model.pth $HOME/polar-bear/Network/hpc_results/${SLURM_JOB_ID}/
     endif
-    
-    # Restore original config
-    if (-f config/config.yaml.original) then
-        mv config/config.yaml.original config/config.yaml
-    endif
 else
     echo "Training failed with exit code $exit_status"
     echo "Check logs for details"
-    
-    # Restore original config even on failure
-    if (-f config/config.yaml.bak) then
-        mv config/config.yaml.bak config/config.yaml
-    endif
 endif
 
 # Calculate runtime
@@ -194,8 +189,8 @@ echo "Total runtime: $runtime seconds"
 # Summary
 echo ""
 echo "=== Summary ==="
-echo "Working directory: /sciclone/scr10/$USER/polar-bear"
+echo "Working directory: /sciclone/scr10/$USER/polar-bear/Network"
 echo "Data directory: /sciclone/data10/$USER/polar-bear"
 echo "Environment: /sciclone/scr-lst/$USER/polar-bear-env"
 echo "Results saved to: $HOME/polar-bear/Network/hpc_results/${SLURM_JOB_ID}/"
-echo "To continue training, use checkpoint: /sciclone/scr10/$USER/polar-bear/checkpoints/best_model.pth"
+echo "To continue training, use checkpoint: /sciclone/scr10/$USER/polar-bear/Network/checkpoints/best_model.pth"

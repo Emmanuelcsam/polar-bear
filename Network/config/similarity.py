@@ -473,12 +473,31 @@ class CombinedSimilarityMetric(nn.Module):
         self.config = config
         
         # Initialize individual metrics
-        self.lpips = LearnedPerceptualSimilarity(net_type='vgg16')
-        self.ot_similarity = OptimalTransportSimilarity(epsilon=0.1)
-        self.ssim = StructuralSimilarityIndex(use_edges=True, multi_scale=True)
+        # Fixed: Use config values instead of hardcoded values
+        self.lpips = LearnedPerceptualSimilarity(
+            net_type=self.config['similarity']['lpips']['network'],
+            use_dropout=self.config['similarity']['lpips']['use_dropout'],
+            spatial=self.config['similarity']['lpips']['spatial']
+        )
+        self.ot_similarity = OptimalTransportSimilarity(
+            epsilon=self.config['similarity']['optimal_transport']['epsilon'],
+            max_iter=self.config['similarity']['optimal_transport']['max_iter'],
+            metric=self.config['similarity']['optimal_transport']['metric']
+        )
+        self.ssim = StructuralSimilarityIndex(
+            window_size=self.config['similarity']['ssim']['window_size'],
+            use_edges=self.config['similarity']['ssim']['use_edges'],
+            multi_scale=self.config['similarity']['ssim']['multi_scale']
+        )
         
-        # Learnable combination weights
-        self.combination_weights = nn.Parameter(torch.tensor([0.4, 0.3, 0.3]))
+        # Learnable combination weights from config
+        # Fixed: Use config combination_weights instead of hardcoded values
+        weights_dict = self.config['similarity']['combination_weights']
+        self.combination_weights = nn.Parameter(torch.tensor([
+            weights_dict['lpips'],
+            weights_dict['ssim'],
+            weights_dict.get('optimal_transport', 0.3)  # Default to 0.3 if not in config
+        ]))
         
         self.logger.info("CombinedSimilarityMetric initialized")
     

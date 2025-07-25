@@ -22,7 +22,7 @@ project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
 # Import all core modules
-from core.config_loader import get_config
+from core.config_loader import get_config, ConfigLoader
 from core.logger import get_logger
 from data.tensor_processor import TensorProcessor
 from data.feature_extractor import FeatureExtractionPipeline
@@ -71,11 +71,10 @@ class UnifiedFiberOpticsSystem:
         
         # Load configuration based on mode
         self.mode = mode
-        self.config = get_config()
+        self.config = get_config(config_path=config_path)
         
         # Override runtime mode in config
-        if hasattr(self.config, 'runtime'):
-            self.config.runtime.mode = mode
+        self.config.set('runtime.mode', mode)
         
         # Setup logger
         self.logger = get_logger("UnifiedFiberOpticsSystem")
@@ -136,17 +135,13 @@ class UnifiedFiberOpticsSystem:
         self.stat_config = get_statistical_config()
         
         # Merge configurations
-        if hasattr(self.config, '__dict__'):
-            base_dict = self.config.__dict__
-        else:
-            base_dict = self.config
+        base_dict = ConfigLoader._to_dict(self.config.config)
         
-        merged_config = merge_with_base_config(base_dict, self.stat_config)
+        merged_config_dict = merge_with_base_config(base_dict, self.stat_config)
         
         # Update config with merged values
-        for key, value in merged_config.items():
-            if hasattr(self.config, key):
-                setattr(self.config, key, value)
+        for key, value in merged_config_dict.items():
+            self.config.set(key, value)
         
         # Create base network and integrate statistics
         base_network = EnhancedIntegratedNetwork()
@@ -197,35 +192,17 @@ class UnifiedFiberOpticsSystem:
     
     def _init_statistical_optimizer(self):
         """Initialize optimizer with statistical component learning rates"""
-        # Separate parameters by component
-        base_params = []
-        statistical_params = []
+        base_params = [p for n, p in self.network.named_parameters() if 'statistical' not in n]
+        statistical_params = [p for n, p in self.network.named_parameters() if 'statistical' in n]
         
-        for name, param in self.network.named_parameters():
-            if any(comp in name for comp in ['statistical', 'master_similarity', 'zone_predictor', 
-                                             'consensus', 'correlation', 'anomaly']):
-                statistical_params.append(param)
-            else:
-                base_params.append(param)
-        
-        # Get learning rates
         base_lr = self.config.optimizer.learning_rate
-        stat_lr_mult = self.stat_config.training_settings['statistical_lr_multiplier']
+        stat_lr_mult = self.config.statistical.training_settings.statistical_lr_multiplier
         
-        # Create parameter groups
         param_groups = [
             {'params': base_params, 'lr': base_lr, 'name': 'base'},
             {'params': statistical_params, 'lr': base_lr * stat_lr_mult, 'name': 'statistical'}
         ]
-        
-        # Initialize optimizer
-        self.optimizer = optim.AdamW(param_groups, weight_decay=0.01)
-        
-        # Initialize scheduler
-        self.scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
-            self.optimizer, T_0=10, T_mult=2
-        )
-        
+        self.optimizer = optim.AdamW(param_groups, weight_decay=self.config.optimizer.weight_decay)
         self.logger.info(f"Statistical optimizer initialized: Base LR={base_lr}, Stat LR={base_lr * stat_lr_mult}")
     
     def _load_reference_statistics(self):
@@ -735,17 +712,18 @@ def main():
     """
     Unified main entry point with configuration-based execution
     Supports both production and research modes
+    All settings come from config.yaml - NO command line arguments
     """
-    # Load configuration to determine mode
+    # Load configuration - everything comes from config.yaml
     config = get_config()
     
-    # Check runtime mode from config
-    mode = "production"  # Default
-    if hasattr(config, 'runtime') and hasattr(config.runtime, 'mode'):
-        if config.runtime.mode in ['research', 'statistical']:
-            mode = 'research'
-        else:
-            mode = 'production'
+    # Determine mode from config
+    mode = config.get('runtime.mode', 'production')
+    if mode not in ['production', 'research', 'statistical']:
+        mode = 'production'
+    # Map statistical to research for compatibility
+    if mode == 'statistical':
+        mode = 'research'
     
     print(f"\n{'='*80}")
     print(f"FIBER OPTICS NEURAL NETWORK SYSTEM - {mode.upper()} MODE")
@@ -835,24 +813,10 @@ def main():
     
     # Update equation parameters
     print("\n🔧 FINE-TUNING EQUATION PARAMETERS...")
-    if hasattr(system.config, 'equation') and hasattr(system.config.equation, 'coefficients'):
-        # Use config values
-        for coef in ['A', 'B', 'C', 'D', 'E']:
-            value = system.config.equation.coefficients[coef]
-            print(f"   {coef} = {value} (from config)")
-    else:
-        # Use optimal defaults
-        optimal_params = {
-            'A': 1.2,  # Structural similarity weight
-            'B': 0.8,  # Reference comparison weight
-            'C': 1.0,  # Feature matching weight
-            'D': 0.6,  # Anomaly detection weight
-            'E': 0.4   # Additional features weight
-        }
-        
-        for coef, value in optimal_params.items():
-            system.update_parameters(coef, value)
-            print(f"   Set {coef} = {value}")
+    # Use config values
+    for coef in ['A', 'B', 'C', 'D', 'E']:
+        value = system.config.equation.coefficients[coef]
+        print(f"   {coef} = {value} (from config)")
     
     # Real-time processing demo
     if system.config.runtime.mode != "batch":

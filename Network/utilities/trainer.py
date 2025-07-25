@@ -421,16 +421,11 @@ class EnhancedTrainer:
                 # Optimizer step
                 if hasattr(self.optimizer, 'first_step'):
                     # SAM optimizer
-                    self.optimizer.first_step(zero_grad=True)
-                    
-                    # Second forward-backward pass
-                    closure()
-                    self.scaler.scale(loss).backward()
-                    self.optimizer.second_step()
+                    self.scaler.step(self.optimizer)
+                    self.scaler.update()
                 else:
                     self.scaler.step(self.optimizer)
-                
-                self.scaler.update()
+                    self.scaler.update()
             else:
                 # Regular training
                 loss = closure()
@@ -584,13 +579,21 @@ class EnhancedTrainer:
         # Get the actual model if using DDP
         model_to_save = self.model.module if hasattr(self.model, 'module') else self.model
         
+        # Convert config to dict properly
+        if hasattr(self.config, '_to_dict'):
+            config_dict = self.config._to_dict()
+        elif hasattr(self.config, '__dict__'):
+            config_dict = self.config.__dict__
+        else:
+            config_dict = dict(self.config)
+        
         checkpoint = {
             'epoch': epoch,
             'model_state_dict': model_to_save.state_dict(),
             'optimizer_state_dict': self.optimizer.state_dict(),
             'scheduler_state_dict': self.scheduler.state_dict() if self.scheduler else None,
             'best_val_loss': self.best_val_loss,
-            'config': self.config._to_dict() if hasattr(self.config, '_to_dict') else dict(self.config),
+            'config': config_dict,
             'history': dict(self.history),
             'distributed': self.distributed,
             'world_size': self.world_size

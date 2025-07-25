@@ -1,0 +1,206 @@
+# HPC Kuro-specific Configuration for Fiber Optics Neural Network
+# Copy this over config.yaml when running on W&M HPC Kuro system
+# NO COMMAND LINE ARGUMENTS - Everything configured here
+
+# System Settings - Optimized for Kuro CPU-only cluster
+system:
+  # Device configuration - Kuro has no GPUs
+  device: "cpu"
+  gpu_id: 0
+  num_workers: 32  # Kuro nodes have 64 cores, use half for data loading
+  seed: 42
+  
+  # Logging settings
+  log_level: "INFO"
+  log_to_file: true
+  log_file_path: "../logs/fiber_optics.log"
+  logs_path: "../logs"
+  verbose_logging: true
+  log_every_n_steps: 10
+  save_logs_to_wandb: false  # Disable for HPC
+  
+  # Paths - using symlinks to data10
+  data_path: "./dataset"
+  tensorized_data_path: "./reference"
+  reference_data_path: "./reference"
+  checkpoints_path: "./checkpoints"
+  results_path: "./results"
+  cache_path: "./cache"
+  temp_path: "./temp"
+  
+  # System behavior
+  auto_cleanup_temp: false
+  max_cache_size_gb: 50.0
+  enable_profiling: false  # Disable for production runs
+  profile_memory: false
+  deterministic_mode: true
+
+# Model Architecture
+model:
+  architecture: "advanced"
+  
+  # Model capacity
+  input_channels: 3
+  base_channels: 64
+  num_blocks: [3, 4, 6, 3]
+  
+  # Features
+  use_se_blocks: true
+  se_reduction: 16
+  use_deformable_conv: true
+  use_cbam: true
+  use_self_attention: true
+  attention_heads: 8
+  
+  # Regularization
+  dropout_rate: 0.3
+  use_stochastic_depth: true
+  stochastic_depth_rate: 0.1
+  
+  # Output configuration
+  num_classes: 4
+  output_features: 256
+
+# Training Configuration
+training:
+  # Basic settings
+  num_epochs: 50
+  batch_size: 32  # Adjust based on CPU memory
+  gradient_accumulation_steps: 1
+  
+  # Optimizer settings
+  optimizer: "adamw"
+  learning_rate: 0.001
+  weight_decay: 0.01
+  adam_epsilon: 1e-8
+  adam_beta1: 0.9
+  adam_beta2: 0.999
+  
+  # Scheduler
+  scheduler: "cosine"
+  warmup_epochs: 5
+  min_lr: 1e-6
+  
+  # Training techniques
+  use_amp: false  # No AMP on CPU
+  gradient_clip_norm: 1.0
+  label_smoothing: 0.1
+  
+  # Validation
+  val_check_interval: 1.0
+  early_stopping_patience: 10
+  early_stopping_min_delta: 0.001
+  
+  # Checkpointing
+  save_top_k: 3
+  checkpoint_monitor: "val_loss"
+  checkpoint_mode: "min"
+
+# Runtime Settings
+runtime:
+  mode: "production"  # Options: "production", "research", "statistical"
+  execution_mode: "train"  # Options: "train", "inference", "batch"
+  input_path: null
+  output_path: null
+  batch_process: true
+  max_batch_images: 1000
+  realtime_source: null
+  realtime_fps: 30
+  save_visualizations: false
+  export_metrics: true
+  generate_report: true
+  
+  # HPC-specific settings
+  checkpoint_interval: 5  # Save checkpoint every N epochs
+  results_dir: "../results"  # Will be updated by SLURM script
+
+# Data Processing
+data_processing:
+  # Image preprocessing
+  image_size: [256, 256]
+  normalize_mean: [0.485, 0.456, 0.406]
+  normalize_std: [0.229, 0.224, 0.225]
+  
+  # Augmentation
+  use_augmentation: true
+  augmentation_probability: 0.8
+  
+  # Data loading
+  cache_processed_data: true
+  preload_data: false  # Don't preload on CPU
+  num_preprocessing_workers: 4
+
+# Loss Configuration
+loss:
+  primary_loss: "combined"
+  focal_alpha: 0.25
+  focal_gamma: 2.0
+  dice_smooth: 1.0
+  perceptual_weight: 0.1
+  contrastive_temperature: 0.07
+  
+  # Loss weights
+  weights:
+    focal: 1.0
+    dice: 0.5
+    perceptual: 0.1
+    contrastive: 0.05
+    consistency: 0.1
+
+# Optimization Settings
+optimization:
+  # CPU optimizations
+  use_mkl: true
+  mkl_threads: 32
+  omp_threads: 32
+  
+  # Memory optimization
+  gradient_checkpointing: false  # Not needed on CPU
+  find_unused_parameters: false
+  
+  # Distributed settings (for future multi-node)
+  distributed: false
+  backend: "gloo"  # CPU backend
+  world_size: 1
+  rank: 0
+
+# Validation Settings
+validation:
+  # Metrics to track
+  metrics: ["accuracy", "precision", "recall", "f1", "confusion_matrix"]
+  
+  # Validation behavior
+  num_sanity_val_steps: 2
+  val_check_interval: 1.0
+  
+  # Test time augmentation
+  use_tta: false
+  tta_transforms: 4
+
+# HPC Job Settings (informational)
+hpc:
+  cluster: "kuro"
+  nodes: 1
+  cores_per_node: 64
+  memory_gb: 256
+  walltime_hours: 48
+  partition: "parallel"
+  
+# Statistical Analysis Settings (for research mode)
+statistical:
+  # Feature extraction
+  num_features: 88
+  use_wavelet: true
+  use_gabor: true
+  use_lbp: true
+  use_hog: true
+  
+  # Analysis methods
+  use_pca: true
+  pca_components: 50
+  use_clustering: true
+  num_clusters: 10
+  
+  # Anomaly detection
+  use_mahalanobis: true
+  anomaly_threshold: 3.0

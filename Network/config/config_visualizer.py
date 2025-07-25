@@ -132,6 +132,8 @@ class ConfigSignalGenerator:
         # Phase shifts from thresholds
         sim_threshold = config['similarity']['threshold']
         anomaly_threshold = config['anomaly']['threshold']
+        # Phase shift calculated from deviation of thresholds from baseline values
+        # Using 0.7 as baseline for similarity and 0.3 as baseline for anomaly
         phase_shift = (sim_threshold - 0.7) * np.pi + (0.3 - anomaly_threshold) * np.pi
 
         # Noise level from regularization
@@ -576,7 +578,7 @@ class SystemArchitectureWidget(QWidget):
             <li><b>Reference Comparator</b>: Compares with reference database</li>
             <li><b>Segmentation</b>: Identifies core, cladding, and ferrule regions</li>
             <li><b>Anomaly Detector</b>: Detects defects and anomalies</li>
-            <li><b>Similarity Calculator</b>: Computes similarity score (must achieve > 0.7)</li>
+            <li><b>Similarity Calculator</b>: Computes similarity score (must achieve > {self.config['similarity']['threshold']})</li>
         </ul>
         <p>The equation <b>I=Ax1+Bx2+Cx3...=S(R)</b> governs the entire process.</p>
         """)
@@ -679,6 +681,7 @@ class PerformanceMetricsWidget(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.config = None  # Will be set later
         self.setup_ui()
         self.metric_history = {
             'similarity': [],
@@ -686,6 +689,11 @@ class PerformanceMetricsWidget(QWidget):
             'memory_usage': [],
             'accuracy': []
         }
+
+    def set_config(self, config):
+        """Set configuration for accessing threshold values"""
+        self.config = config
+        self.update_metrics()
 
     def setup_ui(self):
         layout = QVBoxLayout(self)
@@ -731,7 +739,9 @@ class PerformanceMetricsWidget(QWidget):
         titles = ['Similarity Score', 'Inference Time (ms)', 'Memory Usage (MB)', 'Accuracy']
         keys = ['similarity', 'inference_time', 'memory_usage', 'accuracy']
         colors = ['blue', 'green', 'red', 'purple']
-        thresholds = [0.7, None, None, None]  # Similarity must be > 0.7
+        # Fixed: Use similarity threshold from config if available, else default to 0.7
+        sim_threshold = self.config['similarity']['threshold'] if self.config else 0.7
+        thresholds = [sim_threshold, None, None, None]  # Similarity must be > threshold
 
         for ax, title, key, color, threshold in zip(axes, titles, keys, colors, thresholds):
             data = self.metric_history[key]
@@ -1404,6 +1414,8 @@ class ConfigVisualizerMainWindow(QMainWindow):
             self.create_parameter_widgets()
             self.signal_widget.set_config(self.config)
             self.equation_widget.update_equation_visualization(self.config.get('equation', {}).get('coefficients', {}))
+            # Fixed: Set config on metrics widget to use correct threshold
+            self.metrics_widget.set_config(self.config)
             self.status_bar.showMessage(f"Loaded configuration from {self.config_path}")
 
         except Exception as e:

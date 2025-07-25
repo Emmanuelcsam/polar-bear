@@ -626,7 +626,12 @@ class CombinedAdvancedLoss(nn.Module):
                 )
         
         # Compute weighted total loss
-        total_loss = torch.tensor(0.0, device=next(iter(predictions.values())).device)
+        # Get device from predictions (handle empty predictions case)
+        if predictions:
+            device = next(iter(predictions.values())).device
+        else:
+            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        total_loss = torch.tensor(0.0, device=device)
         for loss_name, loss_value in losses.items():
             if loss_name in self.weights:
                 total_loss += self.weights[loss_name] * loss_value

@@ -48,7 +48,7 @@ class ConfigLoader:
         
         # Track modifications
         self.modifications = []
-        self.original_config = self._deep_copy(self.config)
+        self.original_config = self.__class__._deep_copy(self.config)
         
         # Legacy compatibility - fixed parameters
         self.INPUT_SIZE = (256, 256)
@@ -88,7 +88,7 @@ class ConfigLoader:
                 config = yaml.safe_load(f)
             
             # Convert to nested dictionary with dot notation access
-            config = self._create_nested_dict(config)
+            config = self.__class__._create_nested_dict(config)
             
             return config
             
@@ -96,12 +96,13 @@ class ConfigLoader:
             print(f"[{datetime.now()}] ERROR: Error parsing YAML configuration: {e}")
             raise
     
-    def _create_nested_dict(self, d: Dict) -> 'NestedDict':
+    @staticmethod
+    def _create_nested_dict(d: Union[Dict, List]) -> Union['NestedDict', List]:
         """Create nested dictionary with dot notation access"""
         if isinstance(d, dict):
-            return NestedDict({k: self._create_nested_dict(v) for k, v in d.items()})
+            return NestedDict({k: ConfigLoader._create_nested_dict(v) for k, v in d.items()})
         elif isinstance(d, list):
-            return [self._create_nested_dict(item) for item in d]
+            return [ConfigLoader._create_nested_dict(item) for item in d]
         else:
             return d
     
@@ -141,14 +142,13 @@ class ConfigLoader:
         # This would use watchdog or similar library in production
         self.last_modified = os.path.getmtime(self.config_path)
     
-    def _deep_copy(self, obj):
+    @staticmethod
+    def _deep_copy(obj):
         """Deep copy configuration object"""
-        if isinstance(obj, NestedDict):
-            return NestedDict({k: self._deep_copy(v) for k, v in obj.items()})
-        elif isinstance(obj, dict):
-            return {k: self._deep_copy(v) for k, v in obj.items()}
+        if isinstance(obj, dict):
+            return {k: ConfigLoader._deep_copy(v) for k, v in obj.items()}
         elif isinstance(obj, list):
-            return [self._deep_copy(item) for item in obj]
+            return [ConfigLoader._deep_copy(item) for item in obj]
         else:
             return obj
     
@@ -208,7 +208,7 @@ class ConfigLoader:
         parts = key.split('.')
         obj = self.config
         for part in parts[:-1]:
-            obj = obj[part]
+            obj = obj.setdefault(part, NestedDict())
         obj[parts[-1]] = value
         
         # Validate after change
@@ -262,26 +262,27 @@ class ConfigLoader:
             path = self.config_path.with_suffix('.current.yaml')
         
         # Convert NestedDict back to regular dict
-        config_dict = self._to_dict(self.config)
+        config_dict = self.__class__._to_dict(self.config)
         
         with open(path, 'w') as f:
             yaml.dump(config_dict, f, default_flow_style=False, sort_keys=False)
         
         print(f"[{datetime.now()}] Exported current configuration to {path}")
     
-    def _to_dict(self, obj):
+    @staticmethod
+    def _to_dict(obj):
         """Convert NestedDict to regular dict"""
-        if isinstance(obj, NestedDict):
-            return {k: self._to_dict(v) for k, v in obj.items()}
+        if isinstance(obj, dict):
+            return {k: ConfigLoader._to_dict(v) for k, v in obj.items()}
         elif isinstance(obj, list):
-            return [self._to_dict(item) for item in obj]
+            return [ConfigLoader._to_dict(item) for item in obj]
         else:
             return obj
     
     def reset_to_original(self):
         """Reset configuration to original values"""
         print(f"[{datetime.now()}] Resetting configuration to original values")
-        self.config = self._deep_copy(self.original_config)
+        self.config = self.__class__._deep_copy(self.original_config)
         self.modifications = []
     
     def get_diff(self) -> Dict:
@@ -325,12 +326,12 @@ class ConfigLoader:
         
         if device_config == "auto":
             if torch.cuda.is_available():
-                return torch.device(f"cuda:{self.config.system.gpu_id}")  # Added fallback to specific GPU ID if available; original just used "cuda" without ID, which could default to GPU 0 incorrectly in multi-GPU setups
+                return torch.device(f"cuda:{self.config.system.get('gpu_id', 0)}")  # Added fallback to specific GPU ID if available; original just used "cuda" without ID, which could default to GPU 0 incorrectly in multi-GPU setups
             else:
                 return torch.device("cpu")
         elif device_config == "cuda":
             if torch.cuda.is_available():
-                return torch.device(f"cuda:{self.config.system.gpu_id}")  # Added gpu_id from config; original lacked specificity, potentially causing CUDA errors in distributed or multi-GPU environments
+                return torch.device(f"cuda:{self.config.system.get('gpu_id', 0)}")  # Added gpu_id from config; original lacked specificity, potentially causing CUDA errors in distributed or multi-GPU environments
             else:
                 print(f"[{datetime.now()}] WARNING: CUDA requested but not available, using CPU")
                 return torch.device("cpu")
@@ -352,17 +353,9 @@ class ConfigLoader:
         with open(path, 'r') as f:
             config_dict = json.load(f)
         
-        self.config = self._create_nested_dict(config_dict)
+        self.config = self.__class__._create_nested_dict(config_dict)
         print(f"[{datetime.now()}] Configuration loaded from JSON: {path}")
     
-    def _to_dict(self, nested_dict):
-        """Convert NestedDict to regular dict"""
-        if isinstance(nested_dict, NestedDict):
-            return {k: self._to_dict(v) for k, v in nested_dict.items()}
-        elif isinstance(nested_dict, list):
-            return [self._to_dict(item) for item in nested_dict]
-        else:
-            return nested_dict
 
 
 class NestedDict(OrderedDict):
@@ -370,12 +363,10 @@ class NestedDict(OrderedDict):
     Dictionary subclass that allows dot notation access
     Makes configuration more convenient to use
     """
-    
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for key, value in self.items():
-            if isinstance(value, dict):
-                self[key] = NestedDict(value)
+            self[key] = value
     
     def __getattr__(self, key):
         try:
@@ -411,6 +402,17 @@ class NestedDict(OrderedDict):
     def __setattr__(self, key, value):
         self[key] = value
     
+    def __setitem__(self, key, value):
+        super().__setitem__(key, self._convert(value))
+    
+    def _convert(self, value):
+        """Recursively convert dicts and lists of dicts to NestedDicts."""
+        if isinstance(value, dict):
+            return NestedDict(value)
+        elif isinstance(value, list):
+            return [self._convert(item) for item in value]
+        return value
+    
     def __delattr__(self, key):
         try:
             del self[key]
@@ -427,9 +429,10 @@ class ConfigManager:
     _instance = None
     _config_loader = None
     
-    def __new__(cls):
+    def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
+            cls._instance.initialize(*args, **kwargs)
         return cls._instance
     
     def __getattr__(self, name):
@@ -485,9 +488,9 @@ class ConfigManager:
 config_manager = ConfigManager()
 
 
-def get_config():
+def get_config(config_path: str = "config/config.yaml"):
     """Get global configuration manager"""
-    return config_manager
+    return ConfigManager(config_path=config_path)
 
 
 def update_config(key: str, value: Any):

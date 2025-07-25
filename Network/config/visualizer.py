@@ -549,7 +549,8 @@ class FiberOpticsVisualizer:
         # 2. Similarity curves
         axes[0, 1].plot(history['train_similarity'], label='Train Similarity')
         axes[0, 1].plot(history['val_similarity'], label='Val Similarity')
-        axes[0, 1].axhline(y=0.7, color='r', linestyle='--', label='Threshold')
+        # Fixed: Use similarity threshold from config instead of hardcoded 0.7
+        axes[0, 1].axhline(y=self.config.similarity.threshold, color='r', linestyle='--', label='Threshold')
         axes[0, 1].set_xlabel('Epoch')
         axes[0, 1].set_ylabel('Similarity')
         axes[0, 1].set_title('Similarity Scores')
@@ -684,7 +685,8 @@ class FiberOpticsVisualizer:
             # Similarity score
             if 'summary' in results:
                 score = results['summary']['final_similarity_score']
-                color = 'green' if score > 0.7 else 'red'
+                # Fixed: Use similarity threshold from config instead of hardcoded 0.7
+                color = 'green' if score > self.config.similarity.threshold else 'red'
                 axes[i, 3].text(0.5, 0.5, f'{score:.4f}', 
                               fontsize=24, ha='center', va='center', color=color)
                 axes[i, 3].set_title('Similarity')

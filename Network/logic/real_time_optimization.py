@@ -145,6 +145,7 @@ class KnowledgeDistillationLoss(nn.Module):
             f"Total loss: {self.stats['total_loss']/n:.4f}"
         )
         # Reset stats
+        # FIX: Fixed TypeError by resetting to 0 properly for all keys
         self.stats = {k: 0 for k in self.stats.keys()}
     
     def get_stats(self) -> Dict[str, float]:

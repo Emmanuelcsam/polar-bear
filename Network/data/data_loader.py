@@ -68,6 +68,15 @@ class FiberOpticsDataset(Dataset):
         # Scan data paths and build dataset
         self._scan_data_paths(data_paths, max_samples_per_class)
         
+        if len(self.samples) == 0:
+            error_msg = f"No samples found in the provided data paths: {[str(p) for p in data_paths]}\n"
+            if use_raw_images:
+                error_msg += "Expected image files with extensions: " + ", ".join(self.SUPPORTED_IMAGE_FORMATS)
+            else:
+                error_msg += "Expected .pt tensor files"
+            self.logger.error(error_msg)
+            raise RuntimeError(error_msg)
+        
         self.logger.info(f"Dataset initialized with {len(self.samples)} samples")
         print(f"[{datetime.now()}] FiberOpticsDataset initialized with {len(self.samples)} samples")
     
@@ -338,6 +347,15 @@ class FiberOpticsDataLoader:
         
         # Collect all data paths
         self.data_paths = self._collect_data_paths()
+        
+        if not self.data_paths:
+            error_msg = "No data found! Please ensure either:\n"
+            error_msg += "1. Image files exist in the 'dataset' folder, or\n"
+            error_msg += "2. Tensor files (.pt) exist in the 'reference' folder\n"
+            error_msg += f"Checked paths: dataset={Path(__file__).parent.parent / 'dataset'}, "
+            error_msg += f"reference={Path(self.config.system.tensorized_data_path).parent / 'reference'}"
+            self.logger.error(error_msg)
+            raise RuntimeError(error_msg)
         
         self.logger.info(f"Found {len(self.data_paths)} data folders")
         print(f"[{datetime.now()}] FiberOpticsDataLoader initialized")

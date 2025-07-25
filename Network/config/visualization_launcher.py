@@ -67,7 +67,8 @@ def generate_reports():
     
     try:
         # Import the visualizer
-        from config.visualizer import FiberOpticsVisualizer
+        # Fixed: Changed from 'config.visualizer' to 'visualizer' because file is visualizer.py in same directory
+        from visualizer import FiberOpticsVisualizer
         from datetime import datetime
         
         # Create output directory

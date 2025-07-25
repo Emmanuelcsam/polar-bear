@@ -1220,7 +1220,8 @@ class StatisticallyIntegratedNetwork(nn.Module):
         
         # Combine with base network features (assuming last feature map is [B, 512, H/32, W/32])
         if 'features' in base_outputs:
-            base_features = base_outputs['features']
+            # FIX: Changed to base_outputs['features'][-1] as features is list, last is [B,512,H/32,W/32]
+            base_features = base_outputs['features'][-1]
             # Resize statistical features to match
             stat_features_spatial = F.interpolate(
                 stat_features_spatial, 

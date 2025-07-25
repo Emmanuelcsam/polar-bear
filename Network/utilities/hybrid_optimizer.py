@@ -496,6 +496,9 @@ class HybridAdamSAM(Optimizer):
                 e_w = scale * p.grad.data
                 p.add_(e_w)
                 
+                # Store perturbation for second_step
+                self.state[p]['e_w'] = e_w.clone()
+                
                 # Track statistics
                 self.sam_stats['perturbation_norm'] += e_w.norm().item()
         
@@ -519,9 +522,12 @@ class HybridAdamSAM(Optimizer):
                 self.sam_stats['gradient_similarity'] += cos_sim.item()
                 
                 # Restore original parameters
-                # FIX: Use stored old_grad scaled by rho, but recompute _grad_norm on old_grad to match original scale (avoids mismatch if current grad_norm changed).
-                restored_scale = group['rho'] / (self._grad_norm() + 1e-12)  # Original had self._grad_norm(), but it's current; keep as-is per original, but note potential logic fault if grads altered.
-                p.sub_(group['rho'] * self.state[p]['old_grad'] / (self._grad_norm() + 1e-12))
+                # FIX: Store perturbation e_w in first_step and subtract it directly in second_step
+                if 'e_w' in self.state[p]:
+                    p.sub_(self.state[p]['e_w'])
+                else:
+                    # Fallback if e_w not stored (shouldn't happen)
+                    p.sub_(group['rho'] * self.state[p]['old_grad'] / (self._grad_norm(stored_grads=True) + 1e-12))
         
         # Update with base Adam optimizer
         self.base_optimizer.step()
@@ -554,13 +560,15 @@ class HybridAdamSAM(Optimizer):
             self.sam_stats['perturbation_norm'] = 0.0
             self.sam_stats['gradient_similarity'] = 0.0
     
-    def _grad_norm(self):
+    def _grad_norm(self, stored_grads=False):
         """Compute gradient norm across all parameters"""
         # Collect all gradient norms
         grad_norms = []
         for group in self.param_groups:
             for p in group['params']:
-                if p.grad is not None:
+                if stored_grads and 'old_grad' in self.state[p]:
+                    grad_norms.append(self.state[p]['old_grad'].norm())
+                elif p.grad is not None:
                     grad_norms.append(p.grad.data.norm())
         
         # Handle empty case

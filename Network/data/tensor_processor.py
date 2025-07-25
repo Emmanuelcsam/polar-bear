@@ -159,8 +159,8 @@ class TensorProcessor:
         # Calculate magnitude
         gradient_magnitude = torch.sqrt(grad_x**2 + grad_y**2)
         
-        # Calculate average gradient
-        avg_gradient = gradient_magnitude.mean()
+        # Calculate average gradient per sample in batch
+        avg_gradient = gradient_magnitude.mean(dim=(1, 2, 3))  # Mean over C, H, W, keep batch
         
         # Calculate gradient map (average across channels)
         gradient_map = gradient_magnitude.mean(dim=1, keepdim=True)
@@ -173,7 +173,7 @@ class TensorProcessor:
             'average_gradient': avg_gradient
         }
         
-        self.logger.info(f"Average gradient intensity: {avg_gradient.item():.4f}")
+        self.logger.info(f"Average gradient intensity: {avg_gradient.mean().item():.4f}")
         self.logger.log_function_exit("calculate_gradient_intensity")
         
         return results
@@ -201,10 +201,10 @@ class TensorProcessor:
         # Calculate angular position
         angular_pos = torch.atan2(y_pos, x_pos)
         
-        # Average positions
-        avg_x_pos = x_pos.mean()
-        avg_y_pos = y_pos.mean()
-        avg_radial_pos = radial_pos.mean()
+        # Average positions per sample in batch
+        avg_x_pos = x_pos.mean(dim=(1, 2, 3))  # Mean over C, H, W, keep batch
+        avg_y_pos = y_pos.mean(dim=(1, 2, 3))  # Mean over C, H, W, keep batch
+        avg_radial_pos = radial_pos.mean(dim=(1, 2, 3))  # Mean over C, H, W, keep batch
         
         results = {
             'x_positions': x_pos,
@@ -216,7 +216,7 @@ class TensorProcessor:
             'average_radial': avg_radial_pos
         }
         
-        self.logger.debug(f"Average radial position: {avg_radial_pos.item():.4f}")
+        self.logger.debug(f"Average radial position: {avg_radial_pos.mean().item():.4f}")
         self.logger.log_function_exit("calculate_pixel_positions")
         
         return results
@@ -389,11 +389,11 @@ if __name__ == "__main__":
     
     # Calculate gradients
     gradients = processor.calculate_gradient_intensity(tensor)
-    logger.info(f"Gradient results: avg={gradients['average_gradient'].item():.4f}")
+    logger.info(f"Gradient results: avg={gradients['average_gradient'].mean().item():.4f}")
     
     # Calculate positions
     positions = processor.calculate_pixel_positions(tensor.shape)
-    logger.info(f"Position results: avg_radial={positions['average_radial'].item():.4f}")
+    logger.info(f"Position results: avg_radial={positions['average_radial'].mean().item():.4f}")
     
     # Create multi-scale
     multi_scale = processor.create_multi_scale_tensors(tensor)
