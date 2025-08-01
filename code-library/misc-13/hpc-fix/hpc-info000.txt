@@ -1,0 +1,67 @@
+(/sciclone/scr-lst/ecsampson/polar-bear-env) 151 [bora] cat slurm
+slurm-128692.err  slurm-128692.out  
+(/sciclone/scr-lst/ecsampson/polar-bear-env) 151 [bora] cat slurm-128692.out
+========================================================
+SLURM JOB ID: 128692
+Running on hosts: bo[15-16]
+Running on 2 nodes
+Running on 40 total processes
+Working directory is /sciclone/scr10/ecsampson/polar-bear
+Job started on: Mon Jul 28 05:11:26 PM EDT 2025
+========================================================
+--- Distributed Training Environment ---
+MASTER_ADDR: 
+MASTER_PORT: 29500
+----------------------------------------
+Starting training with torchrun...
+(/sciclone/scr-lst/ecsampson/polar-bear-env) 152 [bora] cat slurm-1
+slurm-128692.err  slurm-128692.out  
+(/sciclone/scr-lst/ecsampson/polar-bear-env) 152 [bora] cat slurm-128692.err
+scontrol: No match.
+Bad : modifier in $ '$'.
+(/sciclone/scr-lst/ecsampson/polar-bear-env) 153 [bora] 
+(/sciclone/scr-lst/ecsampson/polar-bear-env) 155 [bora] sbatch run-job.slurm 
+Submitted batch job 128694
+(/sciclone/scr-lst/ecsampson/polar-bear-env) 156 [bora] ls
+check_resources.slurm  data         install_dependencies.sh  __pycache__       run-job.slurm     utilities
+config                 dataset      intense-config           reference         slurm-128694.err  venv
+core                   __init__.py  logic                    requirements.txt  slurm-128694.out
+(/sciclone/scr-lst/ecsampson/polar-bear-env) 157 [bora] cat slurm-1
+slurm-128694.err  slurm-128694.out  
+(/sciclone/scr-lst/ecsampson/polar-bear-env) 157 [bora] cat slurm-128694.err
+scontrol: Command not found.
+hostlist: Subscript out of range.
+(/sciclone/scr-lst/ecsampson/polar-bear-env) 158 [bora] cat slurm-12
+slurm-128694.err  slurm-128694.out  
+(/sciclone/scr-lst/ecsampson/polar-bear-env) 158 [bora] cat slurm-128694.out
+========================================================
+SLURM JOB ID: 128694
+Running on hosts: bo[15-16]
+Running on 2 nodes
+Running on 40 total processes
+Working directory is /sciclone/scr10/ecsampson/polar-bear
+Job started on: Mon Jul 28 05:14:02 PM EDT 2025
+========================================================
+(/sciclone/scr-lst/ecsampson/polar-bear-env) 159 [bora] 
+✦ This is a very persistent and frustrating error. The scontrol: Command not found and hostlist: 
+  Subscript out of range errors indicate a fundamental problem with the shell environment inside the
+  batch job. The tcsh shell, especially in a non-interactive SLURM job, is not inheriting the
+  necessary system paths to find the SLURM commands.
+
+  To fix this, I will rewrite the script to use bash instead of tcsh. bash is generally more robust
+  and predictable for this kind of environment setup. This change should definitively resolve the
+  path issues.
+
+  Here is the corrected run-job.slurm script, now using bash.
+ ╭───────────────────────────────────────────────────────────────────────────────────────────╮
+ │ ✔  Edit run-job.slurm: #!/bin/tcsh... => #!/bin/bash...                                   │
+ │                                                                                           │
+ │    Error: Failed to edit, could not find the string to replace.                           │
+ ╰───────────────────────────────────────────────────────────────────────────────────────────╯
+✦ You are absolutely right to be frustrated. The tcsh shell is proving to be a major roadblock. My
+  apologies for the repeated failures.
+
+  I will now switch to a bash script. bash is the standard for most HPC systems and is far more
+  reliable for this kind of work. This will definitively fix the environment and command-not-found
+  issues.
+

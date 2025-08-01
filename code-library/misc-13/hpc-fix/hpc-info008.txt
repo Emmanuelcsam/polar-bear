@@ -1,0 +1,573 @@
+do extremely exhaustive deep research on william and mary hpc hgh performance computing bora tsch ssh best practices, tutorials, how to run python scripts, how to make a program run, how to submit jobs everything why am I getting this errror: sbatch: error: Batch job submission failed: Requested node configuration is not available
+run-job.slurm
+
+
+Thought for 67s
+Overview of William & Mary High Performance Computing (HPC) System
+William & Mary's HPC resources are managed by the university's Information Technology (IT) department, primarily through the SciClone cluster on the main campus and the Chesapeake cluster at the Virginia Institute of Marine Science (VIMS). These systems support research in fields like computational science, data analysis, and machine learning. The Bora subcluster, part of SciClone, is designed for multi-node parallel jobs, making it suitable for distributed computing tasks such as neural network training in your script.wm.edu Bora consists of approximately 30 nodes, each equipped with 2x Intel Xeon E5-2640 v4 processors (Broadwell architecture). There is some inconsistency in documentation regarding core counts: one source lists 40 cores per node (likely counting hyperthreads, as each processor has 10 physical cores and 20 threads, totaling 20 physical cores and 40 logical threads per node), while usage examples emphasize using 20 tasks per node.wm.eduwm.edu Each node has 128 GB of RAM, InfiniBand interconnect for high-speed communication, and access to parallel file systems like /sciclone/pscr for I/O-intensive workloads.wm.edu The Hima subcluster shares the same front-end (bora.sciclone.wm.edu) but is geared toward serial or shared-memory jobs, with some nodes featuring NVIDIA GPUs (e.g., P100 or V100 with 16 GB memory).wm.edu
+
+Other subclusters include:
+
+Hima: For GPU-accelerated or single-node tasks.
+Gulf/Astral: For shared-memory GPU computing (e.g., 8x NVIDIA A30 GPUs).
+Kuro: For large MPI jobs requiring at least 64 cores.
+VIMS clusters (e.g., via james.hpc.vims.edu): Reserved primarily for VIMS users but accessible with an HPC account.wm.eduwm.edu
+The system uses SLURM (Simple Linux Utility for Resource Management) as the job scheduler across all clusters, replacing older TORQUE/Maui setups on some subclusters like Bora.wm.edu Maximum walltime on Bora is 72 hours; jobs exceeding this will not start.wm.edu Accounts are available to W&M faculty, staff, and students; request access via email to hpc-help@wm.edu.wm.edu
+
+
+Subcluster	Node Specs	Intended Use	Front-End/Login	Max Walltime
+Bora	30 nodes, 2x Intel E5-2640 v4 (20 physical cores/40 threads, 128 GB RAM)	Multi-node parallel (e.g., MPI)	bora.sciclone.wm.edu	72 hours
+Hima	Similar to Bora, with GPUs on some nodes (P100/V100, 16 GB)	Serial/shared-memory, GPU tasks	bora.sciclone.wm.edu	72 hours
+Gulf	Nodes with SSDs, InfiniBand	General parallel	gulf.sciclone.wm.edu	180 hours
+Astral	8x NVIDIA A30 GPUs	GPU computing	astral.sciclone.wm.edu	Varies
+Kuro	High-core MPI	Large parallel jobs	kuro.sciclone.wm.edu	Varies wm.edu+2 more
+SSH Access and Best Practices
+To access W&M HPC clusters, use SSH (Secure Shell) from a terminal. Connections must originate from the W&M or VIMS campus network, the university VPN, or the bastion host (bastion.wm.edu) for off-campus access. Direct external connections may fail with errors like "Connection timed out."wm.eduwm.edu
+
+How to Connect:
+On-Campus: SSH directly to the front-end, e.g., ssh your_username@bora.sciclone.wm.edu.wm.edu
+Off-Campus via VPN: Connect to W&M VPN first, then SSH as above.
+Off-Campus via Bastion Host: Use ssh -J your_username@bastion.wm.edu your_username@bora.sciclone.wm.edu. Add an SSH key to bastion.wm.edu for passwordless access (generate with ssh-keygen, then add public key via IT portal).wm.eduwm.edu
+With X11 Forwarding (for GUIs like GaussView): Add -Y or -X, e.g., ssh -Y your_username@bora.sciclone.wm.edu. On Windows, install Xming; on macOS/Linux, it's built-in.wm.eduwm.edu
+Best Practices:
+Security: Use SSH keys instead of passwords (ssh-keygen -t ed25519; copy public key to ~/.ssh/authorized_keys on the cluster). Set permissions: chmod 600 ~/.ssh/config, chmod 644 ~/.ssh/authorized_keys.epcced.github.iowm.edu
+File Transfers: Use scp or rsync for files, e.g., rsync -av local_dir/ your_username@bora.sciclone.wm.edu:/sciclone/pscr/your_username/. Avoid spaces in filenames/directories to prevent batch output issues.wm.edu
+Session Management: Use screen or tmux for persistent sessions to avoid losing work on disconnects. Limit front-end usage to light tasks; heavy computations go to compute nodes via SLURM.wm.edu
+VPN vs. Bastion: VPN may slow file transfers due to traffic; bastion is faster for command-line work but requires Duo authentication without keys.wm.edu
+Common Issues: If "Network unreachable," check VPN/campus connection. For VIMS (Chesapeake), access via james.hpc.vims.edu or chesapeake.hpc.vims.edu; it's firewalled, so use bastion from main campus.wm.edu
+Tcsh Shell Best Practices
+The default shell on W&M HPC is tcsh (enhanced C shell), as noted in your script (#!/bin/tcsh).wm.edu It's favored for its syntax in batch scripts and compatibility with modules.
+
+Key Features and Usage:
+Startup Files: Customize via ~/.cshrc (loaded on login) or ~/.tcshrc. Add source /usr/local/etc/sciclone.cshrc for cluster-specific settings (e.g., paths for Bora).wm.edu Avoid output in startup files, as it breaks batch job output delivery.wm.edu
+Aliases and Variables: Use alias ll 'ls -l' for shortcuts; set variables like setenv PATH $PATH:/your/bin.wm.edu
+Job Control: Background jobs with &; manage with jobs, fg, bg. For parallel: find . -name hello &.wm.edu
+Best Practices:
+Comment scripts with # (except #! for shebang).
+Use echo $0 to confirm shell (tcsh).
+For batch scripts: No spaces in paths; test interactively first.
+Switch to bash if needed (chsh -s /bin/bash), but tcsh is default and recommended for consistency.wm.eduwm.edu
+Error Handling: Use onintr for signals, as in your script for checkpointing.wm.edu
+How to Run Python Scripts on Bora
+Python is widely used on W&M HPC, with Anaconda recommended for environments due to its isolation and package management.wm.eduwm.edu
+
+Setup:
+Load Modules: module load anaconda3/2023.09 (or similar; check module avail). For CUDA: module load cuda/12.3.wm.edu
+Create Environment: conda create -n myenv python=3.10; activate with conda activate myenv. Install packages: conda install numpy or pip install -r requirements.txt.wm.edu Place env on scratch: /sciclone/pscr/$USER/conda-envs/ for performance.wm.edu
+Verify: python -c "import torch; print(torch.cuda.is_available())" for GPU/CUDA.wm.edu
+Running Scripts:
+Interactive: salloc -N1 --ntasks-per-node=20 -C bo -t 30:00; then run python script.py.wm.edu
+Batch: In SLURM script, activate env: conda activate /path/to/env; then python script.py. For distributed (e.g., PyTorch): Use srun or set env vars like MASTER_ADDR.wm.eduyoutube.com
+Best Practices:
+Use scratch dirs (/sciclone/pscr, /local/scr) for I/O.wm.edu
+For efficiency: Batch size/memory tuning; avoid front-end runs.jamesthorne.com
+Jupyter: Install pip install notebook; run via interactive job with port forwarding (ssh -L 8888:localhost:8888 ...).wm.edu
+SLURM Bug Workaround (on some clusters like Gust): Reload Anaconda module in script.wm.edu
+How to Submit and Manage Jobs with SLURM
+SLURM handles job submission on Bora. Submit from the front-end (bora.sciclone.wm.edu).wm.eduwm.edu
+
+Submission Process:
+Batch Script: Like your provided script. Use sbatch script.slurm.wm.edu
+Key Directives:
+--nodes=N: Number of nodes.
+--ntasks-per-node=M: Tasks per node (20 for Bora).
+--constraint=bo: Target Bora nodes.
+--mem=120G: Memory per node.
+--time=HH:MM:SS: Walltime (max 72h on Bora).
+--output/--error: Log files.wm.edu
+Interactive: salloc -N1 --ntasks-per-node=20 -C bo -t 1:00:00.wm.edu
+MPI/Distributed: Use srun python script.py inside job; set env vars like WORLD_SIZE.wm.edu
+Array Jobs: --array=1-10 for parametric runs.wm.edu
+Monitoring and Management:
+squeue -u your_username: View your jobs.
+scontrol show job JOBID: Details.
+scancel JOBID: Cancel.
+sinfo: Cluster status (e.g., available nodes).
+Check load: Use ckload script at job start.wm.edugithub.com
+Best Practices:
+Accurate walltime/memory estimates improve priority.
+Use reservations for debugging (e.g., --reservation=debug on Kuro).
+Checkpointing: Handle signals like USR1 for timeouts.
+No spaces in paths; test small jobs first.wm.eduwm.edu
+Tutorials and Resources
+Official W&M Tutorials (PDFs from 2023-2025):
+
+Intro to HPC: Covers login, modules, SLURM basics.wm.edu
+Using Resources: Job memory, Jupyter on cluster.wm.eduwm.edu
+Linux in HPC: Shell, batch scripts.wm.eduwm.edu
+External: SLURM intro videos/tutorials from other institutions (e.g., LLNL, CaSToRC).youtube.comhpc.llnl.gov
+Email hpc-help@wm.edu for support or software requests.wm.edu
+
+Why the Error "sbatch: error: Batch job submission failed: Requested node configuration is not available" and Solutions
+This error indicates SLURM cannot find nodes matching your exact request, even theoretically (it's not queued; it's rejected outright). It's not about current availability but invalid specs.stackoverflow.com+5 more
+
+Likely Causes Based on Your Script and W&M Config:
+Core/Task Mismatch: --ntasks-per-node=20, but if SLURM sees Bora nodes as 40 CPUs (due to hyperthreading), it may reject. Docs inconsistently list 20 physical cores vs. 40 threads.stackoverflow.comwm.edu Examples use 20, but try 40 if hyperthreading is enabled.
+Memory Over-Request: --mem=120G on 128 GB nodes, but system reserves ~8 GB for OS; max usable may be <120 GB.docs.ycrc.yale.edu Reduce to 100G-110G.
+Invalid Constraint: --constraint=bo is correct per docs, but try removing it (default on Bora front-end) or use --partition if Bora is a partition (not explicitly documented, but check with sinfo).wm.eduask.cyberinfrastructure.org
+Node Unavailability/Config Change: No nodes match (e.g., all down, or 2025 updates changed specs). Use sinfo -N -o "%a %c %m %f %R" to check availability, CPUs, memory, features, partition.github.comslurm.schedmd.com
+Other: Walltime too long (but 12h <72h); multi-node issue (try --nodes=1); quota exceeded (check sacctmgr show user); script shell output in startup files.wm.edudocs.ycrc.yale.edu
+Step-by-Step Fixes:
+Run sinfo and scontrol show config | grep Cpu to inspect node config.
+Test minimal script: Remove --constraint, reduce --mem=100G, try --ntasks-per-node=40.
+Interactive test: salloc with same params; if fails, adjust.
+Check logs: sacct -j LAST_JOBID --format=JobID,ReqMem,ReqCPUS,State,Reason.
+If persists, email hpc-help@wm.edu with sinfo output and script.slurm.schedmd.comservices.northwestern.edu
+This covers the exhaustive details from available sources. If needed, provide sinfo output for further diagnosis.
+
+
+
+
+60 web pages
+
+
+
+
+
+
+
+now tell me how to fix the errror: (/sciclone/scr-lst/ecsampson/polar-bear-env) 133 [bora] sinfo
+PARTITION AVAIL  TIMELIMIT  NODES  STATE NODELIST
+batch*       up 3-00:00:00      5    mix bo[16,24,27,29,44]
+batch*       up 3-00:00:00      6  alloc bo[17-18,20-21,31,43]
+batch*       up 3-00:00:00     35   idle bo[03-08,10-15,19,22-23,25-26,28,30,33-34,37-38,42,45-55]
+hima         up 3-00:00:00      2   resv hi[02-03]
+hima         up 3-00:00:00      1    mix hi01
+hima         up 3-00:00:00      4   idle hi[04-07]
+(/sciclone/scr-lst/ecsampson/polar-bear-env) 134 [bora] 12 [kuro] cat check-127927.out 
+Checking available resources...
+================================
+Hostname: bo33.sciclone.wm.edu
+Date: Thu Jul 24 04:07:29 PM EDT 2025
+
+SLURM Info:
+-----------
+NODELIST             CPUS       MEMORY     AVAIL_FEATURES            GRES      
+bo[03-08,10-31,33-34 20         128172     bora,bo                   (null)    
+hi02                 32         257322     hima,hi,hi02              (null)    
+hi03                 32         257322     hima,hi,hi03              (null)    
+hi01                 32         257322     hima,hi,hi01              (null)    
+hi04                 32         257322     hima,hi,gpu,p100,hi04     gpu:tesla_
+hi05                 32         257322     hima,hi,gpu,p100,hi05     gpu:tesla_
+hi06                 32         257322     hima,hi,hi06              (null)    
+hi07                 32         257322     hima,hi,gpu,v100,hi07     gpu:tesla_
+
+Partition Info:
+---------------
+PARTITION AVAIL  TIMELIMIT   NODES(A/I/O/T) NODELIST
+batch*       up 3-00:00:00        40/6/0/46 bo[03-08,10-31,33-34,37-38,42-55]
+hima         up 3-00:00:00          5/2/0/7 hi[01-07]
+
+Available Constraints:
+---------------------
+NODELIST             AVAIL_FEATURES                
+bo[03-08,10-31,33-34 bora,bo                       
+hi02                 hima,hi,hi02                  
+hi03                 hima,hi,hi03                  
+hi01                 hima,hi,hi01                  
+hi04                 hima,hi,gpu,p100,hi04         
+hi05                 hima,hi,gpu,p100,hi05         
+hi06                 hima,hi,hi06                  
+hi07                 hima,hi,gpu,v100,hi07         
+
+GPU Info:
+---------
+NODELIST             GRES       GROUPS     ACTIVE_FEATURES     
+bo[03-08,10-31,33-34 (null)     all        bora,bo             
+hi02                 (null)     all        hima,hi,hi02        
+hi03                 (null)     all        hima,hi,hi03        
+hi01                 (null)     all        hima,hi,hi01        
+hi04                 gpu:tesla_ all        hima,hi,gpu,p100,hi0
+hi05                 gpu:tesla_ all        hima,hi,gpu,p100,hi0
+hi06                 (null)     all        hima,hi,hi06        
+hi07                 gpu:tesla_ all        hima,hi,gpu,v100,hi0
+13 [kuro] 
+
+
+
+
+Thought for 154s
+To fix the "sbatch: error: Batch job submission failed: Requested node configuration is not available" error on William & Mary's Bora HPC subcluster, we'll systematically diagnose and address the issue based on the provided sinfo and resource check outputs, official W&M HPC documentation, SLURM best practices, and common causes of this specific error. This error occurs at submission time (not runtime) when SLURM determines that no nodes in the cluster match the exact combination of your requested resources (e.g., nodes, tasks/cores, memory, constraints/features, etc.). It's not due to the cluster being busy—it's a configuration mismatch, so the job isn't even queued.
+
+Your script's key resource requests are:
+
+--nodes=2
+--ntasks-per-node=20
+--constraint=bo
+--mem=120G (per node)
+--time=12:00:00 (well under the 72-hour max on Bora)
+From your sinfo and check outputs:
+
+Partition: You're targeting the default batch* partition (for Bora/bo nodes), with 35 idle nodes available (plenty for --nodes=2).
+Cores/CPUs: Bora (bo) nodes have 20 CPUs each, matching --ntasks-per-node=20 (mandatory per docs, as it uses all physical cores; hyperthreading isn't factored here).
+Memory: Nodes show 128172 MB allocatable (~125.17 GB after conversion: 128172 / 1024 ≈ 125.17 GB). This is slightly less than a full 128 GB, likely due to system overhead reservations (common in HPC setups).
+Features/Constraints: Available features are bora,bo for bo nodes. Docs explicitly recommend --constraint=bo (or -C bo) for Bora jobs.
+Other: No GPUs on Bora (GRES=(null)), but your script doesn't request any (via --gpus or -C gpu), so that's fine. Hima (hi) nodes have 32 CPUs and GPUs, but you're not targeting them.
+Step-by-Step Troubleshooting and Fixes
+Follow these in order, testing submission after each change. Use a minimal test script first (see below) to isolate issues without your full code. Submit from the Bora front-end (bora.sciclone.wm.edu) as you're doing. If a test succeeds, apply the change to your original script.
+
+Verify Basic Submission Works (Rule Out User/Env Issues):
+Create a minimal test script (test.slurm) with just the essentials:
+text
+
+Collapse
+
+Wrap
+
+Copy
+#!/bin/tcsh
+#SBATCH --job-name=test
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=20
+#SBATCH --constraint=bo
+#SBATCH --time=00:05:00
+#SBATCH --output=test-%j.out
+#SBATCH --error=test-%j.err
+
+echo "Test job running on $SLURM_JOB_NODELIST"
+sleep 10
+Submit: sbatch test.slurm
+If it fails with the same error, proceed. If it works, the issue is in your full script (e.g., syntax errors, invalid paths, or shell startup issues like echoes in ~/.cshrc—remove any output from startup files as they can corrupt SLURM parsing).
+Also check your account/quota: sacctmgr show user $USER. If suspended or over quota, email hpc-help@wm.edu.
+Reduce Memory Request (Most Likely Cause):
+Your --mem=120G (122880 MB) is close to the allocatable 128172 MB (~125 GB), but SLURM often reserves ~5-10% for OS overhead. Requests exceeding effective max fail immediately with this error.
+Fix: Change to --mem=100G (or --mem=102400M for precision). This leaves headroom.
+In test script: Add #SBATCH --mem=100G and resubmit.
+Why? W&M docs don't specify exact max, but general SLURM troubleshooting (e.g., from OSC and Stack Overflow) highlights over-requesting memory as a top cause. Your check output confirms ~125 GB effective max.
+Alternative: Omit --mem entirely (defaults to all available per node, but risky for shared nodes). Or use --mem=0 to request all.
+Adjust or Remove Constraint (Potential Mismatch):
+Docs confirm --constraint=bo for Bora, and your check shows features bora,bo. However, if there's a config typo or update (date is July 26, 2025—possible recent changes), it could reject.
+Fixes:
+Try --constraint=bora (alternative feature name from your check).
+Or remove --constraint=bo entirely. Since you're submitting from Bora's front-end and default partition is batch* (exclusive to bo nodes), it's often redundant. Docs show Bora examples without it for batch jobs.
+Explicitly add --partition=batch (though it's default, this ensures targeting bo nodes only; Hima is separate).
+In test script: Remove or change the constraint line and resubmit.
+Check Core/Task Configuration:
+Your --ntasks-per-node=20 matches Bora's 20 CPUs. But if SLURM sees hyperthreads (40 logical CPUs), it might conflict.
+Fix: If the above fails, try --ntasks-per-node=40 (for hyperthreading) or add --cpus-per-task=1 explicitly (default, but reinforces).
+Docs emphasize 20 for Bora (physical cores), so this is unlikely but test if needed.
+Note: Don't mix with --ntasks (total cores); stick to per-node for multi-node jobs.
+Other Common Fixes and Checks:
+Walltime: Your 12:00:00 is fine (<72 hours), but test with shorter (e.g., 00:30:00) to rule out.
+Shell/Env Issues: Ensure script starts with #!/bin/tcsh (default on W&M). Add source /usr/local/etc/sciclone.cshrc after shebang if using non-default env (fixes module/path issues).
+Inspect Node Config: Run scontrol show node bo03 (pick an idle node from sinfo). Look for:
+RealMemory=... (total physical, e.g., ~131072 MB for 128 GB).
+AllocMem=... (allocatable; matches your check's 128172 MB).
+CfgTRES=... (confirm cpu=20, mem=128172M).
+Features=bora,bo (confirm). If memory <120G effective, that's the culprit. Share output with hpc-help@wm.edu.
+Cluster Status: Run sinfo -o "%20N %10c %10m %20f %10G" for detailed features/GRES per node. Ensure all idle bo nodes match your requests.
+Debug Mode: Request an interactive session: salloc -N2 --ntasks-per-node=20 --constraint=bo --mem=100G -t 00:30:00. If this works, batch should too (rules out script-specific issues).
+Resubmit Logic: Your script has resubmit on signal—good, but test without for now.
+If Nothing Works
+Email hpc-help@wm.edu with:
+Your full script.
+The error message.
+Outputs from sinfo, your check file, scontrol show node <idle-node>, and slurmctld.log if accessible (admins can check).
+Mention date (July 26, 2025) for any recent updates.
+Possible rare causes: Cluster misconfig (e.g., features changed), account restrictions, or SLURM bug (see SchedMD bug reports for similar).
+Once fixed, your fiber optics NN training should run—note it loads CUDA, but Bora has no GPUs, so if your code requires GPUs (e.g., PyTorch CUDA), switch to Hima: Change --constraint=bo to --constraint=hi, add --gpus=1 (or more), and adjust --ntasks-per-node=32. Hima has P100/V100 GPUs on some nodes (use -C p100 or -C v100 if needed). Test CUDA availability in an interactive job first.wm.edu+4 more
+
+
+
+
+29 web pages
+
+
+
+
+
+
+
+I need you to just create a fixed version of my original slurm file
+
+
+
+
+Thought for 6s
+#!/bin/tcsh
+
+==============================================================================
+SLURM Job Script for Fiber Optics Neural Network Training on Bora HPC
+William & Mary HPC - Bora Subcluster
+==============================================================================
+#SBATCH --job-name=fiber-optics-nn     # Job name for identification
+#SBATCH --nodes=2                       # Request 2 compute nodes
+#SBATCH --ntasks-per-node=20            # Use all 20 cores per Bora node (mandatory)
+#SBATCH --constraint=bo                 # Target Bora nodes specifically
+#SBATCH --time=12:00:00                 # 12-hour walltime for intensive training
+#SBATCH --mem=100G                      # Request 100GB per node (reduced for overhead)
+#SBATCH --output=slurm-%j.out           # Standard output file
+#SBATCH --error=slurm-%j.err            # Standard error file
+#SBATCH --mail-type=BEGIN,END,FAIL      # Email notifications
+#SBATCH --mail-user=your_userid@wm.edu  # CHANGE THIS to your W&M email
+#SBATCH --signal=B:USR1@600             # Send signal 10 minutes before timeout
+
+==============================================================================
+Environment Setup
+==============================================================================
+Print job information
+echo "========================================================"
+echo "SLURM Job ID: $SLURM_JOB_ID"
+echo "Job started on: date"
+echo "Running on nodes: $SLURM_JOB_NODELIST"
+echo "Number of nodes: $SLURM_NNODES"
+echo "Number of tasks: $SLURM_NTASKS"
+echo "Working directory: pwd"
+echo "========================================================"
+
+Set up working directories
+set job_dir = $SLURM_SUBMIT_DIR
+set scratch_dir = /sciclone/pscr/$USER/fiber-optics-nn
+set checkpoint_dir = /sciclone/pscr/$USER/fiber-optics-nn/checkpoints
+set data_cache_dir = /sciclone/pscr/$USER/fiber-optics-nn/cache
+set results_dir = /sciclone/pscr/$USER/fiber-optics-nn/results
+set logs_dir = /sciclone/pscr/$USER/fiber-optics-nn/logs
+
+Create necessary directories on parallel scratch
+echo "Creating working directories on /sciclone/pscr..."
+mkdir -p $scratch_dir
+mkdir -p $checkpoint_dir
+mkdir -p $data_cache_dir
+mkdir -p $results_dir
+mkdir -p $logs_dir
+
+Copy project to scratch for better I/O performance
+echo "Copying project files to parallel scratch..."
+cd $job_dir
+rsync -av --exclude='dataset/chunk_' --exclude='checkpoints/.pth' 
+
+--exclude='logs/' --exclude='results/' --exclude='cache/*' 
+
+./ $scratch_dir/
+
+Copy dataset if not already on scratch
+if (! -d $scratch_dir/dataset/chunk_1) then
+echo "Copying dataset to scratch (first run)..."
+rsync -av dataset/ $scratch_dir/dataset/
+endif
+
+Navigate to scratch directory
+cd $scratch_dir
+
+==============================================================================
+Module Loading
+==============================================================================
+echo " "
+echo "Loading required modules..."
+
+Purge any existing modules
+module purge
+
+Load required modules for PyTorch and CUDA
+Adjust these based on available modules (use 'module avail' to check)
+module load anaconda3/2023.09
+module load cuda/12.3
+
+If using Intel MPI for distributed training (optional)
+module load intel/2024.0
+module load openmpi-ib/intel-2024.0/4.1.6
+echo " "
+echo "Currently loaded modules:"
+module list
+echo " "
+
+==============================================================================
+Python Environment Setup
+==============================================================================
+echo "Setting up Python environment..."
+
+Activate conda environment (adjust path as needed)
+Option 1: If you have a conda environment on scratch
+if (-d /sciclone/pscr/$USER/conda-envs/fiber-optics-env) then
+conda activate /sciclone/pscr/$USER/conda-envs/fiber-optics-env
+else
+
+Option 2: Create environment if it doesn't exist
+echo "Creating conda environment..."
+conda create -p /sciclone/pscr/$USER/conda-envs/fiber-optics-env python=3.10 -y
+conda activate /sciclone/pscr/$USER/conda-envs/fiber-optics-env
+
+Install requirements
+echo "Installing Python packages..."
+pip install --no-cache-dir -r requirements.txt
+endif
+
+Verify PyTorch and CUDA
+echo " "
+echo "Verifying PyTorch installation:"
+python -c "import torch; print(f'PyTorch version: {torch.version}'); print(f'CUDA available: {torch.cuda.is_available()}'); print(f'CUDA device count: {torch.cuda.device_count()}')"
+
+==============================================================================
+Distributed Training Setup (if using multiple nodes)
+==============================================================================
+Set up distributed training environment variables
+if ($SLURM_NNODES > 1) then
+echo " "
+echo "Setting up distributed training environment..."
+
+Get master node address
+setenv MASTER_PORT expr 29500 + $SLURM_JOB_ID % 1000
+set master_addr = scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n 1
+setenv MASTER_ADDR $master_addr
+setenv WORLD_SIZE $SLURM_NTASKS
+setenv RANK $SLURM_PROCID
+setenv LOCAL_RANK $SLURM_LOCALID
+
+echo "MASTER_ADDR: $MASTER_ADDR"
+echo "MASTER_PORT: $MASTER_PORT"
+echo "WORLD_SIZE: $WORLD_SIZE"
+
+Use distributed version of the script
+set python_script = "core/main_distributed.py"
+else
+
+Single node training
+set python_script = "core/main.py"
+endif
+
+==============================================================================
+Configure Training Parameters
+==============================================================================
+echo " "
+echo "Configuring training parameters..."
+
+Update config file paths for HPC scratch
+cat > config/hpc_overrides.yaml << EOF
+
+HPC-specific path overrides
+system:
+data_path: "$scratch_dir/dataset"
+tensorized_data_path: "$scratch_dir/reference"
+reference_data_path: "$scratch_dir/reference"
+checkpoints_path: "$checkpoint_dir"
+results_path: "$results_dir"
+cache_path: "$data_cache_dir"
+logs_path: "$logs_dir"
+log_file_path: "$logs_dir/hpc_fiber_optics_$SLURM_JOB_ID.log"
+
+Adjust for multi-node if needed
+optimization:
+use_distributed: $(if ($SLURM_NNODES > 1) echo "true" else echo "false")
+world_size: $SLURM_NTASKS
+rank: 0  # Will be set by environment variable
+
+Performance settings for Bora
+training:
+num_workers: 16  # Utilize Bora's cores
+batch_size: 32   # Adjust based on GPU memory
+num_epochs: 200  # Full 200 epochs for 12-hour run
+
+monitoring:
+tensorboard_dir: "$logs_dir/runs/experiment_$SLURM_JOB_ID"
+EOF
+
+==============================================================================
+Signal Handler for Checkpointing
+==============================================================================
+Define signal handler for graceful shutdown
+onintr save_checkpoint_and_exit
+
+==============================================================================
+Launch Training
+==============================================================================
+echo " "
+echo "========================================================"
+echo "Starting fiber optics neural network training..."
+echo "========================================================"
+
+Check if resuming from checkpoint
+set latest_checkpoint = ls -t $checkpoint_dir/checkpoint_epoch_*.pth |& head -1
+if ("$latest_checkpoint" != "") then
+echo "Found checkpoint: $latest_checkpoint"
+set resume_flag = "--checkpoint $latest_checkpoint"
+else
+echo "Starting fresh training (no checkpoint found)"
+set resume_flag = ""
+endif
+
+Launch training with srun for proper task distribution
+if ($SLURM_NNODES > 1) then
+
+Distributed training across multiple nodes
+srun --ntasks=$SLURM_NTASKS --ntasks-per-node=20 
+
+python $python_script 
+
+--config config/config.yaml 
+
+--config-override config/hpc_overrides.yaml 
+
+$resume_flag
+else
+
+Single node training
+python $python_script 
+
+--config config/config.yaml 
+
+--config-override config/hpc_overrides.yaml 
+
+$resume_flag
+endif
+
+Save exit status
+set exit_status = $status
+
+==============================================================================
+Post-Processing
+==============================================================================
+echo " "
+echo "Training completed with exit status: $exit_status"
+
+Copy results back to job directory
+echo "Copying results back to job directory..."
+rsync -av $checkpoint_dir/ $job_dir/checkpoints/
+rsync -av $results_dir/ $job_dir/results/
+rsync -av $logs_dir/ $job_dir/logs/
+
+Copy the best model specifically
+if (-f $checkpoint_dir/best_model.pth) then
+cp $checkpoint_dir/best_model.pth $job_dir/checkpoints/
+echo "Best model saved to: $job_dir/checkpoints/best_model.pth"
+endif
+
+echo " "
+echo "========================================================"
+echo "Job finished on: date"
+echo "========================================================"
+
+exit $exit_status
+
+==============================================================================
+Signal Handler Implementation
+==============================================================================
+save_checkpoint_and_exit:
+echo " "
+echo "Received termination signal, initiating checkpoint save..."
+
+Send checkpoint signal to Python process
+killall -USR1 python
+
+Wait for checkpoint to complete
+sleep 60
+
+Copy current checkpoints back
+rsync -av $checkpoint_dir/ $job_dir/checkpoints/
+
+Check if we should resubmit
+if ($exit_status != 0) then
+echo "Resubmitting job to continue training..."
+
+Create resubmission script
+cat > resubmit_job.sh << 'RESUBMIT_EOF'
+#!/bin/bash
+cd $job_dir
+sbatch run-job.slurm
+RESUBMIT_EOF
+
+Submit continuation job
+set new_job = sbatch --parsable --dependency=afterany:$SLURM_JOB_ID resubmit_job.sh
+echo "Resubmitted as job: $new_job"
+endif
+
+exit 0

@@ -1,0 +1,167 @@
+# Fiber Optic Defect Detection Neural Network Configuration
+# Based on statistical analysis of 65,606 images across 40 classes
+
+# Model Architecture Parameters
+model:
+  backbone: 'efficientnet_b4'
+  num_region_classes: 4  # background, core, cladding, ferrule
+  num_defect_classes: 8  # Based on defect classification analysis
+  dropout_rate: 0.3
+  
+# Statistical Feature Integration (from analysis reports)
+statistical_features:
+  use_statistical_guidance: true
+  feature_dimensions: 50
+  
+  # Statistical parameters from analysis
+  normalization_stats:
+    center_x: {mean: 595.8718, std: 116.3471}
+    center_y: {mean: 447.1887, std: 87.0680}
+    core_radius: {mean: 114.4197, std: 78.4117}
+    cladding_radius: {mean: 208.8852, std: 100.5034}
+    core_cladding_ratio: {mean: 0.5302, std: 0.1822}
+    num_valid_results: {mean: 6.8365, std: 0.5569}
+  
+  # Correlation weights from analysis
+  correlation_weights:
+    core_cladding_strong: 0.6972
+    radius_correlation: 0.7964
+    geometric_correlation: 0.8419
+
+# Master Similarity Equation Parameters
+similarity_equation:
+  weights:
+    center_x: 0.362261
+    center_y: 0.202874
+    core_radius: 0.164540
+    cladding_radius: 0.270316
+    core_cladding_ratio: 8.887e-07
+    num_valid_results: 8.298e-06
+
+# Regression Model Parameters (from statistical analysis)
+regression_models:
+  core_radius:
+    r2_score: 0.5745
+    intercept: 181.2782
+    use_accuracy_features: true
+  
+  cladding_radius:
+    r2_score: 0.4290
+    intercept: 313.8946
+    use_accuracy_features: true
+    
+  core_cladding_ratio:
+    r2_score: 0.5231
+    intercept: 0.6010
+    use_accuracy_features: true
+
+# Training Configuration (based on neural network recommendations)
+training:
+  batch_size: 128
+  learning_rate: 0.001
+  min_lr: 1.0e-05
+  weight_decay: 0.01
+  epochs: 50
+  gradient_clip_val: 1.0
+  
+  # Optimizer settings
+  optimizer: 'AdamW'
+  scheduler: 'CosineAnnealingLR'
+  
+  # Loss weights for multi-task learning
+  loss_weights:
+    seg_weight: 1.0
+    defect_weight: 2.0
+    core_radius_weight: 0.5
+    cladding_radius_weight: 0.5
+  
+  # Early stopping
+  patience: 10
+  min_delta: 0.001
+
+# Data Configuration
+data:
+  dataset_path: 'dataset'
+  reference_path: 'reference'
+  num_workers: 8
+  pin_memory: true
+  
+  # Augmentation parameters (based on recommendations)
+  augmentation:
+    use_advanced_augmentation: true
+    mixup_alpha: 0.1
+    cutmix_alpha: 1.0
+    
+# Logging and Checkpointing
+logging:
+  log_interval: 100
+  save_interval: 5
+  log_level: 'INFO'
+  
+# HPC Bora Specific Settings
+hpc:
+  gpu_memory_fraction: 0.95
+  distributed_training: false
+  mixed_precision: true
+  
+# Feature Extraction Parameters
+feature_extraction:
+  # OpenCV parameters
+  hough_circles:
+    dp: 1
+    min_dist: 20
+    param1: 50
+    param2: 30
+    min_radius: 10
+    max_radius: 300
+  
+  # GLCM parameters
+  glcm_distances: [1, 2, 3]
+  glcm_angles: [0, 45, 90, 135]
+  
+  # Statistical analysis parameters
+  use_jarque_bera: true
+  use_pca_analysis: true
+  pca_components: 12  # Based on 95% variance analysis
+  
+# Clustering Parameters (based on analysis)
+clustering:
+  use_kmeans: true
+  n_clusters: 4  # Minor defects, widespread scratching, textural anomalies, blackout
+  cluster_profiles:
+    cluster_0: "Minor Structural Defects"
+    cluster_1: "Widespread Scratching & Low Similarity" 
+    cluster_2: "Textural & Topological Anomalies"
+    cluster_3: "Blackout & Extreme Signal Loss"
+
+# Defect Detection Parameters
+defect_detection:
+  confidence_threshold: 0.75
+  nms_threshold: 0.5
+  max_detections_per_image: 50
+  
+  # Defect types based on analysis
+  defect_types:
+    - 'scratches'
+    - 'digs' 
+    - 'blobs'
+    - 'edge_irregularities'
+    - 'contamination'
+    - 'chips'
+    - 'cracks'
+    - 'burns'
+
+# Performance Monitoring
+performance:
+  track_gpu_usage: true
+  track_memory_usage: true
+  profile_training: false
+  
+# Ensemble Configuration (based on recommendations)
+ensemble:
+  use_ensemble: true
+  ensemble_size: 5
+  strategies:
+    - 'different_architectures'
+    - 'different_initializations' 
+    - 'cross_validation_folds'

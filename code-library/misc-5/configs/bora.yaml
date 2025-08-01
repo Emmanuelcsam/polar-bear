@@ -1,0 +1,63 @@
+# Bora Cluster Configuration for Fiber Optic End-Face CNN
+# Incorporates statistical priors from analysis reports
+
+# Data Configuration
+data_root: "../dataset"
+lmdb: "../cache/endfaces.lmdb"  # optional LMDB cache
+bs: 8
+w: 8  # DataLoader workers
+img_size: 256
+
+# Model Configuration
+num_classes: 40  # Based on report-010.txt analysis
+stat_dim: 88     # Statistical feature dimension from PCA analysis
+
+# Training Configuration
+lr: 3e-4
+min_lr: 1e-5
+epochs: 50
+ckpt_dir: "../checkpoints"
+
+# Loss Weights (based on statistical analysis)
+dice_weight: 1.0
+focal_weight: 1.0
+stat_weight: 0.5  # Mahalanobis loss weight
+focal_gamma: 2.0
+focal_alpha: 0.25
+
+# Statistical Priors (from report-009.txt and report-012.txt)
+ref_stats: "../reference/ref_stats.pt"  # Will be created from statistical analysis
+
+# Class Imbalance (from report-010.txt)
+# imbalance_ratio: 34571.0 (dirty-image vs other classes)
+# Using focal loss to handle this imbalance
+
+# PCA Configuration (from report-012.txt)
+# 12 principal components explain 95% of variance
+pca_components: 12
+
+# Mahalanobis Distance Parameters (from report-009.txt)
+# Mean: 0.145, Std: 0.210, Range: 1.118
+mahal_mean: 0.145
+mahal_std: 0.210
+
+# SSIM Parameters (from report-009.txt)
+# Mean: 0.810, Std: 0.200, Range: 0.948
+ssim_mean: 0.810
+ssim_std: 0.200
+
+# Cluster Analysis (from report-012.txt)
+# 4 distinct clusters identified
+num_clusters: 4
+
+# Validation Configuration
+val_interval: 5  # Validate every 5 epochs
+save_interval: 5  # Save checkpoint every 5 epochs
+
+# Distributed Training
+dist_backend: "nccl"
+dist_url: "env://"
+
+# Logging
+log_interval: 20  # Log every 20 steps
+tensorboard: true 

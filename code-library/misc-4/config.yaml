@@ -1,0 +1,109 @@
+# Fiber Optic Quality Assurance CNN Configuration
+# Integrated End-to-End CNN Architecture
+
+# Data Configuration
+data:
+  data_dir: "dataset"
+  reference_dir: "reference"
+  image_size: 512
+  batch_size: 8
+  num_workers: 4
+  train_split: 0.9
+  random_seed: 42
+
+# Model Architecture
+model:
+  in_channels: 3
+  num_zones: 3  # core, cladding, ferrule
+  num_defect_types: 4  # scratches, pits, contamination, edge_defects
+  encoder_channels: [64, 128, 256, 512, 1024]
+  attention_channels: [256, 128, 64, 32]
+
+# Training Configuration
+training:
+  epochs: 50
+  learning_rate: 1e-3
+  weight_decay: 1e-4
+  scheduler: "cosine"
+  warmup_epochs: 5
+  
+  # Loss weights
+  zone_loss_weight: 1.0
+  defect_loss_weight: 1.0
+  quality_loss_weight: 0.5
+  
+  # Focal Loss parameters
+  focal_alpha: 0.25
+  focal_gamma: 2.0
+  dice_weight: 0.6
+
+# Data Augmentation
+augmentation:
+  train:
+    - HorizontalFlip: {p: 0.5}
+    - VerticalFlip: {p: 0.3}
+    - RandomRotate90: {p: 0.5}
+    - RandomBrightnessContrast: {brightness_limit: 0.2, contrast_limit: 0.2, p: 0.5}
+    - GaussNoise: {var_limit: [10.0, 50.0], p: 0.3}
+    - Blur: {blur_limit: 3, p: 0.3}
+    - ElasticTransform: {alpha: 50, sigma: 5, p: 0.2}
+    - GridDistortion: {num_steps: 5, p: 0.2}
+    - OpticalDistortion: {distort_limit: 0.1, p: 0.2}
+  
+  val:
+    - Resize: {height: 512, width: 512}
+    - Normalize: {mean: [0.485, 0.456, 0.406], std: [0.229, 0.224, 0.225]}
+
+# HPC Configuration
+hpc:
+  nodes: 1
+  gpus_per_node: 8
+  cpus_per_task: 6
+  memory: "240G"
+  time_limit: "72:00:00"
+  constraint: "bo"
+  
+  # Distributed training
+  backend: "nccl"
+  init_method: "env://"
+  world_size: 8
+  
+  # Environment
+  conda_env: "fiber-pure-env"
+  python_version: "3.11"
+  cuda_version: "12.3"
+
+# Output Configuration
+output:
+  checkpoint_dir: "checkpoints"
+  log_dir: "logs"
+  tensorboard_dir: "runs"
+  wandb_project: "fiber-optic-quality"
+  
+  # Model saving
+  save_frequency: 10
+  save_best: true
+  save_last: true
+
+# Evaluation Configuration
+evaluation:
+  metrics: ["iou", "dice", "precision", "recall", "f1"]
+  threshold: 0.5
+  num_classes: 4
+  
+  # Quality assessment thresholds
+  quality_thresholds:
+    pass: 0.8
+    warning: 0.6
+    fail: 0.4
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "fiber_cnn_training.log"
+  
+  # Progress tracking
+  log_frequency: 10
+  tensorboard_frequency: 100
+  wandb_frequency: 50 

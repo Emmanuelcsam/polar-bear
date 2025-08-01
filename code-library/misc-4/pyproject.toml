@@ -1,0 +1,154 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fiber-cnn-qa"
+version = "0.1.0"
+description = "Fiber Optic Quality Assurance using CNN"
+readme = "README.md"
+requires-python = ">=3.8,<3.12"
+license = {text = "MIT"}
+authors = [
+    {name = "Fiber CNN QA Team", email = "team@fiber-cnn-qa.com"}
+]
+keywords = ["fiber-optics", "computer-vision", "quality-assurance", "deep-learning"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Image Processing",
+]
+
+dependencies = [
+    "torch>=2.0.0",
+    "torchvision>=0.15.0",
+    "torchaudio>=2.0.0",
+    "opencv-python>=4.8.0",
+    "albumentations>=1.3.0",
+    "Pillow>=9.0.0",
+    "numpy>=1.21.0,<1.25.0",
+    "scipy>=1.10.0,<1.11.0",
+    "scikit-learn>=1.0.0,<1.4.0",
+    "pandas>=1.5.0,<2.1.0",
+    "matplotlib>=3.5.0,<3.8.0",
+    "seaborn>=0.11.0",
+    "tensorboard>=2.10.0",
+    "wandb>=0.13.0",
+    "tqdm>=4.60.0",
+    "PyYAML>=6.0",
+    "pathlib2>=2.3.7",
+    "mpi4py>=3.1.0",
+    "psutil>=5.8.0",
+    "GPUtil>=1.4.0",
+    "pypylon>=2.0.0",
+    "numba>=0.56.0,<0.58.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0.0,<7.4.0",
+    "pytest-cov>=3.0.0,<4.1.0",
+    "pytest-mock>=3.6.0,<3.11.0",
+    "pytest-xdist>=2.5.0,<3.1.0",
+    "black>=22.0.0,<23.4.0",
+    "isort>=5.10.0,<5.13.0",
+    "flake8>=5.0.0,<6.1.0",
+    "mypy>=0.991,<1.5.0",
+    "pylint>=2.15.0,<2.18.0",
+    "types-PyYAML>=6.0.0",
+    "types-requests>=2.28.0",
+    "pre-commit>=2.20.0,<3.1.0",
+    "jupyter>=1.0.0,<1.1.0",
+    "ipython>=8.0.0,<8.15.0",
+    "notebook>=6.4.0,<6.6.0",
+    "sphinx>=5.0.0,<6.1.0",
+    "sphinx-rtd-theme>=1.1.0,<1.3.0",
+    "myst-parser>=0.18.0,<1.1.0",
+    "memory-profiler>=0.58.0,<0.61.0",
+    "line-profiler>=3.5.0,<4.1.0",
+    "coverage>=6.0.0,<7.1.0",
+    "pytest-html>=3.0.0,<3.2.0",
+    "pytest-json-report>=1.4.0,<1.6.0",
+    "radon>=5.1.0,<5.2.0",
+    "mccabe>=0.7.0,<0.8.0",
+    "bandit>=1.7.0,<1.8.0",
+    "click>=8.0.0,<8.2.0",
+    "rich>=12.0.0,<13.1.0",
+    "colorama>=0.4.5,<0.4.7",
+    "ipdb>=0.13.0,<0.14.0",
+    "debugpy>=1.5.0,<1.7.0",
+]
+
+[project.scripts]
+fiber-cnn-train = "fiber_cnn_pure:main"
+fiber-cnn-monitor = "realtime_monitor:main"
+
+[project.urls]
+Homepage = "https://github.com/polar-bear/sauber"
+Repository = "https://github.com/polar-bear/sauber"
+Documentation = "https://github.com/polar-bear/sauber#readme"
+Issues = "https://github.com/polar-bear/sauber/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["*"]
+exclude = ["tests*", "test_*", "venv*", ".venv*", "version*"]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+known_first_party = ["fiber_cnn_pure", "realtime_monitor"]
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q --strict-markers"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+] 

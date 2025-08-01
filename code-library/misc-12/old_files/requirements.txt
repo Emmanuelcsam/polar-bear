@@ -1,0 +1,13 @@
+# Core dependencies for the geometric core detection and learning system
+opencv-python>=4.5.0
+numpy>=1.21.0
+torch>=1.9.0
+torchvision>=0.10.0
+
+# Optional dependencies
+# pypylon>=2.0.0  # Uncomment if using Pylon cameras
+
+# Additional utilities
+matplotlib>=3.5.0  # For visualization and analysis
+scikit-learn>=1.0.0  # For additional machine learning utilities
+scipy>=1.7.0  # For scientific computing 

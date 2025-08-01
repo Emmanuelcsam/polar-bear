@@ -1,0 +1,7 @@
+/var/spool/slurmd/job128550/slurm_script: line 30: module: command not found
+/var/spool/slurmd/job128550/slurm_script: line 34: module: command not found
+/var/spool/slurmd/job128550/slurm_script: line 39: activate: No such file or directory
+Traceback (most recent call last):
+  File "/sciclone/scr10/ecsampson/refractored/main.py", line 4, in <module>
+    import torch
+ModuleNotFoundError: No module named 'torch'

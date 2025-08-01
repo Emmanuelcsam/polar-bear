@@ -3,7 +3,7 @@ REM Continuous Auto Git Push Script with Timer
 REM Save this as: auto-git-loop.bat
 
 REM Configuration
-set REPO_PATH=C:\Users\Saem1001\Documents\GitHub\polar-bear
+set REPO_PATH=E:\GitHub\polar-bear
 set INTERVAL_SECONDS=1800
 REM 1800 = 30 minutes, 3600 = 1 hour, 7200 = 2 hours, 300 = 5 minutes
 

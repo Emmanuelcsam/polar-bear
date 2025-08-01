@@ -1,0 +1,48 @@
+12 [kuro] cat check-127927.out 
+Checking available resources...
+================================
+Hostname: bo33.sciclone.wm.edu
+Date: Thu Jul 24 04:07:29 PM EDT 2025
+
+SLURM Info:
+-----------
+NODELIST             CPUS       MEMORY     AVAIL_FEATURES            GRES      
+bo[03-08,10-31,33-34 20         128172     bora,bo                   (null)    
+hi02                 32         257322     hima,hi,hi02              (null)    
+hi03                 32         257322     hima,hi,hi03              (null)    
+hi01                 32         257322     hima,hi,hi01              (null)    
+hi04                 32         257322     hima,hi,gpu,p100,hi04     gpu:tesla_
+hi05                 32         257322     hima,hi,gpu,p100,hi05     gpu:tesla_
+hi06                 32         257322     hima,hi,hi06              (null)    
+hi07                 32         257322     hima,hi,gpu,v100,hi07     gpu:tesla_
+
+Partition Info:
+---------------
+PARTITION AVAIL  TIMELIMIT   NODES(A/I/O/T) NODELIST
+batch*       up 3-00:00:00        40/6/0/46 bo[03-08,10-31,33-34,37-38,42-55]
+hima         up 3-00:00:00          5/2/0/7 hi[01-07]
+
+Available Constraints:
+---------------------
+NODELIST             AVAIL_FEATURES                
+bo[03-08,10-31,33-34 bora,bo                       
+hi02                 hima,hi,hi02                  
+hi03                 hima,hi,hi03                  
+hi01                 hima,hi,hi01                  
+hi04                 hima,hi,gpu,p100,hi04         
+hi05                 hima,hi,gpu,p100,hi05         
+hi06                 hima,hi,hi06                  
+hi07                 hima,hi,gpu,v100,hi07         
+
+GPU Info:
+---------
+NODELIST             GRES       GROUPS     ACTIVE_FEATURES     
+bo[03-08,10-31,33-34 (null)     all        bora,bo             
+hi02                 (null)     all        hima,hi,hi02        
+hi03                 (null)     all        hima,hi,hi03        
+hi01                 (null)     all        hima,hi,hi01        
+hi04                 gpu:tesla_ all        hima,hi,gpu,p100,hi0
+hi05                 gpu:tesla_ all        hima,hi,gpu,p100,hi0
+hi06                 (null)     all        hima,hi,hi06        
+hi07                 gpu:tesla_ all        hima,hi,gpu,v100,hi0
+13 [kuro] 

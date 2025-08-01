@@ -1,0 +1,61 @@
+# How the Defect Detection Script Works
+
+## 1. Overview
+
+This script (`checkpoint-5.py`) is designed for real-time defect detection and feature extraction from a live video feed. It identifies three types of defects: blobs, digs, and scratches. To ensure the application remains responsive and does not freeze, it uses a multithreaded architecture to separate the demanding analysis tasks from the live video display.
+
+The system is hardcoded to use a Pylon-compatible industrial camera (like a Basler camera) and to perform full feature extraction on every frame that it analyzes.
+
+## 2. Core Architecture: Multithreading
+
+The script's biggest challenge is performing computationally expensive analysis on a live video stream without causing the feed to stutter or freeze. This is solved by using two main threads:
+
+### a. The Main Thread (UI and Camera)
+- **Responsibility:** Its primary job is to keep the application running smoothly for the user.
+- **Tasks:**
+    1.  **Camera Communication:** Continuously grabs the latest frame from the Pylon camera.
+    2.  **Display:** Shows the captured frame in a window (`Defect Detection`). This happens in real-time, providing a fluid video feed.
+    3.  **Queueing Frames:** It places the latest captured frame into a shared queue (`frames_to_process`) that the worker thread can access. This is a non-blocking action; it doesn't wait for the worker to finish.
+    4.  **Displaying Results:** It checks for the most recent analysis results from the worker thread and draws them on top of the live video feed. This means the user always sees the latest available defect information.
+    5.  **User Input:** Listens for the 'q' key to gracefully shut down the application.
+
+### b. The Worker Thread (Analysis)
+- **Responsibility:** To perform all the heavy computational tasks in the background without interrupting the main thread.
+- **Tasks:**
+    1.  **Frame Consumption:** Continuously checks the `frames_to_process` queue for a new frame to analyze.
+    2.  **Defect Detection:** Runs the advanced detection algorithms for blobs, digs, and scratches using the functions from the `defect_detectors` directory.
+    3.  **Feature Extraction:** After finding defects, it runs a comprehensive suite of feature extraction algorithms (Fourier, GLCM, Gradient, LBP, Morphological, and Statistical) on the frame.
+    4.  **Sharing Results:** Once the analysis is complete, it places the results (defect data and feature data) into a shared `shared_results` dictionary, which the main thread can then access for display.
+
+This parallel processing ensures that even if the analysis of a single frame takes a long time, the main thread is unaffected and the video feed remains smooth.
+
+## 3. Execution Flow
+
+1.  **Initialization:** The script starts, initializes the Pylon camera, and creates the `output` directory if it doesn't exist.
+2.  **Thread Launch:** The main thread starts the background worker thread.
+3.  **Main Loop:**
+    - The main thread grabs a frame from the camera.
+    - It puts the frame in the queue for the worker.
+    - The worker thread, running in parallel, grabs that frame and starts its intensive analysis.
+    - The main thread immediately grabs the *next* frame from the camera to keep the video live.
+    - It checks for the latest completed analysis from the worker and draws the corresponding defect overlays (blobs, digs, scratches) on the current frame.
+    - The frame is displayed to the user.
+    - This loop repeats, ensuring high FPS for the display while the worker processes frames as fast as it can in the background.
+4.  **Shutdown:** When 'q' is pressed, a stop signal is sent to the worker thread. The script waits for the worker to finish its current task, then releases the camera and closes all windows.
+
+## 4. Output
+
+-   **Live Display:** A window titled "Defect Detection" shows the live camera feed. Detected defects are highlighted with colored shapes:
+    -   **Blobs:** Cyan
+    -   **Digs:** Magenta
+    -   **Scratches:** Red
+-   **JSON Files:** For every frame that is analyzed by the worker thread, two JSON files are saved to the `output` directory:
+    -   `defects_frame_... .json`: Contains detailed data for every defect found in that frame, including position, size, and confidence.
+    -   `features_frame_... .json`: Contains a dictionary of all the extracted numerical features for that frame, providing a detailed textural and statistical snapshot.
+
+## 5. Dependencies
+
+To run this script, you need the following Python libraries installed:
+- `opencv-python`
+- `numpy`
+- `pypylon` (for Basler or other Pylon-compatible cameras)

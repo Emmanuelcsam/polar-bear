@@ -1,0 +1,666 @@
+﻿A Researcher's Comprehensive Guide to High-Performance Computing at William & Mary: From First Login to Advanced Job Submission on the Bora and Kuro Clusters
+
+
+
+
+Part I: Foundational Knowledge and System Access
+
+
+This document serves as an exhaustive technical guide for faculty, staff, and student researchers utilizing the High-Performance Computing (HPC) resources at William & Mary (W&M). It provides a consolidated, in-depth exploration of the W&M HPC ecosystem, with a specific focus on the operational details of the Bora and Kuro subclusters. The material herein covers the entire research workflow, from initial account setup and secure system access to the compilation of scientific code, execution of Python scripts, and the submission of complex computational jobs to the cluster schedulers.
+
+
+Section 1: Introduction to the William & Mary HPC Ecosystem
+
+
+
+
+Overview of Research Computing
+
+
+High-Performance Computing at William & Mary provides the computational power necessary to tackle advanced problems that are too computation-intensive or data-intensive for a standard desktop or laptop computer.1 These resources are applied across a diverse and expanding array of research disciplines, including but not limited to ocean modeling, quantum and particle physics, health sciences, acoustics, mathematics, operations research, Bayesian statistics, and econometrics.1
+The university's Research Computing division maintains a suite of HPC resources that are available at no cost to faculty, staff, and students for academic research and classroom projects.1 These centrally-managed systems represent a combined computational capacity of approximately 600 trillion double-precision floating-point operations per second (TFLOPS).1
+
+
+The Two-Campus, Heterogeneous Model
+
+
+The W&M HPC infrastructure is organized into two primary, interoperable cluster systems located on different campuses but linked by high-speed networks:
+* SciClone: Located on the main campus in Williamsburg.
+* Chesapeake: Located on the Virginia Institute of Marine Science (VIMS) campus at Gloucester Point.3
+A defining characteristic of the W&M HPC environment is its heterogeneity. Rather than consisting of a single, uniform supercomputer, each cluster is an aggregation of multiple generations of hardware.3 These distinct groups of computers, known as
+subclusters, possess varying hardware specifications (processors, memory), software configurations, and operating systems.3 This model offers significant advantages, including the ability to expand capacity gradually and more economically, support research with specific or legacy hardware requirements, and foster a flexible computing environment.3
+However, this heterogeneity places a distinct responsibility on the user. A computational workflow, including compilation flags and job submission scripts, is not universally portable across all subclusters. Achieving both correctness and optimal performance requires a conscious understanding of the target subcluster's specific architecture and software stack. This guide is designed to provide the necessary knowledge to navigate this complex and powerful ecosystem effectively.
+
+
+Prerequisites for Use
+
+
+A fundamental prerequisite for using the W&M HPC systems is a functional comfort with a Unix/Linux command-line interface.5 The clusters operate on distributions of Linux (historically CentOS, with newer systems on Rocky Linux), and all user interaction is conducted through a command-line shell after connecting via SSH.6
+For individuals new to this environment, W&M provides several valuable resources:
+* Unix—the Bare Minimum
+* UNIX / Linux Tutorial for Beginners
+* Writing tcsh shell scripts
+* The Linux command line for beginners (Ubuntu focused) 6
+Additionally, W&M users have access to numerous technical e-books through Swem Library, such as Unix Power Tools, Learning the Unix Operating System, and Linux Pocket Guide: Essential Commands.6
+As part of command-line proficiency, familiarity with a plain-text editor is essential for creating and modifying code and scripts. All W&M HPC login servers are equipped with vim, nano, and emacs.6 While
+nano is the most approachable for beginners, vim and emacs offer more powerful features for advanced users. Alternatively, users may edit files on their local machines and transfer them to the cluster using utilities like scp or sftp.6
+
+
+Acceptable Use Policy (AUP)
+
+
+Usage of W&M HPC systems is governed by the university's Acceptable Use Policies for faculty/staff and students.2 The core tenets of responsible use are paramount:
+* Individual Use Only: Accounts are granted for individual use and must not be shared. Sharing of credentials is a strict violation of policy and may result in the account being disabled and further disciplinary action.2
+* Academic and Research Focus: The HPC resources are provided for university research and instructional purposes. Commercial use is generally prohibited due to software licensing restrictions.2
+* Resource Responsibility: Users are expected to utilize shared resources—including compute nodes, filesystems, and networks—efficiently and responsibly to prevent undue strain on the systems for all other users.11
+
+
+Section 2: Gaining Access and Managing Your Account
+
+
+
+
+Requesting an Account
+
+
+Unlike many other university IT services, access to the HPC clusters is not automatic and must be explicitly requested.5 The process is as follows:
+1. Prerequisite: You must have an active W&M Username. A single HPC account provides access to both the SciClone and Chesapeake clusters.2
+2. Submission: Submit an account request through the official HPC portal. This same form is used for both new account requests and renewals of expired accounts.2
+
+
+Account Lifecycle Management
+
+
+HPC accounts are tied directly to a user's affiliation with the university and have a defined lifecycle that must be actively managed.
+* Account Expiration: Most accounts have an expiration date, typically corresponding to the end of an academic term or a date specified on the request form.2 Graduating students and relocating collaborators should consult the university's account inactivation schedule to determine when their primary W&M account will expire, which in turn affects their HPC access.2 Users can check their specific HPC account expiration date at any time by logging in and running the command:
+chage -l $USER | grep 't e'.2
+* Renewal: An email notification is sent approximately two weeks before an account is set to expire. To continue using the HPC services, the user must submit a new account request form to renew the account before the expiration date.2
+* Data Permanence Policy: This is a critical policy that all users must understand. The W&M HPC systems are computational resources, not archival or long-term storage facilities.5 Upon account expiration, after a minimum grace period of 30 days,
+all files associated with the expired account are subject to complete and permanent deletion.2 It is solely the user's responsibility to preserve necessary files by copying them to another location before the account expires. An expired account may be reactivated by submitting a renewal request, but if the grace period has passed, the associated files may no longer exist.2
+This direct link between university affiliation and data persistence necessitates a proactive data management strategy from every researcher. The onus is on the user to have an off-boarding plan for their data, whether that involves renewing their account, arranging for a transfer of data to a collaborator (by contacting hpc-help@wm.edu), or downloading it to personal or departmental storage.2
+
+
+External Collaborators
+
+
+W&M faculty and staff can sponsor external collaborators for HPC access. The process requires two distinct steps:
+   1. The W&M sponsor must first request an affiliate W&M Username for their collaborator via the "Request IT" system.12
+   2. Once the collaborator receives their new W&M Username and password, the collaborator must then use those credentials to fill out the separate HPC account request form themselves.12
+
+
+Section 3: Securely Connecting to the Clusters: The SSH Workflow
+
+
+
+
+The Principle of Secure Access
+
+
+All command-line access to the W&M HPC clusters is conducted exclusively through the Secure Shell (SSH) protocol.13 This ensures that the connection between a user's local computer and the HPC system is encrypted and secure.
+
+
+Access Scenarios
+
+
+How a user connects depends on their physical location relative to the campus network.
+   * On-Campus: When connected to the W&M or VIMS network (either via Ethernet or Wi-Fi), users can SSH directly to the front-end hostname of the desired subcluster.13 For example, to connect to the Bora cluster, the command would be:
+Bash
+ssh your_wm_user@bora.sciclone.wm.edu
+
+   * Off-Campus (VPN): A common method for off-campus access is to use the university's Virtual Private Network (VPN) service. The VPN creates a secure, encrypted tunnel that makes your computer appear as if it is on the campus network, after which you can use the direct SSH command as shown above.13 Note that file transfer speeds over the VPN can sometimes be slower depending on network traffic.13
+   * Off-Campus (Bastion Host - Recommended): The primary and most secure method for accessing HPC resources from off-campus is via the W&M IT bastion host, bastion.wm.edu.13 This host replaces the older
+stat.wm.edu gateway.13
+
+
+Tutorial: Connecting via the W&M Bastion Host (bastion.wm.edu)
+
+
+The use of a bastion host is a modern security practice designed to protect high-value internal resources like the HPC clusters. It acts as a single, hardened, and heavily monitored gateway from the public internet into the private campus network, significantly reducing the potential attack surface.16 This architecture is a deliberate security choice, meaning that simple, direct SSH from an off-campus location is intentionally disabled. Mastering the bastion host connection workflow is therefore a required skill for secure and productive remote work.
+      * Functionality: The W&M bastion host is a non-interactive jumphost or proxy. A user cannot log into it to get a shell; it only forwards the SSH connection to the intended destination.13
+      * Authentication: To use the bastion host, you must authenticate using one of two methods:
+      1. Duo Two-Factor Authentication (2FA): A push notification or code from the Duo Mobile app.
+      2. SSH Public Key: An SSH key pair where the public key has been uploaded to your W&M GitLab account at code.wm.edu.13 This is the recommended method for frequent users as it enables passwordless authentication.
+      * SSH Key Setup (Recommended):
+      1. Generate a Key Pair: If you do not already have one, open a terminal on your local machine (Linux, macOS, or Windows PowerShell) and run: ssh-keygen -t ed25519 -C "your_email@wm.edu". Press Enter to accept the default file location and it is highly recommended to enter a strong passphrase to protect your private key.
+      2. Add Public Key to GitLab: Navigate to your SSH Keys settings page on code.wm.edu. Copy the entire content of your public key file (e.g., ~/.ssh/id_ed25519.pub) and paste it into the "Key" field. Give it a descriptive title and save the key.18
+Never share or upload your private key (the file without the .pub extension).
+         * Connection Commands: The modern OpenSSH client uses the -J (or ProxyJump) flag to specify a bastion host.
+         * Linux/macOS/Windows PowerShell Example: To connect to the Kuro cluster through the bastion host, the command is:
+Bash
+ssh -J your_wm_user@bastion.wm.edu your_hpc_user@kuro.sciclone.wm.edu
+
+The system will first connect to bastion.wm.edu, prompt for your Duo 2FA or use your SSH key, and then prompt for your W&M password to log into the Kuro front-end.14
+         * Automating with ~/.ssh/config: To avoid typing the -J flag for every connection, you can create a persistent configuration. Add the following lines to your local ~/.ssh/config file (create it if it doesn't exist):
+Host bastion
+   HostName bastion.wm.edu
+   User your_wm_user
+
+Host *.sciclone.wm.edu *.hpc.vims.edu
+   User your_hpc_user
+   ProxyJump bastion
+
+With this configuration in place, you can simply type ssh kuro.sciclone.wm.edu from off-campus, and SSH will automatically use the bastion host.18
+
+
+Enabling X11 Forwarding
+
+
+To run applications with a graphical user interface (GUI) on the cluster and display them on your local machine, you must enable X11 forwarding. This is done by adding the -Y (or for older systems, -X) flag to your SSH command. This works in conjunction with the bastion host:
+
+
+Bash
+
+
+
+
+ssh -Y -J your_wm_user@bastion.wm.edu your_hpc_user@bora.sciclone.wm.edu
+
+This command establishes a secure, X11-capable session on the bora front-end, allowing you to launch graphical programs like xmgrace or the GUI version of MATLAB.14
+
+
+Part II: The Computing Environment and Cluster Architectures
+
+
+This section provides a detailed examination of the user environment on the clusters, including the command-line shell, software management system, and critical filesystem layout. It then presents a focused architectural comparison of the Bora and Kuro subclusters, highlighting the key differences a researcher must understand to use them effectively.
+
+
+Section 4: Navigating the HPC Environment
+
+
+
+
+The Shell Environment
+
+
+The command-line shell is the primary interface for interacting with the HPC systems. The choice of shell dictates the syntax for scripting and managing the user environment.
+            * Default Shell (tcsh): By default, all user accounts on the W&M HPC systems are configured to use the TC Shell (tcsh).7 This is a significant deviation from the
+bash shell that is standard on most modern Linux distributions. This historical choice has direct consequences for users, particularly those new to the W&M environment. Scripting syntax and commands for setting environment variables differ: for example, setenv VARIABLE value in tcsh versus export VARIABLE=value in bash. Users accustomed to bash will encounter errors if they attempt to use its syntax in the default tcsh environment.
+            * Requesting bash: Users who strongly prefer the Bourne-Again Shell (bash) can request to have their default shell changed by sending an email to hpc-help@wm.edu.20
+            * Platform-Specific Configuration: To manage the heterogeneous environment, the system uses platform-specific startup files. For the default tcsh shell, this is ~/.cshrc.$PLATFORM, where $PLATFORM is a variable that changes depending on the subcluster (e.g., ~/.cshrc.kuro on Kuro, ~/.cshrc.el7-xeon on Bora).7 This file is the correct place to customize your environment, for instance, by adding commands to load specific software modules automatically upon login.
+
+
+Environment Modules: Your Software Toolkit
+
+
+The HPC staff installs and maintains a wide variety of scientific software, compilers, and libraries. To manage these packages and prevent version conflicts, the clusters employ the Environment Modules system.5
+               * Concept: Instead of having all software available at all times, users must explicitly "load" the packages they need for a given session or job. Loading a module dynamically modifies the shell's environment variables, primarily $PATH (to find executables) and $LD_LIBRARY_PATH (to find shared libraries at runtime), making the requested software available.21
+               * Essential Commands:
+               * module avail: Lists all available software modules on the current system.9
+               * module list: Shows which modules are currently loaded in your session.21
+               * module load <package-name>: Loads a specific software package (e.g., module load intel/compiler-2024.0).20
+               * module unload <package-name>: Unloads a package, removing it from your environment.
+               * Customization: For software you use frequently on a specific cluster, it is best practice to add the module load command to the appropriate platform-specific startup file (e.g., ~/.cshrc.kuro) to ensure it is loaded automatically every time you log in or submit a job to that cluster.20
+
+
+W&M Filesystem Deep Dive: A Guide to Storage
+
+
+Properly managing data across the various available filesystems is crucial for performance and stability. Running I/O-intensive jobs in the wrong location can severely impact the performance of the entire cluster for all users.22
+               * Key Filesystem Tiers:
+               * /sciclone/home and /ches/home00: Your home directory. This space is intended for source code, configuration files, executables, and small input files. It has a relatively small storage quota and is backed up nightly. It should never be used for writing large amounts of data from running jobs, as this can degrade interactive performance for everyone.22
+               * /sciclone/data10 and /ches/data10: A larger-capacity space for storing persistent input data files that are needed for active projects. This filesystem is backed up weekly. It is not intended for heavy job output.22
+               * Scratch Filesystems: These are temporary work areas for job input/output.
+               * /local/scr: This is a disk physically located on each individual compute node. It offers the best performance for single-node jobs as it requires no network traffic. Its contents are accessible only on that specific node.21
+               * /sciclone/scrXX: Global scratch filesystems accessible from all nodes on the SciClone cluster.
+               * Policy: All scratch filesystems are NOT backed up and are subject to a purge policy that deletes files not accessed for 90 days.15
+               * Parallel Scratch Filesystems: High-performance Lustre filesystems designed for jobs that perform parallel I/O from many nodes at once.
+               * /sciclone/pscr: The preferred parallel scratch space for jobs on the Bora subcluster.7
+               * /sciclone/scr-lst: The preferred parallel scratch space for jobs on the Kuro and Gulf subclusters.8
+               * Data Locality and Transfers: Performance is highly dependent on data locality. Accessing a file on a remote filesystem involves network latency.22 When transferring large files to or from the clusters using
+scp or sftp, it is most efficient to connect directly to the server that hosts the target filesystem. For example, to transfer files to the Lustre scratch space for Kuro, one should connect to kuro.sciclone.wm.edu.24
+
+
+Section 5: A Tale of Two Clusters: Bora and Kuro
+
+
+The Bora and Kuro subclusters serve as excellent examples of the heterogeneous and evolving nature of the W&M HPC environment. They represent two different generations of technology and, more importantly, two different philosophies of cluster management, particularly regarding job scheduling. Understanding their differences is key to selecting the right tool for the job.
+
+
+Clarification: The "Tsch" Cluster vs. the tcsh Shell
+
+
+First, it is essential to clarify a common point of confusion. There is no cluster named "Tsch" at William & Mary. This term is a frequent misinterpretation of tcsh, the name of the default command-line shell environment used on the HPC systems, as detailed in the previous section.20 All interactions and scripts, unless otherwise configured, will operate within the
+tcsh shell.
+
+
+Table: Bora vs. Kuro Cluster Comparison
+
+
+The following table provides a direct, at-a-glance comparison of the key architectural and operational features of the Bora and Kuro subclusters, synthesizing details from multiple technical documents.4 This allows a researcher to make an informed decision based on their job's specific requirements.
+Feature
+	Bora Subcluster
+	Kuro Subcluster
+	Front-end/Login
+	bora.sciclone.wm.edu
+	kuro.sciclone.wm.edu
+	Job Scheduler
+	TORQUE / Maui
+	SLURM
+	Processor
+	Intel Xeon E5-2683 v4 "Broadwell"
+	AMD EPYC 9334 "Zen 4"
+	Cores per Node
+	20 physical cores
+	64 physical cores
+	Memory per Node
+	128 GB
+	384 GB
+	Operating System
+	CentOS 7.3
+	Rocky Linux 9.2
+	Network Interconnect
+	FDR InfiniBand
+	HDR InfiniBand
+	Intended Use Case
+	General multi-node parallel (MPI) jobs
+	Large MPI/parallel jobs (>=64 cores)
+	Preferred Scratch
+	/sciclone/pscr/$USER
+	/sciclone/scr-lst/$USER
+	Max Walltime
+	72 hours
+	48 hours
+	Deployment Year
+	2017
+	2024
+	
+
+Architectural Deep Dive
+
+
+The contrast between Bora and Kuro represents more than a simple hardware refresh; it signifies a generational and philosophical shift within the W&M HPC ecosystem. Bora, deployed in 2017, is a robust and capable cluster that is a remnant of the TORQUE/Maui scheduling era. Its compute nodes feature 20-core Intel "Broadwell" processors and are primarily intended for multi-node parallel jobs using the Message Passing Interface (MPI).4
+In stark contrast, Kuro, deployed in 2024, is a modern, high-density compute resource built on the latest technologies. Its nodes are equipped with powerful 64-core AMD "Zen 4" processors and a substantial 384 GB of memory, connected by a faster generation of InfiniBand network.8 Kuro is explicitly designed for large-scale MPI jobs that can effectively utilize at least one full node (64 cores).8
+The most significant distinction for the user, however, is the job scheduler. Bora uses the legacy TORQUE resource manager, while Kuro uses the modern SLURM Workload Manager.7 This creates a "two-track" system where a user's entire workflow—from the syntax of their submission scripts to the commands used to monitor jobs—is dictated by which cluster they target. The documentation indicates a clear institutional direction toward standardizing on SLURM, with plans to eventually migrate older clusters like Bora.25 Therefore, while knowledge of TORQUE is currently necessary to use Bora, proficiency in SLURM is the forward-looking skill essential for long-term productivity across the entire W&M HPC ecosystem.
+
+
+Part III: Executing Scientific Workloads
+
+
+This part transitions from system fundamentals to practical application, providing detailed, tutorial-style instructions for compiling traditional scientific code and for setting up and running Python-based workflows.
+
+
+Section 6: Compiling and Running C, C++, and Fortran Programs
+
+
+Successfully compiling code on a heterogeneous HPC system requires selecting the appropriate compiler and using optimization flags tailored to the specific architecture of the target compute nodes.
+
+
+Available Compiler Suites
+
+
+All modern W&M HPC clusters provide two primary, fully-featured compiler suites, accessible via the Environment Modules system.9
+                  * Intel OneAPI: A high-performance, commercial compiler suite from Intel. It is often recommended for achieving the best performance on Intel-based nodes and also provides excellent support for AMD architectures.23
+                  * GNU Compiler Collection (GCC): The open-source standard, providing robust and widely-compatible compilers for C, C++, and Fortran.9
+
+
+Loading Compilers and Command Naming
+
+
+Before compiling, the desired compiler suite must be loaded into your environment.
+                  * Loading Intel OneAPI:
+Bash
+module load intel/compiler-2024.0
+
+The executable names for the latest Intel compilers are icx (for C), icpx (for C++), and ifx (for Fortran). This is a change from the legacy names icc, icpc, and ifort, which may still be available but will issue warnings encouraging a switch to the newer drivers.8
+                  * Using GNU GCC: The gcc, g++, and gfortran commands are typically available in the default environment on refreshed systems.9 To ensure you are using a specific version, you can check
+module avail gcc and load it if necessary.27
+
+
+Architecture-Specific Optimization
+
+
+To extract maximum performance from the underlying hardware, it is critical to use compiler flags that instruct the compiler to generate code optimized for a specific processor's instruction set. A program compiled with generic flags will run, but a program compiled with architecture-specific flags will almost always run faster. While flags like -march=native (GNU) or -xHost (Intel) are convenient, they optimize for the machine you are currently on (i.e., the login node), which may have a different CPU than the compute nodes where the job will actually run.26 Therefore, it is best practice to explicitly specify the target architecture in your compilation command or build script.
+The following table provides recommended optimization flags for the primary W&M HPC architectures.8
+Target Cluster (CPU Architecture)
+	Compiler
+	Recommended Flags
+	Kuro, Gulf (AMD Zen 4/3)
+	GNU
+	-O3 -march=znver3
+	Kuro, Gulf (AMD Zen 4/3)
+	Intel
+	-O3 -axCORE-AVX2
+	Bora (Intel Broadwell)
+	GNU
+	-O3 -march=broadwell
+	Bora (Intel Broadwell)
+	Intel
+	-O3 -xCORE-AVX2
+	                     * Compilation Example (for Kuro): To compile a C++ source file named my_code.cpp for execution on the Kuro cluster using the Intel compiler, the command would be:
+Bash
+module load intel/compiler-2024.0
+icpx -O3 -axCORE-AVX2 -o my_program my_code.cpp
+
+
+
+Linking with MPI Libraries
+
+
+For parallel programs using the Message Passing Interface (MPI), you must also load the appropriate MPI library module and link against it. Both Intel MPI and OpenMPI are available and are typically compiled for both the Intel and GNU compiler toolchains.23
+                        * Example (MPI program for Kuro with Intel compilers):
+Bash
+# Load the necessary modules
+module load intel/compiler-2024.0
+module load openmpi-ib/intel-2024.0/4.1.6
+
+# Compile and link the MPI program
+# The 'mpicxx' command is a wrapper that calls the underlying C++ compiler
+# with the correct flags and libraries for MPI.
+mpicxx -O3 -axCORE-AVX2 -o my_mpi_program my_mpi_code.cpp
+
+
+
+Section 7: A Comprehensive Guide to Using Python on W&M HPC
+
+
+Python is a ubiquitous tool in research computing. However, to ensure reproducibility and manage complex dependencies, it is essential to use isolated Python environments rather than the base system Python.29 W&M HPC supports two primary methods for creating these environments.
+
+
+The Shift from Anaconda to Miniforge3
+
+
+Due to evolving software licensing terms, W&M Research Computing has standardized on Miniforge3 as the recommended tool for managing Conda-style Python environments. As of February 1, 2025, Anaconda3 modules are no longer provided by default.29 Miniforge3 is a community-driven, minimal installer for Conda that defaults to the free and open-source
+conda-forge channel. It is a drop-in replacement for Anaconda, and existing Conda environments will continue to function with the tools provided by Miniforge3.29
+
+
+Method 1 (Recommended): Using Miniforge3 and Conda Environments
+
+
+This is the most robust method for managing complex Python workflows with numerous dependencies. The following tutorial is based on the official W&M documentation.29
+                           1. Log into a cluster front-end (e.g., kuro.sciclone.wm.edu).
+                           2. Load the Miniforge3 module:
+Bash
+module load miniforge3
+
+                           3. (Bash users only) If your default shell is bash, you must run an additional command to initialize Conda for your session. This step is not needed for tcsh users.
+Bash
+eval "$(conda shell.bash hook)"
+
+It is strongly recommended not to run conda init on the HPC clusters, as it can permanently alter your shell startup files in undesirable ways.29
+                           4. Create a new Conda environment:
+Bash
+conda create -n my_research_env python=3.11
+
+This creates a new, isolated environment named my_research_env with Python 3.11.
+                           5. Activate the environment:
+Bash
+conda activate my_research_env
+
+Your shell prompt will change to indicate that you are now inside the environment.
+                           6. Install packages: You can now install packages using Conda or pip.
+                              * Using Conda: conda install numpy pandas matplotlib
+                              * Using pip (recommended syntax): First, install pip into the environment with conda install pip. Then, use python -m pip install <package-name> to ensure packages are installed correctly within the active Conda environment tree.29
+                              7. Deactivate the environment: When you are finished, return to your normal shell with:
+Bash
+conda deactivate
+
+
+
+Method 2: Using Python Virtual Environments (venv)
+
+
+For simpler projects or for those who prefer to avoid Conda, Python's built-in venv module is a lightweight alternative.29
+                                 1. Log into a cluster front-end.
+                                 2. Load the base Python module:
+Bash
+module load python/3.12.7
+
+It is crucial to use the module-provided Python rather than the system default to ensure stability and access to a modern version.29
+                                 3. Create a new virtual environment:
+Bash
+python -m venv my_venv
+
+This creates a directory named my_venv containing the environment.
+                                 4. Activate the environment: The activation command depends on your shell.
+                                    * For tcsh (the default): source my_venv/bin/activate.csh
+                                    * For bash: source my_venv/bin/activate
+                                    5. Install packages: Once activated, you can use pip install <package-name> as usual.
+                                    6. Deactivate the environment: The command is the same for both shells:
+Bash
+deactivate
+
+
+
+Integrating Python into Job Scripts
+
+
+To run a Python script as a batch job, you must include the module loading and environment activation steps within your submission script before the line that executes your Python code.
+                                       * Example SLURM script using a Conda environment (tcsh syntax):
+Code snippet
+#!/bin/tcsh
+#SBATCH --job-name=python_job
+#SBATCH -N 1 --ntasks-per-node=8
+#SBATCH -t 1:00:00
+
+# Load the module and activate the environment
+module load miniforge3
+conda activate my_research_env
+
+# Run the python script
+python my_analysis.py
+
+This ensures that the job runs with the correct Python interpreter and has access to all the packages installed in my_research_env.29
+
+
+Part IV: Job Submission and Workflow Management
+
+
+This final part provides the practical knowledge required to submit your compiled programs and prepared scripts to the clusters for execution. It details the use of both the legacy TORQUE scheduler (for Bora) and the modern SLURM scheduler (for Kuro and other new clusters), and provides a comprehensive guide for migrating workflows between them.
+
+
+Section 8: Mastering the Job Schedulers: TORQUE and SLURM
+
+
+
+
+The Role of a Batch Scheduler
+
+
+Computational jobs are not run directly on the login nodes. The login nodes are shared resources for editing files, compiling code, and managing jobs. Executing intensive calculations on them would render them unusable for other users. Instead, all jobs must be submitted to a batch scheduler or resource manager.5 The scheduler's role is to allocate compute nodes to jobs, manage a queue to ensure fair access to resources, and run the jobs on behalf of the user in an orderly fashion.25
+
+
+Submitting Jobs to Bora with TORQUE/Maui
+
+
+The Bora subcluster uses the TORQUE Resource Manager in conjunction with the Maui Cluster Scheduler.7 Job submission is handled via scripts containing
+#PBS directives.
+                                          * TORQUE Job Script Syntax: A typical script includes:
+                                          * #PBS -N <job_name>: Specifies a name for the job.
+                                          * #PBS -l walltime=HH:MM:SS: Requests the maximum run time.
+                                          * #PBS -l nodes=X:bora:ppn=20: Requests resources. For Bora, this requests X nodes, specifically from the bora subcluster, using all 20 processors per node (ppn=20).7
+                                          * #PBS -j oe: Merges the standard output and standard error streams into a single output file.21
+                                          * cd $PBS_O_WORKDIR: A crucial line that changes the directory to where the job was submitted from. TORQUE jobs, by default, start in your home directory.21
+                                          * Commands:
+                                          * qsub <script_file.pbs>: Submits the job to the queue.30
+                                          * qstat -u <username>: Monitors the status of your jobs.32
+                                          * qdel <job_id>: Deletes a job from the queue.30
+                                          * Example TORQUE script for a 4-node MPI job on Bora:
+Code snippet
+#!/bin/tcsh
+#PBS -N my_bora_job
+#PBS -l walltime=12:00:00
+#PBS -l nodes=4:bora:ppn=20
+#PBS -j oe
+
+# Change to the submission directory
+cd $PBS_O_WORKDIR
+
+# Load necessary modules (example)
+module load intel/compiler-2022.2.1
+module load mvapich2-ib/1.9/gcc
+
+# Run the parallel program using the mvp2run wrapper
+mvp2run./my_mpi_program
+
+                                          * Important Policy: The maximum walltime for jobs on Bora is 72 hours. Currently, if a job is submitted with a requested time greater than this, it will sit in the queue indefinitely with no warning or error message.7
+
+
+Submitting Jobs to Kuro (and others) with SLURM
+
+
+All modern W&M clusters, including Kuro, Gulf, and Astral, use the Simple Linux Utility for Resource Management (SLURM).8 SLURM is the modern standard for HPC job scheduling and offers more power and flexibility.
+                                             * Key SLURM Commands:
+                                             * sbatch <script_file.slurm>: Submits a batch job script.33
+                                             * salloc <options>: Requests an interactive allocation of resources. You are given a shell on a compute node for debugging or interactive work.33
+                                             * srun <program>: Launches parallel tasks across the nodes allocated to your job. It replaces older MPI launchers like mpirun or mvp2run.33
+                                             * squeue -u <username>: Monitors your jobs.35
+                                             * scancel <job_id>: Cancels a job.36
+                                             * SLURM Job Script Syntax: SLURM scripts use #SBATCH directives. Unlike TORQUE, SLURM jobs start in the directory from which they were submitted, so cd $PBS_O_WORKDIR is not needed.33
+                                             * #SBATCH --job-name=<job_name> or -J <job_name>
+                                             * #SBATCH --time=D-HH:MM:SS or -t D-HH:MM:SS
+                                             * #SBATCH --nodes=<N> or -N <N>
+                                             * #SBATCH --ntasks-per-node=<n>
+                                             * #SBATCH --gpus=<g> or -G <g> (for GPU jobs)
+                                             * #SBATCH --output=<file.out> or -o <file.out>
+                                             * Example SLURM script for a 2-node MPI job on Kuro:
+Code snippet
+#!/bin/tcsh
+#SBATCH --job-name=my_kuro_job
+#SBATCH --nodes=2
+#SBATCH --ntasks-per-node=64
+#SBATCH --time=2-00:00:00  # 48 hours is max on Kuro
+#SBATCH --output=kuro_job_%j.out
+
+# Load required modules
+module load intel/compiler-2024.0
+module load openmpi-ib/intel-2024.0/4.1.6
+
+# Launch the parallel job with srun
+srun./my_mpi_program
+
+                                             * Advanced Feature: Job Arrays: SLURM provides a powerful mechanism for submitting many similar jobs, such as for a parameter sweep. The --array flag creates a set of jobs, each with a unique task ID accessible via the $SLURM_ARRAY_TASK_ID environment variable.33
+                                                * Example Array Job: To run a program 10 times with different input files (input.1, input.2, etc.):
+Code snippet
+#!/bin/tcsh
+#SBATCH -N 1 -n 1
+#SBATCH -t 0:30:00
+#SBATCH --array=1-10
+
+# Run the program, using the task ID to select the input file
+
+./my_program < input.$SLURM_ARRAY_TASK_ID```
+
+
+Essential Migration Guide: From TORQUE to SLURM
+
+
+The institutional direction at W&M and in the broader HPC community is a full migration to SLURM.25 Learning SLURM is the key to future productivity on all W&M HPC resources. This guide provides a direct "Rosetta Stone" for users with existing TORQUE workflows to transition them to SLURM.
+The following table maps common TORQUE commands and #PBS directives to their SLURM equivalents, compiled from W&M and other university migration guides.33
+Function
+	TORQUE (#PBS / command)
+	SLURM (#SBATCH / command)
+	Submit Batch Job
+	qsub script.pbs
+	sbatch script.slurm
+	Submit Interactive Job
+	qsub -I
+	salloc
+	View Jobs
+	qstat -u $USER
+	squeue -u $USER
+	Cancel Job
+	qdel <jobid>
+	scancel <jobid>
+	Job Name
+	#PBS -N MyJob
+	#SBATCH --job-name=MyJob
+	Walltime
+	#PBS -l walltime=HH:MM:SS
+	#SBATCH --time=D-HH:MM:SS
+	Request Nodes/Cores
+	#PBS -l nodes=4:ppn=20
+	#SBATCH --nodes=4 --ntasks-per-node=20
+	Memory Request
+	#PBS -l mem=4gb
+	#SBATCH --mem=4G
+	Job Output File
+	-o file.out
+	--output=file.out
+	Merge Stdout/Stderr
+	#PBS -j oe
+	(Default behavior, or use --output)
+	Job Array
+	#PBS -t 1-10
+	#SBATCH --array=1-10
+	Array Task ID Variable
+	$PBS_ARRAYID
+	$SLURM_ARRAY_TASK_ID
+	Starting Directory
+	Starts in /home/$USER
+	Starts in submission directory
+	
+
+Section 9: Best Practices, Tutorials, and Getting Help
+
+
+
+
+Summary of Best Practices
+
+
+To be a good citizen of the shared HPC resources, users should adhere to the following best practices:
+                                                   1. Do Not Run Jobs on Login Nodes: Login nodes are for management tasks only. All computations must be submitted to the scheduler.
+                                                   2. Use Scratch Space for I/O: Direct all significant job input/output to the appropriate scratch (/local/scr, /sciclone/scrXX) or parallel scratch (/sciclone/pscr, /sciclone/scr-lst) filesystems, not your home directory.15
+                                                   3. Clean Up Your Data: The scratch filesystems are temporary and not backed up. Regularly copy important results to persistent storage and delete unneeded files to free up space for others.5
+                                                   4. Be Specific with Resource Requests: Accurately request walltime, memory, and core counts to allow the scheduler to work efficiently and minimize your queue time.
+                                                   5. Optimize for the Architecture: Use compiler flags specific to the target cluster's CPU to maximize the performance of your code.
+                                                   6. Manage Your Account Lifecycle: Proactively monitor your account's expiration date and manage your data accordingly to prevent its permanent deletion.2
+
+
+Index of W&M Resources
+
+
+Research Computing provides tutorials and presentations to help users get started and learn advanced topics. These resources, including slides and video recordings, can be found on the official HPC Tutorials Page.38
+
+
+How to Get Help
+
+
+For any issues, from software installation requests to debugging assistance, the Research Computing staff is the primary point of contact.
+                                                   * Primary Contact Method: Send a detailed email to hpc-help@wm.edu.5
+                                                   * Reporting Problems: To ensure a prompt and effective resolution, it is crucial to provide as much relevant information as possible in your help request. This should include:
+                                                   * The date and time the problem occurred.
+                                                   * The specific server or compute node(s) involved.
+                                                   * The exact command(s) you executed.
+                                                   * The complete and exact text of any error messages that were generated.39
+Providing this level of detail facilitates a collaborative and efficient problem-solving process between users and the HPC support staff.
+Works cited
+                                                   1. Research Computing at W&M | Services | Information Technology - William & Mary, accessed July 26, 2025, https://www.wm.edu/offices/it/services/researchcomputing/atwm/
+                                                   2. Request an Account | Services | Information Technology - William & Mary, accessed July 26, 2025, https://www.wm.edu/offices/it/services/researchcomputing/acctreq/
+                                                   3. System Architecture & Hardware | Services | Information Technology - William & Mary, accessed July 26, 2025, https://www.wm.edu/offices/it/services/researchcomputing/oldjunk/hw/
+                                                   4. Node Types and Subclusters | Services | Information Technology ..., accessed July 26, 2025, https://www.wm.edu/offices/it/services/researchcomputing/oldjunk/hw/nodes/
+                                                   5. Using HPC | Services | Information Technology - William & Mary, accessed July 26, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/
+                                                   6. HPC Prerequisites | Services | Information Technology | William ..., accessed July 26, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/prereqs/
+                                                   7. Bora / Hima | Services | Information Technology - William & Mary, accessed July 26, 2025, https://www.wm.edu/offices/it/services/researchcomputing/oldjunk/hw/nodes/bora/
+                                                   8. Kuro | Services | Information Technology - William & Mary, accessed July 26, 2025, https://www.wm.edu/offices/it/services/researchcomputing/oldjunk/hw/nodes/kuro/
+                                                   9. Software | Services | Information Technology - William & Mary, accessed July 26, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/software/
+                                                   10. Security Policies, Standards and Procedures | Services - William & Mary, accessed July 26, 2025, https://www.wm.edu/offices/it/services/security/securitypolicy/
+                                                   11. Acceptable Use Policy for High Performance Computing (HPC) Cluster | University Technology, [U]Tech, accessed July 26, 2025, https://case.edu/utech/departments/research-computing-and-infrastructure-services/resources/acceptable-use-policy-high-performance-computing-hpc-cluster
+                                                   12. HPC Accounts for External Collaborators | Services - William & Mary, accessed July 26, 2025, https://www.wm.edu/offices/it/services/researchcomputing/acctreq/ext/
+                                                   13. Logging in to HPC clusters | Services | Information Technology - William & Mary, accessed July 26, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/connecting/
+                                                   14. Connecting to HPC via Linux | Services | Information Technology - William & Mary, accessed July 26, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/connecting/linux/
+                                                   15. Eric J. Walter - William & Mary, accessed July 26, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/tutorials/2020tutorial.pdf
+                                                   16. What is Bastion Host ? Why we use it ? How to implement it? | by Prasanna Nayak - Medium, accessed July 26, 2025, https://nayakprasanna007.medium.com/what-is-bastion-host-why-we-use-it-how-to-implement-it-e1878cfdfc1d
+                                                   17. Connect to Linux VMs using a bastion host | Compute Engine Documentation, accessed July 26, 2025, https://cloud.google.com/compute/docs/connect/ssh-using-bastion-host
+                                                   18. Information Technology / Bastion Host Instructions - GitLab, accessed July 26, 2025, https://code.wm.edu/IT/bastion-host-instructions
+                                                   19. How to SSH into a CS Machine, accessed July 26, 2025, https://support.cs.wm.edu/index.php/tips-and-tricks/how-to-ssh-into-a-cs-machine
+                                                   20. Environment Modules | Services | Information Technology - William & Mary, accessed July 26, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/modules/
+                                                   21. HPC Resources at W&M ...and How To Use Them, accessed July 26, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/tutorials/IntroHPC_Jan17.pdf
+                                                   22. Files & Filesystems | Services | Information Technology - William & Mary, accessed July 26, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/filesandfilesystems/
+                                                   23. Gulf | Services | Information Technology - William & Mary, accessed July 26, 2025, https://www.wm.edu/offices/it/services/researchcomputing/oldjunk/hw/nodes/gulf/
+                                                   24. Transferring files | Services | Information Technology - William & Mary, accessed July 26, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/filesandfilesystems/xfers/
+                                                   25. Running jobs (TORQUE/Maui) | Services | Information Technology - William & Mary, accessed July 26, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/jobs/
+                                                   26. Compilers and MPI software | Services | Information Technology ..., accessed July 26, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/compiling/
+                                                   27. GNU Compilers - Research Computing, HKU ITS, accessed July 26, 2025, https://hpc.hku.hk/hpc/software/gcc/
+                                                   28. Astral | Services | Information Technology - William & Mary, accessed July 26, 2025, https://www.wm.edu/offices/it/services/researchcomputing/oldjunk/hw/nodes/astral/
+                                                   29. Python use on HPC clusters | Services | Information Technology - William & Mary, accessed July 26, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/software/python/
+                                                   30. Submitting jobs | Services | Information Technology - William & Mary, accessed July 26, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/jobs/submitting/
+                                                   31. VIMS/Bioinformatics HPC Tutorial - William & Mary, accessed July 26, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/tutorials/bioinfomatics.pdf
+                                                   32. Job priority/scheduling | Services | Information Technology - William & Mary, accessed July 26, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/jobs/scheduling/
+                                                   33. Running Jobs with Slurm | Services | Information Technology - William & Mary, accessed July 26, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/running_jobs_slurm/
+                                                   34. Introduction to using SLURM | Services | Information Technology - William & Mary, accessed July 26, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/jobsslurm/
+                                                   35. Easing your migration from SGE to Slurm in AWS ParallelCluster 3 | AWS HPC Blog, accessed July 26, 2025, https://aws.amazon.com/blogs/hpc/easing-your-migration-from-sge-to-slurm-in-aws-parallelcluster-3/
+                                                   36. Migration Guide (PBS to Slurm) - RCD Documentation - Clemson University, accessed July 26, 2025, https://docs.rcd.clemson.edu/palmetto/migrate/
+                                                   37. Migrating from Torque/PBS to SLURM - Research IT, accessed July 26, 2025, https://docs-research-it.berkeley.edu/services/high-performance-computing/user-guide/running-your-jobs/migrating-from-pbs/
+                                                   38. Tutorials | Services | Information Technology - William & Mary, accessed July 26, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/tutorials/
+                                                   39. Get Help with HPC | Services | Information Technology - William & Mary, accessed July 26, 2025, https://www.wm.edu/offices/it/services/researchcomputing/help/

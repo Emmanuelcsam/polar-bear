@@ -1,0 +1,18 @@
+/var/spool/slurmd/job128553/slurm_script: line 31: module: command not found
+/var/spool/slurmd/job128553/slurm_script: line 35: module: command not found
+
+EnvironmentNameNotFound: Could not find conda environment: your_env_name
+You can list all discoverable environments with `conda info --envs`.
+
+
+Traceback (most recent call last):
+  File "/sciclone/scr10/ecsampson/refractored/main.py", line 220, in <module>
+    main()
+  File "/sciclone/scr10/ecsampson/refractored/main.py", line 197, in main
+    logger, rank, world_size, local_rank, is_distributed = setup_environment(config)
+                                                           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/sciclone/scr10/ecsampson/refractored/main.py", line 32, in setup_environment
+    ensure_directories(config)
+  File "/sciclone/scr10/ecsampson/refractored/config.py", line 134, in ensure_directories
+    raise FileNotFoundError(f"Data directory not found: {data_dir}")
+FileNotFoundError: Data directory not found: fiber_optic_data

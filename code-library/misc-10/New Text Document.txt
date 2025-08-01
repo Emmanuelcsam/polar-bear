@@ -1,0 +1,10 @@
+What it does
+Builds a four-block CNN (64-128-256-512) with dropout and batch-norm, mirroring the ConvNet template recommended in the statistical analysis  and implemented exactly in the D2L convolution-block pattern .
+
+Loads every image in the dataset/ tree, automatically inferring provisional class labels (core / cladding / ferrule / defect) from the file names described in the reports; applies the D2L augmentation pipeline; and trains with imbalance-aware focal loss and cosine-annealing LR scheduling.
+
+Optionally loads the 40 reference .pt tensors and keeps them in RAM for downstream similarity scoring or hard-example mining.
+
+Writes best_fibernet.pt and training_stats.json when training finishes or early-stops.
+
+Provides helper routines for single-image prediction plus classic OpenCV scratch (Canny) and blob (SimpleBlobDetector) visualisation, enabling quick qualitative checks of the learned model.

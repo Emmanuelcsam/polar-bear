@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unified Core Detection System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: white;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            color: #00ff00;
+            margin: 0;
+        }
+        .header p {
+            color: #cccccc;
+            margin: 5px 0;
+        }
+        .main-content {
+            display: flex;
+            gap: 20px;
+        }
+        .video-container {
+            flex: 2;
+            text-align: center;
+        }
+        .video-feed {
+            border: 3px solid #00ff00;
+            border-radius: 10px;
+            max-width: 100%;
+            height: auto;
+        }
+        .controls-panel {
+            flex: 1;
+            background-color: #2a2a2a;
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #444;
+        }
+        .control-group {
+            margin-bottom: 20px;
+        }
+        .control-group h3 {
+            color: #00ff00;
+            margin-bottom: 10px;
+        }
+        .control-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 8px;
+            background-color: #333;
+            border-radius: 5px;
+        }
+        .control-label {
+            font-weight: bold;
+        }
+        .control-value {
+            color: #00ff00;
+            font-weight: bold;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-on {
+            background-color: #00ff00;
+        }
+        .status-off {
+            background-color: #ff0000;
+        }
+        .detection-info {
+            background-color: #333;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        .detection-item {
+            margin-bottom: 10px;
+            padding: 8px;
+            background-color: #444;
+            border-radius: 5px;
+        }
+        .manual-detection {
+            border-left: 4px solid #ff0000;
+        }
+        .automatic-detection {
+            border-left: 4px solid #00ff00;
+        }
+        .instructions {
+            background-color: #2a2a2a;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border: 2px solid #444;
+        }
+        .instructions h3 {
+            color: #00ff00;
+            margin-top: 0;
+        }
+        .instruction-item {
+            margin-bottom: 8px;
+            padding: 5px 0;
+        }
+        .key {
+            background-color: #444;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-weight: bold;
+        }
+        .description {
+            color: #cccccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Unified Core Detection System</h1>
+            <p>Manual Circle Overlay + Automatic Detection + Live Camera Feed</p>
+        </div>
+        
+        <div class="main-content">
+            <div class="video-container">
+                <img src="{{ url_for('video_feed') }}" alt="Live Camera Feed" class="video-feed">
+            </div>
+            
+            <div class="controls-panel">
+                <div class="control-group">
+                    <h3>📊 System Status</h3>
+                    <div class="control-item">
+                        <span class="control-label">Manual Override:</span>
+                        <span class="control-value" id="manual-override">
+                            <span class="status-indicator status-off"></span>OFF
+                        </span>
+                    </div>
+                    <div class="control-item">
+                        <span class="control-label">Auto Detection:</span>
+                        <span class="control-value" id="auto-detection">
+                            <span class="status-indicator status-on"></span>ON
+                        </span>
+                    </div>
+                    <div class="control-item">
+                        <span class="control-label">FPS:</span>
+                        <span class="control-value" id="fps">0.0</span>
+                    </div>
+                    <div class="control-item">
+                        <span class="control-label">Frame Count:</span>
+                        <span class="control-value" id="frame-count">0</span>
+                    </div>
+                    <div class="control-item">
+                        <span class="control-label">Detections:</span>
+                        <span class="control-value" id="detection-count">0</span>
+                    </div>
+                </div>
+                
+                <div class="detection-info">
+                    <h3>🎯 Active Detections</h3>
+                    <div id="detections-list">
+                        <div class="detection-item manual-detection">
+                            <strong>Manual Circle:</strong> Positioned at center, radius 50px
+                        </div>
+                        <div class="detection-item automatic-detection">
+                            <strong>Auto Detection:</strong> No detection currently
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <h3>🎮 Controls</h3>
+            <div class="instruction-item">
+                <span class="key">WASD</span>
+                <span class="description">Move manual circle (W=up, S=down, A=left, D=right)</span>
+            </div>
+            <div class="instruction-item">
+                <span class="key">Q/E</span>
+                <span class="description">Resize manual circle (Q=smaller, E=larger)</span>
+            </div>
+            <div class="instruction-item">
+                <span class="key">L</span>
+                <span class="description">Lock/unlock manual circle position</span>
+            </div>
+            <div class="instruction-item">
+                <span class="key">M</span>
+                <span class="description">Toggle manual override mode</span>
+            </div>
+            <div class="instruction-item">
+                <span class="key">A</span>
+                <span class="description">Toggle automatic detection</span>
+            </div>
+            <div class="instruction-item">
+                <span class="key">R</span>
+                <span class="description">Reset manual circle to center</span>
+            </div>
+            <div class="instruction-item">
+                <span class="key">ESC</span>
+                <span class="description">Exit the application</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Update detection data every second
+        function updateDetections() {
+            fetch('/api/detections')
+                .then(response => response.json())
+                .then(data => {
+                    // Update status indicators
+                    document.getElementById('manual-override').innerHTML = 
+                        `<span class="status-indicator ${data.manual_override ? 'status-on' : 'status-off'}"></span>${data.manual_override ? 'ON' : 'OFF'}`;
+                    
+                    document.getElementById('auto-detection').innerHTML = 
+                        `<span class="status-indicator ${data.auto_detection_enabled ? 'status-on' : 'status-off'}"></span>${data.auto_detection_enabled ? 'ON' : 'OFF'}`;
+                    
+                    // Update statistics
+                    document.getElementById('fps').textContent = data.fps.toFixed(1);
+                    document.getElementById('frame-count').textContent = data.frame_count;
+                    document.getElementById('detection-count').textContent = data.detection_count;
+                    
+                    // Update detections list
+                    const detectionsList = document.getElementById('detections-list');
+                    detectionsList.innerHTML = '';
+                    
+                    if (data.detections.manual) {
+                        const manual = data.detections.manual;
+                        const manualItem = document.createElement('div');
+                        manualItem.className = 'detection-item manual-detection';
+                        manualItem.innerHTML = `<strong>Manual Circle:</strong> Center(${manual.center[0]}, ${manual.center[1]}), Radius: ${manual.radius}px, Confidence: ${manual.confidence.toFixed(2)}`;
+                        detectionsList.appendChild(manualItem);
+                    }
+                    
+                    if (data.detections.automatic) {
+                        const auto = data.detections.automatic;
+                        const autoItem = document.createElement('div');
+                        autoItem.className = 'detection-item automatic-detection';
+                        autoItem.innerHTML = `<strong>Auto Detection:</strong> Center(${auto.center[0]}, ${auto.center[1]}), Radius: ${auto.radius}px, Confidence: ${auto.confidence.toFixed(2)}`;
+                        detectionsList.appendChild(autoItem);
+                    }
+                    
+                    if (!data.detections.manual && !data.detections.automatic) {
+                        const noDetection = document.createElement('div');
+                        noDetection.className = 'detection-item';
+                        noDetection.innerHTML = '<strong>No detections currently</strong>';
+                        detectionsList.appendChild(noDetection);
+                    }
+                })
+                .catch(error => console.error('Error fetching detections:', error));
+        }
+        
+        // Update every second
+        setInterval(updateDetections, 1000);
+        
+        // Initial update
+        updateDetections();
+    </script>
+</body>
+</html> 

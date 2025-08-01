@@ -1,0 +1,34 @@
+  Analysis of Errors
+
+   1. `module: command not found`: This error, seen in slurm-128679.err,
+      occurs because the shell environment within the Slurm job is not
+      correctly sourcing the initialization files that define the module
+      command. W&M's HPC uses tcsh as the default shell, and scripts need
+      to be written accordingly or explicitly source the correct profile
+      for other shells.
+
+   2. `ValueError: Unsupported nproc_per_node value:`: This traceback from
+      torchrun indicates that the --nproc_per_node argument is not
+      receiving a valid integer. This is a direct result of the shell error
+       that precedes it.
+
+   3. `/var/spool/slurmd/job128679/slurm_script: line 37: 2 * : syntax 
+      error: operand expected (error token is \"* \")`: This shell error is
+       happening because the script is trying to perform an arithmetic
+      calculation (2 * $SLURM_NTASKS_PER_NODE) using a syntax that is
+      incorrect for the shell it's running in.
+
+  Root Cause
+
+  The fundamental problem is a mismatch between the shell specified in
+  your Slurm script (#!/bin/bash) and the default shell environment and
+  syntax expected on the W&M HPC (tcsh). The module command is not in
+  the default path for a non-interactive bash shell, and the arithmetic
+  syntax is also incorrect.
+
+  The Fix: A Corrected and Robust Slurm Script
+
+  Here is the corrected run_wm_hpc_job.slurm file. This script is
+  written in tcsh to align with W&M's documented best practices and
+  default environment. It addresses all the errors and incorporates the
+  knowledge from the HPC documentation.

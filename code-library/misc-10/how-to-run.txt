@@ -1,0 +1,4 @@
+python detector.py \
+    --dataset  project-directory/dataset \
+    --reference project-directory/reference \
+    --class_weights --focal

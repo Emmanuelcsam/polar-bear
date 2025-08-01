@@ -1,0 +1,135 @@
+18 [bora] ls
+data10  hwFeko2024.1_win64.exe  __MACOSX  scr10  scr-lst  vampire6old
+Expts   lscr                    pscr      scr20  vampire  vampire-src-5.0.zip
+19 [bora] cd scr10
+20 [bora] ls
+logs  polar-bear  refractored
+21 [bora] cd refractored/
+22 [bora] ls
+app.py       dataset.py    optimizer.py      run-job.slurm     slurm-128660.out
+checkpoints  evaluator.py  __pycache__       run_job.slurm     trainer.py
+config.py    losses.py     reference         slurm-128659.err  utils.py
+config.yaml  main.py       requirements.txt  slurm-128659.out
+dataset      model.py      run-job-2.slurm   slurm-128660.err
+23 [bora] cd ..
+24 [bora] cd polar-bear/
+25 [bora] ls 
+check-127927.out       core         install_dependencies.sh  slurm-128657.err
+check-128351.out       data         logic                    slurm-128657.out
+check_resources.slurm  dataset      reference                utilities
+config                 __init__.py  run-job.slurm            venv
+26 [bora] cd 
+27 [bora] ls
+data10  hwFeko2024.1_win64.exe  __MACOSX  scr10  scr-lst  vampire6old
+Expts   lscr                    pscr      scr20  vampire  vampire-src-5.0.zip
+28 [bora] cd scr-lst/
+29 [bora] ls
+polar-bear-env
+30 [bora] cd
+31 [bora] module load miniforge3/24.9.2-0
+32 [bora] cd scr-lst/
+33 [bora] conda activate ./polar-bear-env
+(/sciclone/scr-lst/ecsampson/polar-bear-env) 34 [bora] module load cuda/12.3 
+(/sciclone/scr-lst/ecsampson/polar-bear-env) 35 [bora] cd 
+(/sciclone/scr-lst/ecsampson/polar-bear-env) 36 [bora] cd scr10/polar-bear/
+(/sciclone/scr-lst/ecsampson/polar-bear-env) 37 [bora] ccat chec
+check-127927.out       check-128351.out       check_resources.slurm*
+(/sciclone/scr-lst/ecsampson/polar-bear-env) 37 [bora] ccat check-1
+check-127927.out  check-128351.out  
+(/sciclone/scr-lst/ecsampson/polar-bear-env) 37 [bora] cat check-127927.out 
+Checking available resources...
+================================
+Hostname: bo33.sciclone.wm.edu
+Date: Thu Jul 24 04:07:29 PM EDT 2025
+
+SLURM Info:
+-----------
+NODELIST             CPUS       MEMORY     AVAIL_FEATURES            GRES      
+bo[03-08,10-31,33-34 20         128172     bora,bo                   (null)    
+hi02                 32         257322     hima,hi,hi02              (null)    
+hi03                 32         257322     hima,hi,hi03              (null)    
+hi01                 32         257322     hima,hi,hi01              (null)    
+hi04                 32         257322     hima,hi,gpu,p100,hi04     gpu:tesla_
+hi05                 32         257322     hima,hi,gpu,p100,hi05     gpu:tesla_
+hi06                 32         257322     hima,hi,hi06              (null)    
+hi07                 32         257322     hima,hi,gpu,v100,hi07     gpu:tesla_
+
+Partition Info:
+---------------
+PARTITION AVAIL  TIMELIMIT   NODES(A/I/O/T) NODELIST
+batch*       up 3-00:00:00        40/6/0/46 bo[03-08,10-31,33-34,37-38,42-55]
+hima         up 3-00:00:00          5/2/0/7 hi[01-07]
+
+Available Constraints:
+---------------------
+NODELIST             AVAIL_FEATURES                
+bo[03-08,10-31,33-34 bora,bo                       
+hi02                 hima,hi,hi02                  
+hi03                 hima,hi,hi03                  
+hi01                 hima,hi,hi01                  
+hi04                 hima,hi,gpu,p100,hi04         
+hi05                 hima,hi,gpu,p100,hi05         
+hi06                 hima,hi,hi06                  
+hi07                 hima,hi,gpu,v100,hi07         
+
+GPU Info:
+---------
+NODELIST             GRES       GROUPS     ACTIVE_FEATURES     
+bo[03-08,10-31,33-34 (null)     all        bora,bo             
+hi02                 (null)     all        hima,hi,hi02        
+hi03                 (null)     all        hima,hi,hi03        
+hi01                 (null)     all        hima,hi,hi01        
+hi04                 gpu:tesla_ all        hima,hi,gpu,p100,hi0
+hi05                 gpu:tesla_ all        hima,hi,gpu,p100,hi0
+hi06                 (null)     all        hima,hi,hi06        
+hi07                 gpu:tesla_ all        hima,hi,gpu,v100,hi0
+(/sciclone/scr-lst/ecsampson/polar-bear-env) 38 [bora] cat check-128351.out 
+Checking available resources...
+================================
+Hostname: bo33.sciclone.wm.edu
+Date: Fri Jul 25 03:12:28 PM EDT 2025
+
+SLURM Info:
+-----------
+NODELIST             CPUS       MEMORY     AVAIL_FEATURES            GRES      
+bo[03-08,10-31,33-34 20         128172     bora,bo                   (null)    
+hi02                 32         257322     hima,hi,hi02              (null)    
+hi03                 32         257322     hima,hi,hi03              (null)    
+hi01                 32         257322     hima,hi,hi01              (null)    
+hi04                 32         257322     hima,hi,gpu,p100,hi04     gpu:tesla_
+hi05                 32         257322     hima,hi,gpu,p100,hi05     gpu:tesla_
+hi06                 32         257322     hima,hi,hi06              (null)    
+hi07                 32         257322     hima,hi,gpu,v100,hi07     gpu:tesla_
+
+Partition Info:
+---------------
+PARTITION AVAIL  TIMELIMIT   NODES(A/I/O/T) NODELIST
+batch*       up 3-00:00:00       32/14/0/46 bo[03-08,10-31,33-34,37-38,42-55]
+hima         up 3-00:00:00          0/7/0/7 hi[01-07]
+
+Available Constraints:
+---------------------
+NODELIST             AVAIL_FEATURES                
+bo[03-08,10-31,33-34 bora,bo                       
+hi02                 hima,hi,hi02                  
+hi03                 hima,hi,hi03                  
+hi01                 hima,hi,hi01                  
+hi04                 hima,hi,gpu,p100,hi04         
+hi05                 hima,hi,gpu,p100,hi05         
+hi06                 hima,hi,hi06                  
+hi07                 hima,hi,gpu,v100,hi07         
+
+GPU Info:
+---------
+NODELIST             GRES       GROUPS     ACTIVE_FEATURES     
+bo[03-08,10-31,33-34 (null)     all        bora,bo             
+hi02                 (null)     all        hima,hi,hi02        
+hi03                 (null)     all        hima,hi,hi03        
+hi01                 (null)     all        hima,hi,hi01        
+hi04                 gpu:tesla_ all        hima,hi,gpu,p100,hi0
+hi05                 gpu:tesla_ all        hima,hi,gpu,p100,hi0
+hi06                 (null)     all        hima,hi,hi06        
+hi07                 gpu:tesla_ all        hima,hi,gpu,v100,hi0
+(/sciclone/scr-lst/ecsampson/polar-bear-env) 39 [bora] 
+
+

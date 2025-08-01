@@ -1,0 +1,140 @@
+  ================================================================================
+  COMPLETE MATHEMATICAL EXPRESSIONS FOR ANOMALY DETECTION MODELS
+  ================================================================================
+
+
+  This document provides the full, unabridged mathematical formulas for the models described in the
+  advanced analysis report. The equations are presented in a symbolic format, where w_i represents the
+  weight for each corresponding feature.
+
+  Full Definition of the Feature Vector (V)
+
+
+  An image I is defined by its complete 88-dimensional feature vector V_I:
+
+
+  V_I = [Mahalanobis_Distance, Comparison_Mean, Comparison_Std, Comparison_Min, Comparison_Max,
+  topo_b0_persistence_sum, glcm_d3_a135_energy, glcm_d3_a90_energy, glcm_d3_a45_energy,
+  glcm_d2_a135_energy, glcm_d2_a45_energy, glcm_d3_a0_energy, glcm_d2_a90_energy, glcm_d2_a0_energy,
+  glcm_d1_a135_energy, glcm_d1_a90_energy, glcm_d1_a45_energy, glcm_d1_a0_energy,
+  topo_b0_persistence_max, stat_min, stat_max, stat_mean, stat_variance, stat_skewness, stat_kurtosis,
+  stat_iqr, stat_p25, stat_p75, gradient_magnitude_max, gradient_magnitude_mean,
+  gradient_orientation_std, laplacian_L0_energy, laplacian_L1_energy, pyramid_detail_L1_energy,
+  pyramid_detail_L2_energy, pyramid_detail_L3_energy, glcm_d2_a45_contrast, glcm_d3_a45_contrast,
+  glcm_d3_a90_contrast, morph_dilation_ratio, morph_gradient_sum, morph_bth_3_sum, morph_bth_3_mean,
+  morph_bth_5_sum, morph_bth_5_mean, morph_bth_7_max, morph_bth_11_max, shape_hu_0, shape_hu_1,
+  shape_hu_2, shape_hu_3, shape_hu_4, shape_hu_5, shape_hu_6, shape_centroid_x, shape_centroid_y,
+  lbp_r1_entropy, lbp_r1_energy, lbp_r1_mean, lbp_r1_std, lbp_r2_entropy, lbp_r2_energy, lbp_r2_mean,
+  lbp_r2_std, lbp_r3_entropy, lbp_r3_energy, lbp_r3_mean, lbp_r3_std, lbp_r5_entropy, lbp_r5_energy,
+  lbp_r5_mean, lbp_r5_std, fft_spectral_centroid, fft_spectral_spread, fft_std_phase, entropy_local_min,
+  entropy_tsallis, svd_n_components_95, SSIM_Index, Luminance_Similarity, Contrast_Similarity,
+  Structure_Similarity, Scratches, Digs, Blobs, Edge_Irregularities]
+
+  ---
+
+  Full Equation for Principal Component 1 (PC1)
+
+  The score for the first Principal Component is a weighted, linear combination of all 88 standardized
+  features:
+
+
+  PC1_Score = (w_pc1_1 * Mahalanobis_Distance + w_pc1_2 * Comparison_Mean + w_pc1_3 * Comparison_Std +
+  w_pc1_4 * Comparison_Min + w_pc1_5 * Comparison_Max + w_pc1_6 * topo_b0_persistence_sum + w_pc1_7 *
+  glcm_d3_a135_energy + w_pc1_8 * glcm_d3_a90_energy + w_pc1_9 * glcm_d3_a45_energy + w_pc1_10 *
+  glcm_d2_a135_energy + w_pc1_11 * glcm_d2_a45_energy + w_pc1_12 * glcm_d3_a0_energy + w_pc1_13 *
+  glcm_d2_a90_energy + w_pc1_14 * glcm_d2_a0_energy + w_pc1_15 * glcm_d1_a135_energy + w_pc1_16 *
+  glcm_d1_a90_energy + w_pc1_17 * glcm_d1_a45_energy + w_pc1_18 * glcm_d1_a0_energy + w_pc1_19 *
+  topo_b0_persistence_max + w_pc1_20 * stat_min + w_pc1_21 * stat_max + w_pc1_22 * stat_mean + w_pc1_23 *
+   stat_variance + w_pc1_24 * stat_skewness + w_pc1_25 * stat_kurtosis + w_pc1_26 * stat_iqr + w_pc1_27 *
+   stat_p25 + w_pc1_28 * stat_p75 + w_pc1_29 * gradient_magnitude_max + w_pc1_30 *
+  gradient_magnitude_mean + w_pc1_31 * gradient_orientation_std + w_pc1_32 * laplacian_L0_energy +
+  w_pc1_33 * laplacian_L1_energy + w_pc1_34 * pyramid_detail_L1_energy + w_pc1_35 *
+  pyramid_detail_L2_energy + w_pc1_36 * pyramid_detail_L3_energy + w_pc1_37 * glcm_d2_a45_contrast +
+  w_pc1_38 * glcm_d3_a45_contrast + w_pc1_39 * glcm_d3_a90_contrast + w_pc1_40 * morph_dilation_ratio +
+  w_pc1_41 * morph_gradient_sum + w_pc1_42 * morph_bth_3_sum + w_pc1_43 * morph_bth_3_mean + w_pc1_44 *
+  morph_bth_5_sum + w_pc1_45 * morph_bth_5_mean + w_pc1_46 * morph_bth_7_max + w_pc1_47 *
+  morph_bth_11_max + w_pc1_48 * shape_hu_0 + w_pc1_49 * shape_hu_1 + w_pc1_50 * shape_hu_2 + w_pc1_51 *
+  shape_hu_3 + w_pc1_52 * shape_hu_4 + w_pc1_53 * shape_hu_5 + w_pc1_54 * shape_hu_6 + w_pc1_55 *
+  shape_centroid_x + w_pc1_56 * shape_centroid_y + w_pc1_57 * lbp_r1_entropy + w_pc1_58 * lbp_r1_energy +
+   w_pc1_59 * lbp_r1_mean + w_pc1_60 * lbp_r1_std + w_pc1_61 * lbp_r2_entropy + w_pc1_62 * lbp_r2_energy
+  + w_pc1_63 * lbp_r2_mean + w_pc1_64 * lbp_r2_std + w_pc1_65 * lbp_r3_entropy + w_pc1_66 * lbp_r3_energy
+   + w_pc1_67 * lbp_r3_mean + w_pc1_68 * lbp_r3_std + w_pc1_69 * lbp_r5_entropy + w_pc1_70 *
+  lbp_r5_energy + w_pc1_71 * lbp_r5_mean + w_pc1_72 * lbp_r5_std + w_pc1_73 * fft_spectral_centroid +
+  w_pc1_74 * fft_spectral_spread + w_pc1_75 * fft_std_phase + w_pc1_76 * entropy_local_min + w_pc1_77 *
+  entropy_tsallis + w_pc1_78 * svd_n_components_95 + w_pc1_79 * SSIM_Index + w_pc1_80 *
+  Luminance_Similarity + w_pc1_81 * Contrast_Similarity + w_pc1_82 * Structure_Similarity + w_pc1_83 *
+  Scratches + w_pc1_84 * Digs + w_pc1_85 * Blobs + w_pc1_86 * Edge_Irregularities)
+
+
+  ---
+
+  Full Equation for Principal Component 2 (PC2)
+
+
+  The score for the second Principal Component is a different weighted, linear combination of all 88
+  standardized features:
+
+
+  PC2_Score = (w_pc2_1 * Mahalanobis_Distance + w_pc2_2 * Comparison_Mean + w_pc2_3 * Comparison_Std +
+  w_pc2_4 * Comparison_Min + w_pc2_5 * Comparison_Max + w_pc2_6 * topo_b0_persistence_sum + w_pc2_7 *
+  glcm_d3_a135_energy + w_pc2_8 * glcm_d3_a90_energy + w_pc2_9 * glcm_d3_a45_energy + w_pc2_10 *
+  glcm_d2_a135_energy + w_pc2_11 * glcm_d2_a45_energy + w_pc2_12 * glcm_d3_a0_energy + w_pc2_13 *
+  glcm_d2_a90_energy + w_pc2_14 * glcm_d2_a0_energy + w_pc2_15 * glcm_d1_a135_energy + w_pc2_16 *
+  glcm_d1_a90_energy + w_pc2_17 * glcm_d1_a45_energy + w_pc2_18 * glcm_d1_a0_energy + w_pc2_19 *
+  topo_b0_persistence_max + w_pc2_20 * stat_min + w_pc2_21 * stat_max + w_pc2_22 * stat_mean + w_pc2_23 *
+   stat_variance + w_pc2_24 * stat_skewness + w_pc2_25 * stat_kurtosis + w_pc2_26 * stat_iqr + w_pc2_27 *
+   stat_p25 + w_pc2_28 * stat_p75 + w_pc2_29 * gradient_magnitude_max + w_pc2_30 *
+  gradient_magnitude_mean + w_pc2_31 * gradient_orientation_std + w_pc2_32 * laplacian_L0_energy +
+  w_pc2_33 * laplacian_L1_energy + w_pc2_34 * pyramid_detail_L1_energy + w_pc2_35 *
+  pyramid_detail_L2_energy + w_pc2_36 * pyramid_detail_L3_energy + w_pc2_37 * glcm_d2_a45_contrast +
+  w_pc2_38 * glcm_d3_a45_contrast + w_pc2_39 * glcm_d3_a90_contrast + w_pc2_40 * morph_dilation_ratio +
+  w_pc2_41 * morph_gradient_sum + w_pc2_42 * morph_bth_3_sum + w_pc2_43 * morph_bth_3_mean + w_pc2_44 *
+  morph_bth_5_sum + w_pc2_45 * morph_bth_5_mean + w_pc2_46 * morph_bth_7_max + w_pc2_47 *
+  morph_bth_11_max + w_pc2_48 * shape_hu_0 + w_pc2_49 * shape_hu_1 + w_pc2_50 * shape_hu_2 + w_pc2_51 *
+  shape_hu_3 + w_pc2_52 * shape_hu_4 + w_pc2_53 * shape_hu_5 + w_pc2_54 * shape_hu_6 + w_pc2_55 *
+  shape_centroid_x + w_pc2_56 * shape_centroid_y + w_pc2_57 * lbp_r1_entropy + w_pc2_58 * lbp_r1_energy +
+   w_pc2_59 * lbp_r1_mean + w_pc2_60 * lbp_r1_std + w_pc2_61 * lbp_r2_entropy + w_pc2_62 * lbp_r2_energy
+  + w_pc2_63 * lbp_r2_mean + w_pc2_64 * lbp_r2_std + w_pc2_65 * lbp_r3_entropy + w_pc2_66 * lbp_r3_energy
+   + w_pc2_67 * lbp_r3_mean + w_pc2_68 * lbp_r3_std + w_pc2_69 * lbp_r5_entropy + w_pc2_70 *
+  lbp_r5_energy + w_pc2_71 * lbp_r5_mean + w_pc2_72 * lbp_r5_std + w_pc2_73 * fft_spectral_centroid +
+  w_pc2_74 * fft_spectral_spread + w_pc2_75 * fft_std_phase + w_pc2_76 * entropy_local_min + w_pc2_77 *
+  entropy_tsallis + w_pc2_78 * svd_n_components_95 + w_pc2_79 * SSIM_Index + w_pc2_80 *
+  Luminance_Similarity + w_pc2_81 * Contrast_Similarity + w_pc2_82 * Structure_Similarity + w_pc2_83 *
+  Scratches + w_pc2_84 * Digs + w_pc2_85 * Blobs + w_pc2_86 * Edge_Irregularities)
+
+
+  ---
+
+  Full Equation for Multiple Linear Regression Model
+
+  The prediction for the Confidence metric is the weighted sum of all 88 features, plus a constant
+  intercept term (w_0).
+
+
+  Confidence_Prediction = w_0 + (w_conf_1 * Mahalanobis_Distance + w_conf_2 * Comparison_Mean + w_conf_3
+  * Comparison_Std + w_conf_4 * Comparison_Min + w_conf_5 * Comparison_Max + w_conf_6 *
+  topo_b0_persistence_sum + w_conf_7 * glcm_d3_a135_energy + w_conf_8 * glcm_d3_a90_energy + w_conf_9 *
+  glcm_d3_a45_energy + w_conf_10 * glcm_d2_a135_energy + w_conf_11 * glcm_d2_a45_energy + w_conf_12 *
+  glcm_d3_a0_energy + w_conf_13 * glcm_d2_a90_energy + w_conf_14 * glcm_d2_a0_energy + w_conf_15 *
+  glcm_d1_a135_energy + w_conf_16 * glcm_d1_a90_energy + w_conf_17 * glcm_d1_a45_energy + w_conf_18 *
+  glcm_d1_a0_energy + w_conf_19 * topo_b0_persistence_max + w_conf_20 * stat_min + w_conf_21 * stat_max +
+   w_conf_22 * stat_mean + w_conf_23 * stat_variance + w_conf_24 * stat_skewness + w_conf_25 *
+  stat_kurtosis + w_conf_26 * stat_iqr + w_conf_27 * stat_p25 + w_conf_28 * stat_p75 + w_conf_29 *
+  gradient_magnitude_max + w_conf_30 * gradient_magnitude_mean + w_conf_31 * gradient_orientation_std +
+  w_conf_32 * laplacian_L0_energy + w_conf_33 * laplacian_L1_energy + w_conf_34 *
+  pyramid_detail_L1_energy + w_conf_35 * pyramid_detail_L2_energy + w_conf_36 * pyramid_detail_L3_energy
+  + w_conf_37 * glcm_d2_a45_contrast + w_conf_38 * glcm_d3_a45_contrast + w_conf_39 *
+  glcm_d3_a90_contrast + w_conf_40 * morph_dilation_ratio + w_conf_41 * morph_gradient_sum + w_conf_42 *
+  morph_bth_3_sum + w_conf_43 * morph_bth_3_mean + w_conf_44 * morph_bth_5_sum + w_conf_45 *
+  morph_bth_5_mean + w_conf_46 * morph_bth_7_max + w_conf_47 * morph_bth_11_max + w_conf_48 * shape_hu_0
+  + w_conf_49 * shape_hu_1 + w_conf_50 * shape_hu_2 + w_conf_51 * shape_hu_3 + w_conf_52 * shape_hu_4 +
+  w_conf_53 * shape_hu_5 + w_conf_54 * shape_hu_6 + w_conf_55 * shape_centroid_x + w_conf_56 *
+  shape_centroid_y + w_conf_57 * lbp_r1_entropy + w_conf_58 * lbp_r1_energy + w_conf_59 * lbp_r1_mean +
+  w_conf_60 * lbp_r1_std + w_conf_61 * lbp_r2_entropy + w_conf_62 * lbp_r2_energy + w_conf_63 *
+  lbp_r2_mean + w_conf_64 * lbp_r2_std + w_conf_65 * lbp_r3_entropy + w_conf_66 * lbp_r3_energy +
+  w_conf_67 * lbp_r3_mean + w_conf_68 * lbp_r3_std + w_conf_69 * lbp_r5_entropy + w_conf_70 *
+  lbp_r5_energy + w_conf_71 * lbp_r5_mean + w_conf_72 * lbp_r5_std + w_conf_73 * fft_spectral_centroid +
+  w_conf_74 * fft_spectral_spread + w_conf_75 * fft_std_phase + w_conf_76 * entropy_local_min + w_conf_77
+   * entropy_tsallis + w_conf_78 * svd_n_components_95 + w_conf_79 * SSIM_Index + w_conf_80 *
+  Luminance_Similarity + w_conf_81 * Contrast_Similarity + w_conf_82 * Structure_Similarity + w_conf_83 *
+   Scratches + w_conf_84 * Digs + w_conf_85 * Blobs + w_conf_86 * Edge_Irregularities)

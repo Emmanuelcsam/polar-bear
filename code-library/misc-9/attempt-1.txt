@@ -1,0 +1,236 @@
+#!/usr/bin/env python3
+# ==============================================================
+#  Fiber-Optic End-Face Defect Detection
+#  End-to-end pipeline that
+#    1) loads reference tensors for supervised learning
+#    2) trains a lightweight CNN (ResNet18 from D2L)
+#    3) parses every image in ./dataset/**, isolates core /
+#       cladding / ferrule regions, classifies them, then
+#       searches each region for blobs & scratches
+#    4) prints a concise statistics report
+# --------------------------------------------------------------
+#  All model, data, and training utilities follow the coding
+#  style and APIs used throughout https://d2l.ai/ (PyTorch tab)
+# ==============================================================
+
+import os, sys, csv, math, time, json, glob, random
+from pathlib import Path
+from collections import defaultdict, Counter
+
+import cv2
+import numpy as np
+import torch
+from torch import nn
+from torchvision import transforms
+from d2l import torch as d2l                        # D2L helpers
+
+# ----------------------------------------------------------------
+# 1. Hyper-parameters & I/O paths
+# ----------------------------------------------------------------
+class Args(d2l.HyperParameters):
+    def __init__(self):
+        self.save_dir         = Path('./checkpoints')
+        self.batch_size       = 32
+        self.num_epochs       = 15
+        self.lr               = 1e-3
+        self.device           = d2l.try_gpu()
+        self.num_workers      = 4
+        self.seed             = 42
+        self.ref_dir          = Path('./reference')
+        self.data_dir         = Path('./dataset')
+        self.stats_file       = Path('./defect_stats.csv')
+args = Args()
+
+torch.manual_seed(args.seed)
+random.seed(args.seed)
+np.random.seed(args.seed)
+
+# ----------------------------------------------------------------
+# 2. Reference-set dataset (supervised)
+#    Each sub-folder inside ./reference/ is treated as a class.
+#    Every file is a serialized tensor (*.pt) representing one
+#    cropped region (core / cladding / ferrule / etc…).
+# ----------------------------------------------------------------
+class RefTensorDataset(torch.utils.data.Dataset):
+    def __init__(self, ref_root: Path, transform=None):
+        self.files   = []
+        self.labels  = []
+        self.classes = sorted([p.name for p in ref_root.iterdir() if p.is_dir()])
+        self.cls2idx = {c:i for i,c in enumerate(self.classes)}
+        for cls in self.classes:
+            for f in (ref_root/cls).glob('*.pt'):
+                self.files.append(f)
+                self.labels.append(self.cls2idx[cls])
+        self.transform = transform
+    def __len__(self):             return len(self.files)
+    def __getitem__(self, idx):
+        x = torch.load(self.files[idx]).float()      # (C,H,W)
+        if self.transform: x = self.transform(x)
+        y = torch.tensor(self.labels[idx])
+        return x, y
+
+# simple augmentation identical to D2L CIFAR-10 section
+train_tfms = transforms.Compose([
+    transforms.RandomHorizontalFlip(), transforms.RandomVerticalFlip()])
+test_tfms  = None
+
+train_ds = RefTensorDataset(args.ref_dir, train_tfms)
+test_ds  = RefTensorDataset(args.ref_dir, test_tfms)
+
+train_dl = torch.utils.data.DataLoader(
+    train_ds, batch_size=args.batch_size, shuffle=True,
+    num_workers=args.num_workers, pin_memory=True)
+test_dl  = torch.utils.data.DataLoader(
+    test_ds, batch_size=args.batch_size, shuffle=False,
+    num_workers=args.num_workers, pin_memory=True)
+
+# ----------------------------------------------------------------
+# 3. Network definition = ResNet-18 (D2L §8.6) with class count
+# ----------------------------------------------------------------
+class ResNet18(d2l.Classifier):
+    def __init__(self, lr=args.lr, num_classes=len(train_ds.classes)):
+        super().__init__()
+        self.save_hyperparameters()
+        self.net = d2l.resnet18(num_classes, 1)        # single-channel tensors
+        self.apply(d2l.init_cnn)
+
+model = ResNet18().to(args.device)
+loss_fn = nn.CrossEntropyLoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+trainer = d2l.Trainer(max_epochs=args.num_epochs, num_gpus=1,
+                      gradient_clip_val=1.0, log_interval=50)
+
+# ----------------------------------------------------------------
+# 4. Train / evaluate
+# ----------------------------------------------------------------
+def train():
+    model.apply_init(next(iter(train_dl))[0], d2l.init_cnn)
+    trainer.fit(model, train_dl, test_dl)
+
+if not args.save_dir.exists(): args.save_dir.mkdir()
+weight_path = args.save_dir/'resnet18_ref.pth'
+if weight_path.exists():
+    model.load_state_dict(torch.load(weight_path, map_location=args.device))
+else:
+    train()
+    torch.save(model.state_dict(), weight_path)
+
+model.eval()
+
+# ----------------------------------------------------------------
+# 5. Image pre-processing helpers
+# ----------------------------------------------------------------
+to_tensor = transforms.Compose([
+    transforms.ToTensor(),                           # HWC→CHW, [0,1]
+    transforms.Normalize(mean=[0.5], std=[0.5])])    # range ≈ (-1,1)
+
+def isolate_regions(img_gray):
+    """Detect core / cladding / ferrule via Hough-circles, return masks."""
+    h, w = img_gray.shape
+    blr  = cv2.medianBlur(img_gray, 5)
+    circles = cv2.HoughCircles(
+        blr, cv2.HOUGH_GRADIENT, dp=1.2, minDist=h//8,
+        param1=50, param2=30, minRadius=h//6, maxRadius=h//2)
+    masks = {}
+    if circles is not None:
+        circles = np.uint16(circles[0])
+        circles = sorted(circles, key=lambda c: c[2])    # by radius
+        if len(circles) >= 2:
+            core_r = circles[0][2]
+            clad_r = circles[1][2]
+            cx, cy = circles[0][:2]
+            Y, X = np.ogrid[:h, :w]
+            dist = np.sqrt((X - cx)**2 + (Y - cy)**2)
+            masks['core']     = (dist <= core_r).astype(np.uint8)*255
+            masks['cladding'] = ((dist > core_r) & (dist <= clad_r)).astype(np.uint8)*255
+            masks['ferrule']  = (dist > clad_r).astype(np.uint8)*255
+    return masks
+
+def classify_region(region_tensor):
+    region_tensor = region_tensor.unsqueeze(0).to(args.device)
+    with torch.no_grad():
+        logits = model(region_tensor)
+        pred   = torch.argmax(logits, dim=1).item()
+    return train_ds.classes[pred]
+
+# ----------------------------------------------------------------
+# 6. Defect detection routines (OpenCV blob + scratch)
+# ----------------------------------------------------------------
+blob_params = cv2.SimpleBlobDetector_Params()
+blob_params.filterByArea       = True
+blob_params.minArea            = 20
+blob_params.filterByCircularity= False
+blob_params.filterByInertia    = False
+blob_detector = cv2.SimpleBlobDetector_create(blob_params)
+
+def detect_blobs(masked):
+    keypoints = blob_detector.detect(masked)
+    return len(keypoints)
+
+def detect_scratches(masked):
+    sob  = cv2.Sobel(masked, cv2.CV_64F, 1, 0, ksize=3) + \
+           cv2.Sobel(masked, cv2.CV_64F, 0, 1, ksize=3)
+    edges = cv2.convertScaleAbs(sob)
+    cnts, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL,
+                               cv2.CHAIN_APPROX_SIMPLE)
+    long_lines = [c for c in cnts if cv2.arcLength(c, closed=False) > 50]
+    return len(long_lines)
+
+# ----------------------------------------------------------------
+# 7. End-face processing for a single image
+# ----------------------------------------------------------------
+def process_image(img_path):
+    img   = cv2.imread(str(img_path), cv2.IMREAD_COLOR)
+    gray  = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    masks = isolate_regions(gray)
+    result = {}
+    for region, m in masks.items():
+        roi     = cv2.bitwise_and(gray, gray, mask=m)
+        tensor  = to_tensor(roi).float()               # (1,H,W)
+        cls     = classify_region(tensor)
+        blobs   = detect_blobs(roi)
+        scratch = detect_scratches(roi)
+        result[region] = dict(label=cls,
+                              blobs=blobs,
+                              scratches=scratch)
+    return result
+
+# ----------------------------------------------------------------
+# 8. Walk through ./dataset/ and accumulate statistics
+# ----------------------------------------------------------------
+stats = defaultdict(Counter)
+files = sorted(glob.glob(str(args.data_dir/'**'/'*.png'), recursive=True) +
+               glob.glob(str(args.data_dir/'**'/'*.jpg'), recursive=True))
+
+tic = time.time()
+for f in files:
+    res = process_image(f)
+    for region, out in res.items():
+        stats[region]['images']     += 1
+        stats[region]['blobs']      += out['blobs']
+        stats[region]['scratches']  += out['scratches']
+        stats[region][out['label']] += 1
+toc = time.time()
+
+# ----------------------------------------------------------------
+# 9. Save CSV statistics & pretty print
+# ----------------------------------------------------------------
+with open(args.stats_file, 'w', newline='') as fp:
+    writer = csv.writer(fp)
+    header = ['region', 'images', 'blobs', 'scratches'] + train_ds.classes
+    writer.writerow(header)
+    for region, ctr in stats.items():
+        row = [region,
+               ctr['images'],
+               ctr['blobs'],
+               ctr['scratches']] + [ctr[c] for c in train_ds.classes]
+        writer.writerow(row)
+
+print('=== Inspection Summary ===================================')
+for region, ctr in stats.items():
+    print(f"{region.upper():10} | "
+          f"imgs {ctr['images']:5} | "
+          f"blobs {ctr['blobs']:4} | "
+          f"scratches {ctr['scratches']:4}")
+print(f'Processed {len(files)} images in {toc-tic:.1f}s')
+print(f'Saved statistics → {args.stats_file.resolve()}')

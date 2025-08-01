@@ -1,0 +1,47 @@
+# Core PyTorch and Deep Learning
+torch>=2.0.0
+torchvision>=0.15.0
+torchaudio>=2.0.0
+#pytorch-cuda>=12.1
+
+# Computer Vision and Image Processing
+opencv-python>=4.8.0
+albumentations>=1.3.0
+Pillow>=9.0.0
+
+# Scientific Computing - Fixed versions for Python 3.8 compatibility
+numpy>=1.21.0,<1.25.0
+scipy>=1.10.0,<1.11.0
+scikit-learn>=1.0.0,<1.4.0
+pandas>=1.5.0,<2.1.0
+
+# Visualization and Logging
+matplotlib>=3.5.0,<3.8.0
+seaborn>=0.11.0
+tensorboard>=2.10.0
+wandb>=0.13.0
+
+# Utilities
+tqdm>=4.60.0
+PyYAML>=6.0
+pathlib2>=2.3.7
+
+# Additional ML Libraries
+#timm>=0.9.0
+#segmentation-models-pytorch>=0.3.0
+#efficientnet-pytorch>=0.7.0
+#focal-loss-torch>=0.2.0
+#torchmetrics>=1.0.0
+
+# HPC and Distributed Training
+mpi4py>=3.1.0 
+
+# Monitoring dependencies
+psutil>=5.8.0
+GPUtil>=1.4.0 
+
+# PYLON Camera Integration
+pypylon>=2.0.0
+
+# Performance optimization
+numba>=0.56.0,<0.58.0 

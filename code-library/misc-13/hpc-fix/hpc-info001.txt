@@ -1,0 +1,575 @@
+﻿A Researcher's Comprehensive Guide to the William & Mary Bora HPC Cluster
+
+
+
+
+Section 1: Introduction to the William & Mary HPC Ecosystem and the Bora Subcluster
+
+
+
+
+1.1. The SciClone and Chesapeake Clusters: A Unified HPC Environment
+
+
+The High-Performance Computing (HPC) resources at William & Mary (W&M) are organized into a powerful and diverse computational ecosystem designed to support a wide array of research disciplines, from quantum physics and ocean modeling to health sciences and econometrics.1 This ecosystem is primarily composed of two large, distinct clusters:
+SciClone, located on the main campus, and Chesapeake, situated on the Virginia Institute of Marine Science (VIMS) campus.1 Together, these resources provide a combined computational capacity of approximately 600 trillion double-precision floating-point operations per second (TFLOPS).1
+An HPC account, which is granted by request only, provides a researcher with access to both the SciClone and Chesapeake clusters.2 However, as a matter of policy and practice, the VIMS cluster is typically reserved for VIMS-affiliated users, while the more extensive SciClone cluster serves as the primary computational resource for both main-campus and VIMS researchers.3
+A fundamental concept for any user of the W&M HPC environment is the "subcluster." Neither SciClone nor Chesapeake is a single, monolithic supercomputer. Instead, they are collections of many individual computers, known as "nodes," which are grouped into specialized subclusters. Each subcluster possesses a distinct hardware architecture tailored for specific types of computational tasks.4 For example, some subclusters are designed for massively parallel jobs that span hundreds of cores across many nodes, while others are equipped with high-memory nodes or specialized Graphics Processing Units (GPUs) for serial or shared-memory applications.4 This modular design requires the user to make a deliberate choice about which subcluster is most appropriate for their specific application before submitting a job.4 This report focuses specifically on one of the key components of the SciClone cluster: the Bora subcluster.
+
+
+1.2. The Bora Subcluster: Architecture and Intended Purpose
+
+
+The Bora subcluster is a significant component of the SciClone environment, specifically engineered for multi-node, parallel computing workloads.4 It shares its front-end login node,
+bora.sciclone.wm.edu, with its sister subcluster, Hima, which is conversely designed for serial and shared-memory jobs.6 Understanding the specific hardware architecture of Bora is essential for crafting efficient and effective jobs.
+The compute nodes within the Bora subcluster are Dell PowerEdge R730 servers with the following hardware profile 6:
+* Processors: Each node is equipped with two 16-core Intel Xeon E5-2683 v4 "Broadwell" processors, running at a clock speed of 2.1 GHz.6 While some system documentation lists a different processor model (Intel Xeon E5-2640), the more detailed hardware page specifies the E5-2683 v4.5 For precise verification, a user can execute the
+lscpu command within an interactive session on a Bora compute node.
+* Cores per Node: For job scheduling purposes, each Bora node makes 20 physical cores available for user computations.6 It is a strong policy recommendation that jobs submitted to Bora utilize all 20 cores on each requested node to prevent wasting resources, as the scheduler allocates the entire node to a single job.6
+* Memory per Node: Each Bora node contains 128 GB of system memory.6
+* Network: Inter-node communication, which is critical for parallel applications, is handled by a high-speed, low-latency FDR InfiniBand network. A separate, standard 1 GbE network is used for system-level tasks and management.6
+The primary design purpose of Bora is to execute multi-node parallel jobs, particularly those that rely on the Message Passing Interface (MPI) communication protocol.4 Its architecture is optimized for calculations that can be decomposed into many communicating tasks running simultaneously across multiple nodes. This makes it the ideal choice for large-scale simulations and data analysis that exceed the capabilities of a single machine.
+
+
+1.3. Critical Clarification: The Migration from Torque to the SLURM Workload Manager
+
+
+A critical point of awareness for any user, new or experienced, is the evolution of the job scheduling system on the W&M HPC clusters. Older documentation specific to the Bora subcluster makes explicit reference to the Torque Resource Manager and the Portable Batch System (PBS), providing job submission examples with #PBS directives.4 These historical documents can be misleading if taken in isolation.
+More recent, system-wide documentation confirms a major and complete infrastructure upgrade. The W&M Research Computing team has standardized on a single, modern workload manager across the entire HPC environment. It is unequivocally stated that SLURM (Simple Linux Utility for Resource Management) is the batch system used to submit jobs on all main-campus and VIMS HPC clusters.8
+This transition from multiple schedulers to a unified SLURM environment represents a significant modernization effort. The existence of a "Migrating from Torque" guide within the official SLURM documentation serves as definitive evidence of this system-wide change.8 Furthermore, the same documentation provides explicit examples of SLURM submission scripts targeting the Bora cluster, removing any ambiguity about the correct scheduler to use.8
+The persistence of older, Torque-related documentation is not an indication of error but rather a natural artifact of this large-scale system evolution. It reflects an actively maintained and improving computational environment, a positive attribute for researchers. However, it also underscores the need for users to critically evaluate documentation, prioritizing newer, system-wide guides over older, hardware-specific pages when conflicts arise.
+Therefore, to ensure all instructions are current, accurate, and functional, this report will exclusively use the SLURM workload manager for all examples and operational procedures. All references to Torque/PBS should be considered historical and are superseded by the SLURM-based methods detailed herein.
+
+
+Section 2: Access, Connectivity, and Environment Setup
+
+
+
+
+2.1. First Steps: Account and Prerequisites
+
+
+Access to the W&M HPC clusters is a managed service and is not granted to users by default. The first step for any prospective user is to formally request an account through the Information Technology services portal.2
+Once an account is provisioned, it is essential to recognize the primary prerequisite for effective use of the system: a functional proficiency with a Unix/Linux command-line interface.2 The HPC clusters operate on derivatives of Red Hat Enterprise Linux, and nearly all interaction with the system—from file management and software compilation to job submission and monitoring—is performed via a command-line shell.10 Users unfamiliar with this environment are strongly encouraged to utilize the resources provided by W&M, which include links to online tutorials and access to technical e-books through Swem Library, such as
+Using csh & tcsh and the Linux Pocket Guide.10 As part of this command-line proficiency, familiarity with a plain text editor like
+nano, vim, or emacs is indispensable for creating and modifying scripts and source code files directly on the cluster.10
+
+
+2.2. Connecting to the Bora Front-End: bora.sciclone.wm.edu
+
+
+All user interaction with the Bora subcluster is mediated through its designated "front-end" or "login" node. This server, bora.sciclone.wm.edu, is where users compile their code, manage their files, and submit their computational jobs to the back-end compute nodes.2 It is critical to understand that the front-end node is a shared resource for these preparatory tasks and is
+not to be used for running computationally intensive calculations themselves.2 The method for connecting to this front-end depends on the user's physical network location.
+
+
+On-Campus Connection
+
+
+For users connected to the W&M or VIMS campus networks (either physically or via the university VPN), access is straightforward. From a Linux or macOS terminal, or a Windows terminal with an SSH client (like PowerShell), the connection is established with a standard SSH command 3:
+
+
+Bash
+
+
+
+
+ssh <username>@bora.sciclone.wm.edu
+
+Here, <username> should be replaced with the user's W&M username, which is typically the same as their HPC account username.11
+
+
+Off-Campus Connection via Bastion Host
+
+
+Connecting from an off-campus network involves an additional security layer. Direct SSH access to the HPC front-end nodes is blocked by the university firewall for security reasons.2 All off-campus connections must be routed through a dedicated, secure gateway known as a "jump host" or "bastion host." The official W&M IT bastion host is
+bastion.wm.edu.3
+This multi-step login process is not a matter of inconvenience but a deliberate security architecture. This "defense-in-depth" strategy creates a series of checkpoints—the external firewall, the hardened bastion host, the DUO two-factor authentication, and the final cluster login—that an unauthorized party would need to circumvent. By funneling all external administrative access through this single, heavily monitored chokepoint, the Research Computing team can better protect the high-value computational resources and research data housed on the clusters. Understanding this rationale transforms a seemingly complex login procedure into an appreciated security measure.
+To connect from off-campus, the ssh command must be modified to use the -J (ProxyJump) flag, which instructs the local SSH client to first connect to the bastion host and then establish a tunnel to the final destination (bora.sciclone.wm.edu) 9:
+
+
+Bash
+
+
+
+
+ssh -J <WM_username>@bastion.wm.edu <hpc_username>@bora.sciclone.wm.edu
+
+This command initiates a two-stage authentication process:
+   1. The user will first be prompted for their W&M password to authenticate to bastion.wm.edu.
+   2. Following a successful password entry, the user will receive a DUO two-factor authentication (2FA) prompt on their registered device.
+   3. Once the DUO authentication is complete, the user will be prompted a second time for their W&M password to authenticate to the final destination, bora.sciclone.wm.edu.3
+
+
+2.3. Mastering Your Environment: tcsh, Modules, and Customization
+
+
+Upon a successful login, the user is placed into a command-line shell. The configuration of this shell environment is key to a productive workflow.
+
+
+The tcsh Shell
+
+
+The default shell environment for all HPC users at W&M is the TC Shell (tcsh).9 While
+tcsh is a powerful interactive shell, some users may be more familiar with the Bourne-Again Shell (bash). For those who prefer bash, a request can be made to the support team at hpc-help@wm.edu to change their default shell.14 However, all examples in this guide will use the default
+tcsh syntax. A basic tcsh script, for example, uses a foreach loop structure and references variables with a $ prefix.9
+
+
+The Environment Module System
+
+
+The W&M HPC environment hosts a vast collection of software packages, compilers, and libraries, often with multiple versions of each. To manage this complexity and prevent conflicts, the system employs a powerful tool called Environment Modules.14 Instead of having all software available in the user's path at all times, users can dynamically load and unload the specific software environments they need for a given task.
+The following commands are essential for interacting with the module system 14:
+   * module avail: Lists all software modules available on the current platform.
+   * module list: Shows which modules are currently loaded in the user's active session.
+   * module load <module_name>: Loads a specific module into the environment, modifying PATH and other environment variables. For example: module load python/3.12.7.
+   * module unload <module_name>: Removes a module from the current environment.
+
+
+Persistent Customization
+
+
+Loading modules manually in each new session can be tedious. To make environment configurations persistent, users can modify a set of shell startup files in their home directory. The system uses a hierarchical structure of configuration files, with system-wide settings in /usr/local/etc/sciclone.cshrc being sourced before user-specific files like ~/.cshrc.14
+Most importantly, the system uses platform-specific configuration files to allow for tailored environments on each subcluster. For the Bora subcluster, the relevant file is ~/.cshrc.bora.14 Any commands placed in this file will be executed automatically every time a user logs into
+bora.sciclone.wm.edu or starts a batch job on a Bora node.
+For example, to ensure the Intel compiler suite is always available upon logging into Bora, a user would add the following line to their ~/.cshrc.bora file:
+
+
+Code snippet
+
+
+
+
+module load intel/compiler-2024.0
+
+This practice is the recommended way to create a consistent and reproducible software environment for all work conducted on the Bora subcluster.14 The most recent templates for these configuration files can be found in
+/usr/local/etc/templates on the front-end node.14
+
+
+Section 3: File Systems and Data Workflow
+
+
+
+
+3.1. The HPC Storage Landscape
+
+
+A proficient understanding of the storage architecture is as critical to successful high-performance computing as understanding the compute architecture. The choice of where to store files directly impacts job performance, data safety, and collaboration. The SciClone cluster provides several distinct filesystems, each with a specific purpose, performance profile, and backup policy.6 Using the wrong filesystem for a given task—for example, running an I/O-intensive parallel job from a home directory—is a common mistake that can severely degrade performance and impact other users.
+The following table consolidates information from across the W&M Research Computing documentation to provide a single, comprehensive guide to the primary filesystems available to a user on the Bora front-end.
+Table 3.1: W&M HPC File Systems and Usage Guidelines
+
+
+Filesystem Path
+	Recommended Use
+	Backup Policy
+	Performance Notes
+	Source(s)
+	/sciclone/homeXX/$USER
+	Source code, shell scripts, configuration files, and other small, critical files. It should never be used for active job input/output.
+	Backed up.
+	This is a Network File System (NFS). It is relatively slow and not designed for the high-concurrency I/O of parallel jobs.
+	6
+	/sciclone/dataXX/$USER
+	Long-term storage for important research datasets, archives, and results that are not currently in active use. Not for active job I/O.
+	Backed up.
+	Also an NFS-based filesystem with performance characteristics similar to home directories.
+	6
+	/sciclone/scrXX/$USER
+	General-purpose temporary storage for job-related files. A good default location for staging input data and writing intermediate output.
+	NOT backed up. Data is subject to purging.
+	An NFS-based scratch space, but generally offering higher performance and bandwidth than the home/data filesystems.
+	12
+	/sciclone/pscr/$USER
+	This is the preferred filesystem for all work on Bora. It is a parallel filesystem designed for high-performance, multi-node I/O.
+	NOT backed up.
+	A high-performance parallel filesystem (e.g., Lustre) that allows many nodes to read and write data simultaneously without creating an I/O bottleneck.
+	6
+	/local/scr
+	Node-local temporary storage. This is the fastest possible storage for single-node jobs or for job steps that are I/O bound on a single node.
+	NOT backed up. Data is private to the node and is deleted when the job finishes.
+	This is a physical disk (often an SSD) inside the compute node. It offers extremely high speed by avoiding the network entirely.
+	6
+	
+
+3.2. Storage Usage Policy: The "Good Citizenship" Model
+
+
+A unique aspect of the W&M HPC storage environment is its policy on disk space limits. For the primary computational filesystems—home, data, and scratch—the Research Computing group has deliberately chosen not to implement firm, enforced disk quotas for individual users.15 The documentation explicitly states that this policy is intended to avoid hindering research projects, which can have vastly different and unpredictable storage requirements.15
+This "no hard quota" system, however, is not an invitation for unlimited or careless storage use. On the contrary, it represents a policy of trust that shifts the burden of resource management from the system administrators to the individual researchers. This "good citizenship" model fosters a flexible and collaborative environment but also carries the inherent risk that a single user's actions could negatively impact the entire community. If one user fills a shared filesystem, it can cause jobs belonging to dozens of other researchers to fail and can prevent new work from starting.15
+This policy, therefore, empowers users with flexibility but simultaneously demands a higher level of awareness and responsibility. Users are expected to be diligent stewards of the shared storage resources. To facilitate this, the system provides standard Linux tools for self-monitoring disk usage:
+   * To check the overall status of a filesystem, including total size, used space, and available space, the df command is used. For example, to check the parallel scratch filesystem, a user would run 15:
+Bash
+df -h /sciclone/pscr
+
+   * To determine the amount of space consumed by one's own directories, the du command is used. To get a human-readable summary of usage in a specific directory, a user would run 15:
+Bash
+du -sh /sciclone/pscr/$USER
+
+Users have a personal responsibility to clean up their data, delete files that are no longer needed, and use the appropriate storage tier for their data (e.g., not using backed-up home directories for temporary scratch data).15 For long-term archival of data not in active use, a separate service, the Research Computing Storage (RCS) server (
+rcs01.hpc.wm.edu), provides a cold storage solution with a free tier of up to 4 TB.16
+
+
+3.3. A Complete Guide to File Transfers
+
+
+Moving data between a local computer and the HPC cluster is a fundamental part of the research workflow. W&M Research Computing supports several methods, each suited to different use cases, data sizes, and user platforms.17 When using command-line tools like
+scp or sftp, it is best practice to connect directly to the front-end node that is most closely associated with the target filesystem to ensure the most direct data path.17 For files on
+/sciclone/pscr or for general job submission tasks, bora.sciclone.wm.edu is the correct destination.
+
+
+Method 1: Command-Line scp and sftp
+
+
+For users on Linux, macOS, or Windows with PowerShell, the scp (secure copy) and sftp (secure file transfer protocol) commands are efficient tools for moving smaller files or for incorporating file transfers into scripts.18
+      * To copy a file from a local machine to a home directory on Bora (from off-campus):
+The -o ProxyJump option is used to tunnel the connection through the bastion host.
+Bash
+scp -o ProxyJump=<user>@bastion.wm.edu local_file.dat <user>@bora.sciclone.wm.edu:~/project_data/
+
+      * To copy a file from Bora back to a local machine (from off-campus):
+Bash
+scp -o ProxyJump=<user>@bastion.wm.edu <user>@bora.sciclone.wm.edu:~/results/output.log.
+
+The . at the end of the command signifies the current directory on the local machine.
+
+
+Method 2: GUI-based WinSCP for Windows Users
+
+
+For Windows users who prefer a graphical interface, WinSCP is a popular and robust SFTP client. It provides a familiar dual-pane, drag-and-drop interface for file transfers.19
+         * On-Campus Connection: A new session is configured with bora.sciclone.wm.edu as the host name and the user's W&M credentials.
+         * Off-Campus Connection: The configuration is more involved, requiring the setup of an SSH tunnel. In the WinSCP "Login" window, after entering the host name for Bora, the user must click "Advanced," navigate to the "Tunnel" section, and configure an SSH tunnel through bastion.wm.edu using their W&M credentials. This setup correctly routes the connection through the required jump host, prompting for DUO authentication before establishing the final connection to Bora.19
+
+
+Method 3: High-Performance Transfers with Globus
+
+
+For large datasets (many gigabytes or terabytes), Globus is the strongly recommended transfer method.17 Globus is a "fire-and-forget" data management service that uses a web interface to orchestrate high-performance, reliable, and secure data transfers between two endpoints. It automatically optimizes transfer parameters, retries failed transfers, and sends a notification upon completion, freeing the user from having to monitor the process.
+The typical workflow for transferring files from a personal computer to the cluster involves these steps 21:
+         1. Install Globus Connect Personal: The user first downloads and installs the Globus Connect Personal utility on their local Mac, Windows, or Linux machine. This turns their local computer into a Globus "endpoint."
+         2. Log in to Globus: The user navigates to the Globus web portal and logs in using their existing W&M organizational login.
+         3. Select Endpoints: In the Globus "File Manager" interface, the user selects two endpoints for the transfer. The first is their personal computer's collection. The second is the target W&M HPC collection, such as the W&M RC/HPC/IO Collection, which provides access to all /sciclone filesystems.17
+         4. Initiate Transfer: The user can then browse the files on both endpoints and initiate the transfer with a click. Globus manages the entire process in the background.
+Globus can also be used for extremely fast transfers between two remote HPC clusters or between the SciClone and Chesapeake clusters at W&M.22
+
+
+Section 4: Authoring and Executing Jobs with SLURM
+
+
+
+
+4.1. The Anatomy of a SLURM Submission Script
+
+
+The primary mechanism for running computations on the Bora subcluster is by submitting a job script to the SLURM workload manager. This script is a plain text file that contains two main components: a series of scheduler directives and the sequence of shell commands to be executed on the compute nodes.8
+The script must begin with a "shebang" line that specifies the interpreter. For the default tcsh shell, this is #!/bin/tcsh.9 Following the shebang are the SLURM directives, which all begin with
+#SBATCH. These directives are not comments; they are instructions for the scheduler, requesting resources such as nodes, cores, memory, and wall time.8
+Two fundamental behavioral differences distinguish SLURM from the older Torque system:
+         1. Starting Directory: SLURM jobs begin execution in the directory from which the sbatch command was issued. This is a convenient change from Torque, which always started jobs in the user's home directory.8
+         2. Environment Inheritance: A batch job submitted with sbatch inherits the environment (loaded modules, environment variables, etc.) that is active in the shell at the moment of submission. Crucially, the batch job does not re-source the user's startup files like ~/.cshrc.bora.8 This means that any required software modules must either be loaded in the shell
+before submitting the job or, more robustly and reproducibly, be loaded explicitly within the job script itself using module load commands.
+
+
+4.2. The Definitive Bora SLURM Script (run_bora_job.slurm)
+
+
+The following is a complete, heavily commented, and functional SLURM submission script designed specifically for running a parallel MPI job on the Bora subcluster using the tcsh shell. It serves as a robust template that can be copied, modified, and used for a wide variety of research applications.
+
+
+Code snippet
+
+
+
+
+#!/bin/tcsh
+#
+# ======================================================================
+# SLURM SUBMISSION SCRIPT FOR THE W&M BORA SUBCLUSTER
+# This script is designed for a parallel MPI application.
+# ======================================================================
+#
+# --- SLURM Resource Directives ---
+#
+#SBATCH --job-name=MyBoraJob         # A descriptive name for your job for easy identification.
+#SBATCH --nodes=2                    # Request 2 compute nodes from the cluster.
+#SBATCH --ntasks-per-node=20         # Request all 20 available cores on each node.
+#SBATCH --time=01:30:00              # Set the walltime limit (format: HH:MM:SS). Job will be killed if it exceeds this. Max is 72h.
+#SBATCH --mem=100G                   # Request 100 Gigabytes of memory PER NODE.
+#SBATCH -C bo                        # **CRITICAL CONSTRAINT**: This ensures the job runs on Bora nodes, not Hima nodes.
+#SBATCH -o slurm-%j.out              # Redirect standard output to a file named slurm-<jobID>.out.
+#SBATCH -e slurm-%j.err              # Redirect standard error to a file named slurm-<jobID>.err.
+#SBATCH --mail-type=END,FAIL         # Send an email when the job ends or if it fails.
+#SBATCH --mail-user=your_wm_id@wm.edu # The email address for notifications.
+
+# --- Job Environment Setup and Diagnostics ---
+#
+# It is good practice to print diagnostic information to the output file.
+echo "========================================================"
+echo "SLURM JOB ID: ${SLURM_JOB_ID}"
+echo "Running on hosts: ${SLURM_JOB_NODELIST}"
+echo "Running on ${SLURM_NNODES} nodes"
+echo "Running on ${SLURM_NPROCS} total processes"
+echo "Working directory is: ${SLURM_SUBMIT_DIR}"
+echo "Job started on: `date`"
+echo "========================================================"
+
+# --- Software Environment Configuration ---
+#
+# Load the necessary software modules for your application.
+# This is required because batch jobs do not automatically source your.cshrc.bora file.
+# The following is an example for a program compiled with the Intel suite and OpenMPI.
+# Use 'module avail' to see all available modules.
+module load intel/compiler-2024.0
+module load openmpi-ib/intel-2024.0/4.1.6
+
+# --- Application Execution ---
+#
+# It is best practice to change into the submission directory.
+cd $SLURM_SUBMIT_DIR
+
+# The 'srun' command is the standard SLURM utility for launching parallel tasks.
+# It automatically distributes the application across the nodes and cores
+# allocated to the job. It replaces older wrappers like 'mpirun' or 'mvp2run'.
+# The following command will launch 40 instances of 'my_parallel_executable'
+# (2 nodes * 20 tasks/node) and redirect its output to a log file.
+srun./my_parallel_executable >& my_output_file.log
+
+# --- Job Completion ---
+#
+echo "========================================================"
+echo "Job finished with exit code $? on: `date`"
+echo "========================================================"
+
+
+
+4.3. Deconstructing the Directives: A Quick Reference
+
+
+While the example script covers a typical use case, understanding the key #SBATCH directives is essential for tailoring requests to specific needs. The following table provides a quick-reference guide to the most important options for Bora users.
+Table 4.1: Essential SLURM #SBATCH Directives for Bora
+Directive
+	Alias
+	Description
+	Bora-Specific Example
+	--job-name
+	-J
+	Assigns a name to the job for easy identification in the queue.
+	-J QuantumSim
+	--nodes
+	-N
+	Specifies the number of compute nodes to allocate to the job.
+	-N 4
+	--ntasks-per-node
+	
+
+	Specifies the number of tasks (typically cores) to launch on each node. For Bora, this should almost always be 20.
+	--ntasks-per-node=20
+	--time
+	-t
+	Sets the maximum wall clock time for the job (D-HH:MM:SS). The maximum for Bora is 72 hours.
+	-t 2-12:00:00 (2 days, 12 hours)
+	--mem
+	
+
+	Specifies the memory required per node. Use units like M for Megabytes or G for Gigabytes.
+	--mem=120G
+	--constraint
+	-C
+	This is a critical and mandatory directive for Bora. It selects nodes with a specific feature tag. bo targets Bora nodes.
+	-C bo
+	--output
+	-o
+	Specifies a file for the job's standard output. The %j wildcard is replaced by the numeric Job ID.
+	-o my_job_%j.out
+	--error
+	-e
+	Specifies a file for the job's standard error.
+	-e my_job_%j.err
+	The --constraint or -C directive is particularly important. Because the Bora and Hima subclusters share the bora.sciclone.wm.edu front-end, the scheduler needs this constraint to distinguish which type of node is being requested. Omitting -C bo may result in the job being scheduled on the wrong hardware or remaining queued indefinitely.8
+
+
+4.4. The Job Lifecycle: Submission, Interaction, and Execution
+
+
+With a prepared script, the user can manage the entire lifecycle of a job using a few core SLURM commands.
+            * Submitting a Batch Job: The standard method to add a job to the queue is with the sbatch command, followed by the script name 8:
+Bash
+sbatch run_bora_job.slurm
+
+SLURM will respond with the assigned Job ID.
+            * Running Parallel Code with srun: Within a job allocation (either from sbatch or salloc), the srun command is the designated launcher for parallel applications.8 It communicates directly with SLURM to understand the job's topology (which nodes and cores are assigned) and correctly launches the executable on the allocated resources. It is the modern replacement for older MPI launchers like
+mpirun, mpiexec, or the W&M-specific mvp2run from the Torque era.9
+            * Requesting Interactive Sessions: For tasks like debugging, compiling code directly on the compute node architecture, or performing short, interactive tests, requesting an interactive session is invaluable. The salloc command allocates resources and provides a live shell prompt directly on a compute node.8 To request a full Bora node for one hour, the command would be 8:
+Bash
+salloc -N 1 -n 20 -t 1:00:00 -C bo
+
+After the resources are granted, the user's command prompt will change, indicating they are now on a compute node (e.g., [user@bo03 ~]$), where they can run commands directly. The session is terminated by typing exit.
+
+
+Section 5: Monitoring, Management, and Post-Job Analysis
+
+
+
+
+5.1. Watching Your Job and the Cluster
+
+
+Once a job is submitted, a set of SLURM commands allows the user to monitor its status, check the overall state of the cluster, and manage the job if necessary.
+               * squeue: This is the primary command for viewing the status of jobs in the queue. Running squeue by itself shows all jobs, which can be overwhelming. It is most effective when used with the -u flag to show only the current user's jobs 8:
+Bash
+squeue -u <username>
+
+The output will show the Job ID, partition, job name, user, status (e.g., PD for Pending, R for Running), time elapsed, and nodes allocated.
+               * sinfo: This command provides a summary of the cluster's state, showing information about the different partitions (e.g., bora, hima), their availability (up or down), and the number of nodes in various states (idle, alloc, mix).8 It is useful for getting a quick overview of how busy the cluster is.
+               * scancel <jobID>: If a job needs to be terminated, either because it is running incorrectly or is no longer needed, the scancel command is used. It immediately removes the specified job, whether it is pending or running, from the queue.8
+
+
+5.2. Retrieving Job Output
+
+
+By default, SLURM writes all standard output (stdout) and standard error (stderr) from a batch job to a single file named slurm-<jobID>.out, located in the directory where the sbatch command was executed.8 As shown in the definitive script in Section 4.2, this behavior can be customized using the
+-o and -e directives to specify separate files for output and error streams.
+Once a job has completed, the process of retrieving results is straightforward:
+                  1. Navigate to the submission directory.
+                  2. Locate the output files (e.g., slurm-12345.out and any other files generated by the application itself, like my_output_file.log from the example script).
+                  3. View the files directly on the cluster using commands like cat, less, or vim.
+                  4. If the results need to be moved to a local machine for further analysis or visualization, use one of the file transfer methods detailed in Section 3.3 (e.g., scp, sftp, or Globus).
+
+
+5.3. Analyzing Job Performance and Resource Utilization
+
+
+Simply running a job to completion is only part of the process. A key skill for an effective HPC user is the ability to analyze the performance of past jobs to optimize resource requests for future runs. Requesting too many resources wastes computational cycles that others could use, while requesting too few can cause jobs to fail or run inefficiently. SLURM provides powerful tools for this post-job analysis.
+
+
+sacct - The Job Accounting Tool
+
+
+The sacct command is the definitive utility for querying the SLURM accounting database, which stores detailed records of all completed jobs.13 It can provide a wealth of information about a job's resource consumption, execution time, and final status.
+                  * Basic Usage: To view the default accounting information for a specific job, use the -j flag 25:
+Bash
+sacct -j <jobID>
+
+                  * Customized Output: The true power of sacct lies in its --format (or -o) option, which allows the user to specify exactly which accounting fields to display.25 This is essential for comparing requested resources against actual usage.
+The following table details some of the most valuable format strings for performance analysis.
+Table 5.1: Powerful sacct Formatting Options for Job Analysis
+Format String
+	Description
+	Why It's Useful for Optimization
+	JobID
+	The numeric job identifier.
+	For basic identification.
+	JobName
+	The name specified with the -J or --job-name directive.
+	For identifying the purpose of the job.
+	State
+	The final state of the job (e.g., COMPLETED, FAILED, TIMEOUT, OUT_OF_MEMORY).
+	To quickly determine if the job succeeded and why it might have failed.
+	ExitCode
+	The exit code returned by the job script or application (a 0:0 code indicates success).
+	To debug application-level failures.
+	Elapsed
+	The total wall clock time the job ran.
+	To compare against the requested time. If Elapsed is close to Timelimit, the requested time may need to be increased.
+	Timelimit
+	The wall clock time limit requested for the job.
+	To see what was originally requested.
+	ReqMem
+	The amount of memory requested per node.
+	To see the memory requested in the script.
+	MaxRSS
+	The maximum Resident Set Size (physical memory) used by any single task in the job.
+	Crucial for memory optimization. Compare this value to ReqMem. If MaxRSS is much smaller than ReqMem, you can safely reduce your memory request in future runs. If the job failed with an OUT_OF_MEMORY state, this shows how much memory it was using when it failed.
+	NCPUS
+	The total number of CPUs allocated to the job.
+	To verify the core count matches the request (-N * --ntasks-per-node).
+	TotalCPU
+	The sum of system and user CPU time consumed by all tasks.
+	To gauge CPU efficiency. For a well-parallelized code, TotalCPU should be close to Elapsed multiplied by NCPUS. A much lower value may indicate poor scaling or I/O waiting.
+	A powerful, customized sacct command to get a detailed performance summary might look like this:
+
+
+Bash
+
+
+
+
+sacct -j <jobID> -o JobID,JobName,State,ExitCode,Elapsed,Timelimit,ReqMem,MaxRSS,NCPUS,TotalCPU
+
+Running this command provides an at-a-glance report card for the job, enabling data-driven decisions for optimizing future submissions.
+
+
+seff - The Efficiency Report
+
+
+For users who prefer a more concise, human-readable summary, the W&M HPC systems provide the seff (Slurm efficiency) utility.13 This command is a user-friendly wrapper around
+sacct that calculates and presents key performance metrics for a completed job.
+To use it, simply run:
+
+
+Bash
+
+
+
+
+seff <jobID>
+
+The output will typically include the number of cores used, CPU and memory utilization percentages, and an overall efficiency score, providing a quick check on how well the job used its allocated resources.25
+
+
+Section 6: Conclusion and Support Channels
+
+
+
+
+6.1. Summary of the Bora Workflow
+
+
+Successfully leveraging the William & Mary Bora subcluster involves a systematic workflow that spans from initial connection to post-job analysis. By adhering to the principles and procedures outlined in this guide, a researcher can effectively utilize this powerful computational resource. The end-to-end process can be summarized in the following key steps:
+                     1. Connect: Establish an SSH connection to the Bora front-end at bora.sciclone.wm.edu. If connecting from off-campus, this must be done via the bastion.wm.edu jump host.
+                     2. Prepare: Stage your source code, executables, and input files in the appropriate filesystem. For parallel jobs on Bora, the /sciclone/pscr/$USER parallel scratch space is the preferred location for all job-related I/O.
+                     3. Script: Author a tcsh SLURM submission script. This script must request the necessary resources (nodes, cores per node, wall time, memory) and, most critically, include the -C bo constraint to specifically target the Bora hardware.
+                     4. Configure: Within the submission script, explicitly load all required software environments using module load commands to ensure a reproducible environment.
+                     5. Submit: Submit the job to the scheduler using the sbatch <script_name> command from the front-end node.
+                     6. Monitor: Track the status of the submitted job using squeue -u <username> and check the overall cluster load with sinfo.
+                     7. Retrieve: Once the job is complete, retrieve the output files (slurm-<jobID>.out and any application-generated files) from the submission directory. Use scp, sftp, or Globus to transfer results to a local machine if needed.
+                     8. Analyze: Use the sacct and seff commands to analyze the performance and resource utilization of the completed job. Use this data to refine resource requests for future submissions, improving efficiency and contributing to the responsible use of shared resources.
+
+
+6.2. Getting Help
+
+
+The W&M Research Computing group provides robust support for users of the HPC systems. While this guide aims to be comprehensive, questions and issues will inevitably arise.
+The primary and most effective channel for seeking assistance is the HPC help desk email:
+                     * hpc-help@wm.edu 2
+Emails sent to this address are tracked in a ticket system and monitored by the entire Research Computing staff, ensuring a timely and expert response.9
+For important system-wide updates, scheduled maintenance notifications, and announcements about new software or hardware, users are automatically subscribed to the announcements mailing list upon account creation:
+                     * hpc-announce@wm.edu 9
+Finally, the official W&M Research Computing website serves as the definitive source for documentation, tutorials, and further information:
+                     * https://www.wm.edu/it/rc 12
+Works cited
+                     1. Research Computing at W&M | Services | Information Technology - William & Mary, accessed July 25, 2025, https://www.wm.edu/offices/it/services/researchcomputing/atwm/
+                     2. Using HPC | Services | Information Technology - William & Mary, accessed July 25, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/
+                     3. Logging in to HPC clusters | Services | Information Technology - William & Mary, accessed July 25, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/connecting/
+                     4. Node Types and Subclusters | Services | Information Technology - William & Mary, accessed July 25, 2025, https://www.wm.edu/offices/it/services/researchcomputing/oldjunk/hw/nodes/
+                     5. RC/HPC available resources | Services | Information Technology - William & Mary, accessed July 25, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/systemarchitecture/nodes/
+                     6. Bora / Hima | Services | Information Technology | William & Mary, accessed July 25, 2025, https://www.wm.edu/offices/it/services/researchcomputing/oldjunk/hw/nodes/bora/
+                     7. Python use on HPC clusters | Services | Information Technology - William & Mary, accessed July 25, 2025, https://www.wm.edu/offices/it/services/researchcomputing/atwm/software_new/python/
+                     8. Running Jobs with Slurm | Services | Information Technology ..., accessed July 25, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/running_jobs_slurm/
+                     9. Linux and the HPC Environment Eric J. Walter - William & Mary, accessed July 25, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/tutorials/linuxinhpc_092823.pdf
+                     10. HPC Prerequisites | Services | Information Technology - William & Mary, accessed July 25, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/prereqs/
+                     11. Connecting to HPC via Linux | Services | Information Technology - William & Mary, accessed July 25, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/connecting/linux/
+                     12. Guide to W&M Computational Resources Eric J. Walter, accessed July 25, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/tutorials/introtohpc_0921231.pdf
+                     13. Using Computational Resources at W&M/VIMS, accessed July 25, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/tutorials/usinghpc_020625.pdf
+                     14. Environment Modules | Services | Information Technology | William ..., accessed July 25, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/modules/
+                     15. Managing disk space | Services | Information Technology | William ..., accessed July 25, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/filesandfilesystems/managing/
+                     16. Research Computing Data Storage | Services | Information Technology - William & Mary, accessed July 25, 2025, https://www.wm.edu/offices/it/services/researchcomputing/atwm/rcstorage/
+                     17. Transferring files | Services | Information Technology - William & Mary, accessed July 25, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/filesandfilesystems/xfers/
+                     18. Transferring files from HPC using sftp/scp | Services - William & Mary, accessed July 25, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/filesandfilesystems/xfers/sftp/
+                     19. Transferring files from HPC via WinSCP (Windows) | Services - William & Mary, accessed July 25, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/filesandfilesystems/xfers/winscp/
+                     20. Using Globus for data transfers to/from the HPC clusters | Services - William & Mary, accessed July 25, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/filesandfilesystems/xfers/globus/
+                     21. Globus personal transfers | Services | Information Technology - William & Mary, accessed July 25, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/filesandfilesystems/xfers/globus/personal/
+                     22. Transferring data between W&M/VIMS and external clusters | Services - William & Mary, accessed July 25, 2025, https://www.wm.edu/offices/it/services/researchcomputing/using/filesandfilesystems/xfers/globus/clusters/
+                     23. Kuro | Services | Information Technology - William & Mary, accessed July 25, 2025, https://www.wm.edu/offices/it/services/researchcomputing/oldjunk/hw/nodes/kuro/
+                     24. sacct - Slurm Workload Manager, accessed July 25, 2025, https://slurm.schedmd.com/sacct.html
+                     25. sacct - Google Sites, accessed July 25, 2025, https://sites.google.com/a/case.edu/hpcc/hpc-cluster/important-notes-for-new-users/slurm-command-overview/sacct
+                     26. sacct - Sheffield HPC Documentation, accessed July 25, 2025, https://docs.hpc.shef.ac.uk/en/latest/referenceinfo/scheduler/SLURM/Common-commands/sacct.html

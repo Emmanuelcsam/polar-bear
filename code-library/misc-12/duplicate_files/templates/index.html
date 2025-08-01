@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Core Detection</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: white;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            color: #00ff00;
+            margin: 0;
+        }
+        .video-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .video-feed {
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            max-width: 100%;
+            height: auto;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background-color: #2a2a2a;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #00ff00;
+        }
+        .stat-card h3 {
+            margin: 0 0 10px 0;
+            color: #00ff00;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .detection-info {
+            background-color: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .detection-info h3 {
+            margin: 0 0 15px 0;
+            color: #00ff00;
+        }
+        .detection-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+        .detail-item {
+            background-color: #3a3a3a;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .detail-label {
+            font-size: 12px;
+            color: #888;
+            text-transform: uppercase;
+        }
+        .detail-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #fff;
+        }
+        .status {
+            text-align: center;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .status.live {
+            background-color: #004400;
+            color: #00ff00;
+        }
+        .status.demo {
+            background-color: #440000;
+            color: #ff0000;
+        }
+        .instructions {
+            background-color: #2a2a2a;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Live Core Detection System</h1>
+            <p>Real-time camera feed with automatic circle detection</p>
+        </div>
+
+        <div class="status" id="status">
+            <span id="status-text">Initializing...</span>
+        </div>
+
+        <div class="video-container">
+            <img src="/video_feed" alt="Live Camera Feed" class="video-feed" id="video-feed">
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <h3>FPS</h3>
+                <div class="stat-value" id="fps">0.0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Frames Processed</h3>
+                <div class="stat-value" id="frame-count">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Detections Found</h3>
+                <div class="stat-value" id="detection-count">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Runtime</h3>
+                <div class="stat-value" id="runtime">00:00</div>
+            </div>
+        </div>
+
+        <div class="detection-info" id="detection-info" style="display: none;">
+            <h3>🎯 Latest Detection</h3>
+            <div class="detection-details">
+                <div class="detail-item">
+                    <div class="detail-label">Center X</div>
+                    <div class="detail-value" id="center-x">-</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Center Y</div>
+                    <div class="detail-value" id="center-y">-</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Radius</div>
+                    <div class="detail-value" id="radius">-</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Confidence</div>
+                    <div class="detail-value" id="confidence">-</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="instructions">
+            <h3>📋 Instructions</h3>
+            <ul>
+                <li><strong>Live Feed:</strong> The video feed shows what your camera is seeing in real-time</li>
+                <li><strong>Detection:</strong> Red circles indicate detected objects with confidence scores</li>
+                <li><strong>Statistics:</strong> Monitor FPS, frame count, and detection performance</li>
+                <li><strong>Demo Mode:</strong> If no camera is detected, the system runs in demo mode with synthetic data</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        let startTime = Date.now();
+        
+        function updateStats() {
+            fetch('/api/detection')
+                .then(response => response.json())
+                .then(data => {
+                    // Update basic stats
+                    document.getElementById('fps').textContent = data.fps ? data.fps.toFixed(1) : '0.0';
+                    document.getElementById('frame-count').textContent = data.frame_count || 0;
+                    document.getElementById('detection-count').textContent = data.detection_count || 0;
+                    
+                    // Update runtime
+                    const runtime = Math.floor((Date.now() - startTime) / 1000);
+                    const minutes = Math.floor(runtime / 60);
+                    const seconds = runtime % 60;
+                    document.getElementById('runtime').textContent = 
+                        `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    
+                    // Update detection info
+                    if (data.detection) {
+                        document.getElementById('detection-info').style.display = 'block';
+                        document.getElementById('center-x').textContent = data.detection.center[0];
+                        document.getElementById('center-y').textContent = data.detection.center[1];
+                        document.getElementById('radius').textContent = data.detection.radius;
+                        document.getElementById('confidence').textContent = 
+                            (data.detection.confidence * 100).toFixed(1) + '%';
+                    } else {
+                        document.getElementById('detection-info').style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching detection data:', error);
+                });
+        }
+        
+        // Update stats every second
+        setInterval(updateStats, 1000);
+        
+        // Initial update
+        updateStats();
+        
+        // Check if we're in demo mode
+        setTimeout(() => {
+            const statusElement = document.getElementById('status');
+            const statusText = document.getElementById('status-text');
+            
+            // Check if we're getting video feed
+            const videoFeed = document.getElementById('video-feed');
+            videoFeed.onload = function() {
+                statusElement.className = 'status live';
+                statusText.textContent = '✅ Live Camera Feed Active';
+            };
+            
+            videoFeed.onerror = function() {
+                statusElement.className = 'status demo';
+                statusText.textContent = '⚠ Demo Mode - No Camera Detected';
+            };
+        }, 2000);
+    </script>
+</body>
+</html> 

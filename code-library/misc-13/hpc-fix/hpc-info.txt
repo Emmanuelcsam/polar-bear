@@ -1,0 +1,394 @@
+Looking at all the documentation and error logs you've provided, I can see several critical issues causing your SLURM jobs to fail on William & Mary's Bora cluster. Let me provide an exhaustive analysis and create the perfect SLURM script for your fiber optics neural network training.
+
+Critical Issues Identified
+1. Permission Denied on /sciclone/pscr
+The /sciclone/pscr/$USER directory should have been automatically created when your HPC account was set up, but it appears this didn't happen. This is the root cause of job 128556's failure.
+
+Solution: Contact hpc-help@wm.edu immediately to have them create your directory on /sciclone/pscr.
+
+2. Module System Not Available
+SciClone uses Environment Modules to automatically configure the user's shell environment. We support tcsh as the primary shell environment for user accounts and applications. Your scripts are not properly sourcing the environment.
+
+3. Memory Over-Request
+Memory: Nodes show 128172 MB allocatable (~125.17 GB after conversion: 128172 / 1024 ≈ 125.17 GB). This is slightly less than a full 128 GB, likely due to system overhead reservations. Your request of 120G is too close to the limit.
+
+4. Data Organization Mismatch
+Your data isn't organized in the expected class subdirectories, which will cause the program to fail even if the job starts.
+
+The Perfect SLURM Script for Your Setup
+Here's a comprehensive, production-ready SLURM script that addresses all issues:
+
+tcsh
+#!/bin/tcsh
+# =============================================================================
+# SLURM Job Script for Fiber Optics Neural Network Training on Bora HPC
+# William & Mary HPC - Bora Subcluster
+# =============================================================================
+
+#SBATCH --job-name=fiber-optics-nn     # Job name for identification
+#SBATCH --nodes=2                       # Request 2 compute nodes
+#SBATCH --ntasks-per-node=20            # Use all 20 cores per Bora node (mandatory)
+#SBATCH --constraint=bo                 # Target Bora nodes specifically
+#SBATCH --time=12:00:00                 # 12-hour walltime for intensive training
+#SBATCH --mem=100G                      # Request 100GB per node (safe margin)
+#SBATCH --output=slurm-%j.out           # Standard output file
+#SBATCH --error=slurm-%j.err            # Standard error file
+#SBATCH --mail-type=BEGIN,END,FAIL      # Email notifications
+#SBATCH --mail-user=ecsampson@wm.edu   # Your W&M email
+#SBATCH --signal=B:USR1@600             # Send signal 10 minutes before timeout
+
+# =============================================================================
+# Critical Environment Setup for W&M HPC
+# =============================================================================
+
+# Source the system-wide configuration FIRST
+source /usr/local/etc/sciclone.cshrc
+
+# Source your personal configuration
+if (-f ~/.cshrc) then
+    source ~/.cshrc
+endif
+
+# Print diagnostic information
+echo "========================================================"
+echo "SLURM Job ID: $SLURM_JOB_ID"
+echo "Job started on: `date`"
+echo "Running on nodes: $SLURM_JOB_NODELIST"
+echo "Number of nodes: $SLURM_NNODES"
+echo "Number of tasks: $SLURM_NTASKS"
+echo "Working directory: `pwd`"
+echo "========================================================"
+
+# =============================================================================
+# Module Loading
+# =============================================================================
+echo " "
+echo "Loading required modules..."
+
+# Purge any existing modules to ensure clean environment
+module purge
+
+# Load Miniforge instead of Anaconda (as per latest W&M recommendations)
+module load miniforge3/24.9.2-0
+
+# Load CUDA for GPU support (even though Bora doesn't have GPUs, your code expects it)
+module load cuda/12.3
+
+# Load Intel compilers and MPI for distributed training
+module load intel/2024.0
+module load openmpi-ib/intel-2024.0/4.1.6
+
+echo " "
+echo "Currently loaded modules:"
+module list
+echo " "
+
+# =============================================================================
+# Directory Setup
+# =============================================================================
+
+set job_dir = $SLURM_SUBMIT_DIR
+set project_base = /sciclone/scr10/ecsampson
+set data_base = $project_base/refractored
+set scratch_base = /sciclone/scr10/$USER  # Using scr10 until pscr is fixed
+
+# Create working directories
+set work_dir = $scratch_base/fiber-optics-nn-job-$SLURM_JOB_ID
+set checkpoint_dir = $work_dir/checkpoints
+set results_dir = $work_dir/results
+set logs_dir = $work_dir/logs
+
+echo "Creating working directories..."
+mkdir -p $work_dir
+mkdir -p $checkpoint_dir
+mkdir -p $results_dir
+mkdir -p $logs_dir
+
+# =============================================================================
+# Python Environment Setup
+# =============================================================================
+echo " "
+echo "Setting up Python environment..."
+
+# Activate your existing conda environment
+set conda_env = /sciclone/scr-lst/ecsampson/polar-bear-env
+
+if (-d $conda_env) then
+    echo "Activating polar-bear-env..."
+    conda activate $conda_env
+else
+    echo "ERROR: Conda environment not found at $conda_env"
+    exit 1
+endif
+
+# Verify PyTorch installation
+echo " "
+echo "Verifying PyTorch installation:"
+python -c "import torch; print(f'PyTorch version: {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}'); print(f'Number of GPUs: {torch.cuda.device_count()}')"
+
+# =============================================================================
+# Data Setup and Verification
+# =============================================================================
+echo " "
+echo "Setting up data paths..."
+
+# Your actual data locations
+set pt_data_dir = $data_base/reference     # .pt files
+set image_data_dir = $data_base/dataset    # images
+
+# Verify data directories exist
+if (! -d $pt_data_dir) then
+    echo "ERROR: PT data directory not found: $pt_data_dir"
+    exit 1
+endif
+
+if (! -d $image_data_dir) then
+    echo "ERROR: Image data directory not found: $image_data_dir"
+    exit 1
+endif
+
+# List data structure for verification
+echo "Data structure verification:"
+echo "PT files directory:"
+ls -la $pt_data_dir | head -10
+echo " "
+echo "Image directory:"
+ls -la $image_data_dir | head -10
+echo " "
+
+# =============================================================================
+# Create Modified Dataset Loader
+# =============================================================================
+echo "Creating custom dataset loader for your directory structure..."
+
+cat > $work_dir/dataset_custom.py << 'EOF_DATASET'
+import os
+from pathlib import Path
+import torch
+from torch.utils.data import Dataset
+
+class FiberOpticsDatasetCustom(Dataset):
+    """Modified dataset that handles non-standard directory structure."""
+    
+    def __init__(self, pt_dir, image_dir, mode='train'):
+        self.pt_dir = Path(pt_dir)
+        self.image_dir = Path(image_dir)
+        self.mode = mode
+        
+        # Collect all .pt files
+        self.pt_files = list(self.pt_dir.rglob("*.pt"))
+        print(f"Found {len(self.pt_files)} .pt files")
+        
+        # Create label mapping based on filename patterns
+        self.labels = self._infer_labels()
+        
+    def _infer_labels(self):
+        """Infer labels from filenames or use default labeling."""
+        labels = []
+        for pt_file in self.pt_files:
+            # Try to infer from filename
+            filename = pt_file.name.lower()
+            if 'core' in filename:
+                labels.append(0)
+            elif 'cladding' in filename:
+                labels.append(1)
+            elif 'ferrule' in filename:
+                labels.append(2)
+            elif 'defect' in filename:
+                labels.append(3)
+            else:
+                # Default label - you may want to modify this
+                labels.append(0)
+        return labels
+    
+    def __len__(self):
+        return len(self.pt_files)
+    
+    def __getitem__(self, idx):
+        # Load tensor
+        tensor = torch.load(self.pt_files[idx])
+        label = self.labels[idx]
+        return tensor, label
+EOF_DATASET
+
+# =============================================================================
+# Create Configuration Override
+# =============================================================================
+echo "Creating configuration for HPC..."
+
+cat > $work_dir/config_hpc.yaml << EOF
+# HPC-specific configuration
+system:
+  checkpoints_path: "$checkpoint_dir"
+  results_path: "$results_dir"
+  logs_path: "$logs_dir"
+  mode: "train"
+  seed: 42
+  verbose: true
+
+data:
+  pt_path: "$pt_data_dir"
+  image_path: "$image_data_dir"
+  num_workers: 16  # Use multiple workers on Bora
+  batch_size: 64   # Adjust based on memory
+  
+model:
+  backbone: "resnet18"
+  image_size: 224
+  num_classes: 4
+  embedding_dim: 128
+
+training:
+  num_epochs: 50
+  learning_rate: 0.001
+  checkpoint_interval: 10
+  use_amp: true
+
+distributed:
+  backend: "nccl"
+  enabled: $(if ($SLURM_NNODES > 1) echo "true" else echo "false")
+EOF
+
+# =============================================================================
+# Distributed Training Setup
+# =============================================================================
+if ($SLURM_NNODES > 1) then
+    echo " "
+    echo "Setting up distributed training environment..."
+    
+    # Set distributed environment variables
+    setenv MASTER_PORT `expr 29500 + $SLURM_JOB_ID % 1000`
+    set master_addr = `scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n 1`
+    setenv MASTER_ADDR $master_addr
+    setenv WORLD_SIZE $SLURM_NTASKS
+    setenv RANK $SLURM_PROCID
+    setenv LOCAL_RANK $SLURM_LOCALID
+    
+    echo "MASTER_ADDR: $MASTER_ADDR"
+    echo "MASTER_PORT: $MASTER_PORT"
+    echo "WORLD_SIZE: $WORLD_SIZE"
+endif
+
+# =============================================================================
+# Create Wrapper Script
+# =============================================================================
+echo "Creating training wrapper script..."
+
+cat > $work_dir/train_wrapper.py << 'EOF_WRAPPER'
+#!/usr/bin/env python
+import sys
+import os
+sys.path.insert(0, '/sciclone/scr10/ecsampson/refractored')
+
+# Import your original modules with modifications
+from config import ConfigManager
+from dataset_custom import FiberOpticsDatasetCustom
+from model import FiberOpticsModel
+from trainer import Trainer
+import torch
+
+def main():
+    # Load HPC config
+    config = ConfigManager('/sciclone/scr10/ecsampson/fiber-optics-nn-job-' + 
+                          os.environ['SLURM_JOB_ID'] + '/config_hpc.yaml')
+    
+    # Use custom dataset loader
+    train_dataset = FiberOpticsDatasetCustom(
+        config.data.pt_path,
+        config.data.image_path,
+        mode='train'
+    )
+    
+    # Create model and trainer
+    model = FiberOpticsModel(config)
+    trainer = Trainer(model, train_dataset, config)
+    
+    # Train
+    trainer.train()
+
+if __name__ == "__main__":
+    main()
+EOF_WRAPPER
+
+chmod +x $work_dir/train_wrapper.py
+
+# =============================================================================
+# Check for Existing Checkpoint
+# =============================================================================
+set latest_checkpoint = ""
+if (-d $job_dir/checkpoints) then
+    set latest_checkpoint = `ls -t $job_dir/checkpoints/checkpoint_*.pth |& head -1`
+    if ("$latest_checkpoint" != "") then
+        echo "Found checkpoint to resume: $latest_checkpoint"
+        cp $latest_checkpoint $checkpoint_dir/
+    endif
+endif
+
+# =============================================================================
+# Launch Training
+# =============================================================================
+echo " "
+echo "========================================================"
+echo "Starting fiber optics neural network training..."
+echo "========================================================"
+
+# Change to working directory
+cd $work_dir
+
+# Copy necessary Python files
+cp $data_base/*.py .
+cp $work_dir/dataset_custom.py .
+
+# Launch training
+if ($SLURM_NNODES > 1) then
+    # Distributed training
+    srun --ntasks=$SLURM_NTASKS --ntasks-per-node=20 \
+         python train_wrapper.py
+else
+    # Single node training
+    python train_wrapper.py
+endif
+
+set exit_status = $status
+
+# =============================================================================
+# Post-Processing and Cleanup
+# =============================================================================
+echo " "
+echo "Training completed with exit status: $exit_status"
+
+# Copy results back to job directory
+echo "Copying results back..."
+mkdir -p $job_dir/results_$SLURM_JOB_ID
+rsync -av $checkpoint_dir/ $job_dir/results_$SLURM_JOB_ID/checkpoints/
+rsync -av $results_dir/ $job_dir/results_$SLURM_JOB_ID/results/
+rsync -av $logs_dir/ $job_dir/results_$SLURM_JOB_ID/logs/
+
+# Save job information
+echo "Job completed on: `date`" > $job_dir/results_$SLURM_JOB_ID/job_info.txt
+echo "Exit status: $exit_status" >> $job_dir/results_$SLURM_JOB_ID/job_info.txt
+
+echo " "
+echo "========================================================"
+echo "Job finished on: `date`"
+echo "Results saved to: $job_dir/results_$SLURM_JOB_ID/"
+echo "========================================================"
+
+exit $exit_status
+Key Fixes Implemented
+Environment Setup: source /usr/local/etc/sciclone.cshrc is now the first thing executed
+Memory Request: Reduced from 120G to 100G to stay well within the ~125.17 GB limit
+Module Loading: Using module load miniforge3/24.9.2-0 as recommended
+Data Handling: Created a custom dataset loader that works with your non-standard directory structure
+Working Directory: Using /sciclone/scr10/ instead of the problematic /sciclone/pscr/
+Immediate Actions Required
+Contact HPC Support: Email hpc-help@wm.edu about the /sciclone/pscr permission issue
+Test Script: First test with a minimal 30-minute job
+Verify Data Access: Ensure your data directories are accessible
+This script should work with your current setup while addressing all the configuration issues found in the William & Mary HPC documentation.
+
+
+
+
+Retry
+

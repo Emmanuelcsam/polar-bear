@@ -1,0 +1,10 @@
+mkdir: cannot create directory ‘/sciclone/pscr/ecsampson’: Permission denied
+mkdir: cannot create directory ‘/sciclone/pscr/ecsampson’: Permission denied
+mkdir: cannot create directory ‘/sciclone/pscr/ecsampson’: Permission denied
+mkdir: cannot create directory ‘/sciclone/pscr/ecsampson’: Permission denied
+mkdir: cannot create directory ‘/sciclone/pscr/ecsampson’: Permission denied
+rsync: [Receiver] mkdir "/sciclone/pscr/ecsampson/fiber-optics-nn" failed: No such file or directory (2)
+rsync error: error in file IO (code 11) at main.c(783) [Receiver=3.2.3]
+rsync: [Receiver] mkdir "/sciclone/pscr/ecsampson/fiber-optics-nn/dataset" failed: No such file or directory (2)
+rsync error: error in file IO (code 11) at main.c(783) [Receiver=3.2.3]
+/sciclone/pscr/ecsampson/fiber-optics-nn: No such file or directory.

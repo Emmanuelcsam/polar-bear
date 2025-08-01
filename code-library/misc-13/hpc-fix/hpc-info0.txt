@@ -1,0 +1,14 @@
+             JOBID PARTITION     NAME     USER ST       TIME  NODES NODELIST(REASON)
+            128664     batch convert_ arsalcha CG    2:00:20      1 bo03
+            128627     batch interact   kkoech  R    4:20:08      1 bo06
+            128651     batch   align1   wjrice  R    3:08:57      1 bo10
+            128616     batch alignPro arsalcha  R    5:06:20      1 bo04
+            128613     batch  space_2 arsalcha  R    5:20:12      1 bo03
+            128682     batch virbatch  ebcasey  R       5:55      1 bo08
+            128669     batch virbatch  ebcasey  R    1:18:38      1 bo07
+            128600     batch megahitc  ebcasey  R    6:38:52      1 bo05
+            128683     batch Gaussian   cjabel  R       2:34      2 bo[13-14]
+            128670     batch Gaussian   cjabel  R    1:17:23      2 bo[11-12]
+            128559     batch interact yacahuan  R 1-22:57:02      1 bo19
+            128684 batch,him MyBoraJo ecsampso PD       0:00      2 (None)
+(/sciclone/scr-lst/ecsampson/polar-bear-env) 106 [bora] 
