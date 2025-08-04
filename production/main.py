@@ -11,7 +11,7 @@ import logging
 
 # Import our modular components
 from config.system_config import SystemConfig
-from logging.async_logger import setup_logging
+from log_utils.async_logger import setup_logging
 from camera.pylon_grabber import PylonFrameGrabber, PYLON_AVAILABLE
 from detection.preprocessing import preprocess_image
 from processing.frame_processor import process_frame
