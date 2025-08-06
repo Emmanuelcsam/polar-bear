@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 """
 Live Defect Detector
-This script merges real-time camera capture with advanced anomaly detection
-to find defects on a surface in real-time. It uses a reference image
-to build a model of a "good" surface and then compares the live feed against it.
 """
 
 import json

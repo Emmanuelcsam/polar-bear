@@ -1,0 +1,63 @@
+# Fiber Optic Neural Network Requirements
+# Based on neural-network--with-visual-1.py and neural-network--with-visual-2.py
+
+# Core PyTorch ecosystem
+torch>=2.0.0
+torchvision>=0.15.0
+torchaudio>=2.0.0
+
+# TensorBoard for model visualization
+tensorboard>=2.13.0
+
+# Computer Vision and Image Processing
+opencv-python>=4.8.0
+Pillow>=9.5.0
+
+# Scientific Computing
+numpy>=1.24.0
+pandas>=2.0.0
+
+# Visualization
+matplotlib>=3.7.0
+
+# Progress bars and utilities
+tqdm>=4.65.0
+
+# Path handling (included with Python 3.4+)
+# pathlib
+
+# JSON handling (included with Python)
+# json
+
+# Time utilities (included with Python)
+# time
+
+# Argument parsing (included with Python)
+# argparse
+
+# File system operations (included with Python)
+# os, glob
+
+# Optional: For better performance on GPU
+# torch-scatter (if using PyTorch Geometric)
+# torch-sparse (if using PyTorch Geometric)
+
+# Optional: For additional visualization features
+# seaborn>=0.12.0
+# plotly>=5.15.0
+
+# Optional: For Jupyter notebook support
+# jupyter>=1.0.0
+# ipywidgets>=8.0.0
+
+# Optional: For model deployment
+# onnx>=1.14.0
+# onnxruntime>=1.15.0
+
+# Optional: For advanced logging
+# wandb>=0.15.0
+
+# Development and testing (optional)
+# pytest>=7.3.0
+# black>=23.0.0
+# flake8>=6.0.0 

@@ -1,0 +1,4 @@
+R:\Engineering\Library\Computer Vision
+R:\Customer\WFOI\Machine Vision
+E:\GitHub\polar-bear\training
+
