@@ -8,12 +8,16 @@ Emmanuel Sampson
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.tensorboard import SummaryWriter  # Add TensorBoard import
 import numpy as np
 import cv2
+import os
+import glob
 from pathlib import Path
+import matplotlib.pyplot as plt
 from tqdm import tqdm
 import json
 import time
@@ -83,53 +87,21 @@ class FiberOpticDataset(Dataset):
         self.transform = transform  # Store image transformation pipeline
         self.mode = mode  # Store mode (train/val/test)
 
-        # Load ALL image paths from chunk directories recursively
+        # Load image paths from chunk directories
         self.image_paths = []  # Initialize empty list to store image file paths
-        
-        # Search for ALL image files recursively
-        image_extensions = ['*.jpg', '*.jpeg', '*.png', '*.bmp', '*.tiff', 
-                           '*.tif']  # Define supported image extensions
-        for ext in image_extensions:  # Iterate through each extension
-            pattern = self.data_dir / '**' / ext  # Create recursive pattern
-            self.image_paths.extend(list(self.data_dir.glob(f'**/{ext}')))  # Find all matching files recursively
-        
-        # If no images found, try mask files as fallback
-        if len(self.image_paths) == 0:
-            print("No standard images found, checking for mask files...")
-            mask_files = list(self.data_dir.glob('**/mask_*.png'))  # Find mask files
-            self.image_paths.extend(mask_files)  # Add mask files to the list
-        
-        print(f"Loaded {len(self.image_paths)} images from dataset "
-              f"(including all subdirectories)")  # Print number of loaded images
+        for chunk_dir in self.data_dir.glob('chunk_*'):  # Find all directories starting with 'chunk_'
+            chunk_images = list(chunk_dir.glob('*.jpg')) + list(chunk_dir.glob('*.png'))  # Get all jpg and png files
+            self.image_paths.extend(chunk_images)  # Add found images to the main list
 
-        # Load ALL reference tensors recursively
+        # Load reference tensors
         self.reference_tensors = {}  # Initialize dictionary to store reference tensors
-        
-        if self.reference_dir.exists():  # Check if reference directory exists
-            # Find ALL .pt files recursively
-            pt_files = list(self.reference_dir.glob('**/*.pt'))  # Get all .pt files recursively
-            print(f"Found {len(pt_files)} .pt files in reference directory")
-            
-            for pt_file in pt_files:  # Iterate through each .pt file
-                try:  # Try to load the tensor
-                    # Create a unique key based on the relative path from reference directory
-                    rel_path = pt_file.relative_to(self.reference_dir)  # Get relative path
-                    key = rel_path.stem  # Remove extension to get key
-                    key = str(key).replace('/', '_').replace('\\', '_')  # Replace path separators with underscores
-                    
-                    # Load the tensor
-                    tensor = torch.load(str(pt_file), weights_only=False)  # Load tensor
-                    self.reference_tensors[key] = tensor  # Store with unique key
-                    
-                    if len(self.reference_tensors) % 100 == 0:  # Print progress every 100 files
-                        print(f"Loaded {len(self.reference_tensors)} reference tensors...")
-                        
-                except Exception as e:  # If loading fails
-                    print(f"Warning: Could not load reference tensor {pt_file}: {e}")  # Print warning message
-            
-            print(f"Successfully loaded {len(self.reference_tensors)} reference tensors")  # Print final count
-        else:  # If reference directory doesn't exist
-            print(f"Reference directory {self.reference_dir} not found!")
+        for ref_dir in self.reference_dir.iterdir():  # Iterate through reference directory contents
+            if ref_dir.is_dir():  # Check if it's a directory
+                ref_files = list(ref_dir.glob('*.pt'))  # Get all .pt (PyTorch tensor) files
+                self.reference_tensors[ref_dir.name] = ref_files  # Store files with directory name as key
+
+        print(f"Loaded {len(self.image_paths)} images from dataset")  # Print number of loaded images
+        print(f"Loaded {len(self.reference_tensors)} reference categories")  # Print number of reference categories
 
     def __len__(self):
         return len(self.image_paths)  # Return total number of images in dataset
@@ -138,14 +110,7 @@ class FiberOpticDataset(Dataset):
         # Load image
         img_path = self.image_paths[idx]  # Get image path at given index
         image = cv2.imread(str(img_path))  # Read image using OpenCV
-        
-        # Handle case where image couldn't be loaded
-        if image is None:  # If image couldn't be loaded
-            print(f"Warning: Could not load image {img_path}")
-            # Create a dummy image as fallback
-            image = np.zeros((256, 256, 3), dtype=np.uint8)
-        else:
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # Convert BGR to RGB color space
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # Convert BGR to RGB color space
 
         # Apply transforms (D2L style augmentation)
         if self.transform:  # Check if transformation pipeline is provided

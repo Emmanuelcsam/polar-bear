@@ -229,33 +229,26 @@ class FiberOpticDataset(Dataset):
         self.img_size = img_size  # Store target image size
         self.is_train = is_train  # Store training mode flag
         
-        # 1. Parse dataset directory - find ALL image files recursively
+        # 1. Parse dataset directory - look for actual images (jpg, png) instead of just masks
         if os.path.exists(dataset_path):  # Check if dataset path exists
-            # Look for ALL image files recursively in the dataset path
-            image_extensions = ['*.png', '*.jpg', '*.jpeg', '*.bmp', '*.tiff', '*.tif']  # Define supported image extensions
+            # Look for actual image files in the dataset path
+            image_extensions = ['*.png', '*.jpg', '*.jpeg']  # Define supported image extensions
             self.image_files = []  # Initialize list to store image file paths
-            
-            # Search recursively through all subdirectories
             for ext in image_extensions:  # Iterate through each extension
-                pattern = os.path.join(dataset_path, '**', ext)  # Create recursive pattern
-                self.image_files.extend(glob.glob(pattern, recursive=True))  # Find all matching files recursively
+                self.image_files.extend(glob.glob(os.path.join(dataset_path, '**', ext), recursive=True))  # Find all matching files
             
-            print(f"Found {len(self.image_files)} images in {dataset_path} (including all subdirectories)")  # Print number of found images
-            
-            # If no images found, try alternative approach
-            if len(self.image_files) == 0:
-                print("No images found with standard extensions, checking for mask files...")
-                # Look for mask files as fallback
-                mask_pattern = os.path.join(dataset_path, '**', 'mask_*.png')
-                self.image_files = glob.glob(mask_pattern, recursive=True)
-                print(f"Found {len(self.image_files)} mask files as fallback")
+            # Filter out mask files
+            self.image_files = [f for f in self.image_files if 'mask_' not in os.path.basename(f)]  # Remove mask files from list
+            print(f"Found {len(self.image_files)} images in {dataset_path}")  # Print number of found images
         else:  # If dataset path doesn't exist
-            print(f"Dataset path {dataset_path} not found!")
-            self.image_files = []
+            # Use test images from version4 as fallback
+            test_dir = os.path.join(os.path.dirname(dataset_path), 'version4')  # Create fallback directory path
+            self.image_files = glob.glob(os.path.join(test_dir, '*.jpg'))  # Find jpg files in fallback directory
+            print(f"Dataset path not found, using test images from {test_dir}: {len(self.image_files)} images")  # Print fallback message
 
-        # 2. Parse reference directory - find ALL .pt files recursively
+        # 2. Parse reference directory
         self.reference_tensors = self._load_reference_tensors(reference_path)  # Load reference tensors
-        print(f"Loaded {len(self.reference_tensors)} reference tensors from {reference_path}")
+        print(f"Loaded {len(self.reference_tensors)} reference tensors.")  # Print number of loaded tensors
 
         # 3. Define classes
         self.seg_classes = {'background': 0, 'ferrule': 1, 'cladding': 2, 'core': 3}  # Define segmentation class mapping
@@ -269,35 +262,15 @@ class FiberOpticDataset(Dataset):
         ])
 
     def _load_reference_tensors(self, reference_path):
-        """Load ALL .pt files from reference directory and subdirectories"""
         refs = {}  # Initialize dictionary to store reference tensors
-        
-        if not os.path.exists(reference_path):  # Check if reference path exists
-            print(f"Reference path {reference_path} not found!")
-            return refs
-        
-        # Find ALL .pt files recursively
-        pt_files = glob.glob(os.path.join(reference_path, '**', '*.pt'), recursive=True)  # Find all .pt files recursively
-        print(f"Found {len(pt_files)} .pt files in reference directory")
-        
+        pt_files = glob.glob(os.path.join(reference_path, '**', '*.pt'), recursive=True)  # Find all .pt files
         for pt_file in pt_files:  # Iterate through each .pt file
             try:  # Try to load the tensor
-                # Create a unique key based on the relative path from reference directory
-                rel_path = os.path.relpath(pt_file, reference_path)  # Get relative path
-                key = os.path.splitext(rel_path)[0]  # Remove extension to get key
-                key = key.replace(os.sep, '_')  # Replace path separators with underscores
-                
-                # Load the tensor
-                tensor = torch.load(pt_file, weights_only=False)  # Load tensor (allow loading older tensors)
-                refs[key] = tensor  # Store with unique key
-                
-                if len(refs) % 100 == 0:  # Print progress every 100 files
-                    print(f"Loaded {len(refs)} reference tensors...")
-                    
+                # Key is the filename without extension, e.g., 'core'
+                key = os.path.splitext(os.path.basename(pt_file))[0]  # Extract filename without extension as key
+                refs[key] = torch.load(pt_file, weights_only=False)  # Load tensor (allow loading older tensors)
             except Exception as e:  # If loading fails
                 print(f"Warning: Could not load reference tensor {pt_file}: {e}")  # Print warning message
-        
-        print(f"Successfully loaded {len(refs)} reference tensors")  # Print final count
         return refs  # Return loaded reference tensors
 
     def __len__(self):
@@ -305,16 +278,9 @@ class FiberOpticDataset(Dataset):
 
     def __getitem__(self, idx):
         img_path = self.image_files[idx]  # Get image path at given index
-        
-        # Load image - handle both regular images and mask files
         image = cv2.imread(img_path)  # Read image using OpenCV
-        if image is None:  # If image couldn't be loaded
-            print(f"Warning: Could not load image {img_path}")
-            # Create a dummy image as fallback
-            image = np.zeros((256, 256, 3), dtype=np.uint8)
-        else:
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # Convert BGR to RGB color space
-            image = cv2.resize(image, self.img_size)  # Resize image to target size
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # Convert BGR to RGB color space
+        image = cv2.resize(image, self.img_size)  # Resize image to target size
 
         # On-the-fly ground truth generation
         seg_mask, defect_boxes = self._generate_ground_truth(image)  # Generate segmentation mask and defect boxes
