@@ -2,7 +2,7 @@
 REM Rapid Git Change Checker - Checks every 30 seconds
 REM Save as: rapid-git-check.bat
 
-set REPO_PATH=E:\GitHub\polar-bear
+set REPO_PATH=C:\Test\NewLocation\polar-bear
 set CHECK_INTERVAL=30
 
 echo Rapid Git Checker Started!

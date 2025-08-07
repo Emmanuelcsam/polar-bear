@@ -3,7 +3,7 @@ REM Auto Git Commit and Push Script
 REM Save this as: auto-git-push.bat
 
 REM Configuration - CHANGE THIS PATH
-set REPO_PATH=E:\GitHub\polar-bear
+set REPO_PATH=
 
 REM Navigate to repository
 cd /d "%REPO_PATH%"

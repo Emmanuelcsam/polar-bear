@@ -8,6 +8,6 @@ echo This window will minimize in 5 seconds...
 timeout /t 5
 
 REM Start the loop script minimized
-start /min "Auto Git Push" "E:\GitHub\polar-bear"
+start /min "Auto Git Push" "C:\Test\NewLocation\polar-bear"
 
 exit

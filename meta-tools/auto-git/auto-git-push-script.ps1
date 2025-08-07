@@ -2,7 +2,7 @@
 # Save this as: auto-git-push.ps1
 
 # Configuration - CHANGE THESE VALUES
-$repoPath = "E:\GitHub\polar-bear"  # Change this to your repository path
+$repoPath = "C:\Test\NewLocation\polar-bear"  # Change this to your repository path
 $commitMessage = "Auto commit: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
 
 # Navigate to repository

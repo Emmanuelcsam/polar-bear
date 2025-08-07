@@ -2,6 +2,11 @@
 """
 Integrated Real-Time Defect Detection System
 
+This is the main integrated system that combines:
+- Enhanced Pylon Frame Grabber for camera capture
+- Real-time defect detection using your detection.py
+- Live visualization and monitoring
+- Comprehensive logging and result saving
 
 Usage:
     python realtime_defect_detection.py <reference_image_path>

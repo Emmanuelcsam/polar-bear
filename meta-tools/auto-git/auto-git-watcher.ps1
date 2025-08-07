@@ -2,7 +2,7 @@
 # Automatically commits and pushes when files change
 
 # Configuration
-$repoPath = "E:\GitHub\polar-bear"
+$repoPath = "C:\Test\NewLocation\polar-bear"
 $debounceSeconds = 5  # Wait 5 seconds after last change before committing
 
 # Navigate to repository

@@ -1,0 +1,11 @@
+Best separation approaches(scripts):
+
+1. geometric approach (uses hough circle then uses calculates gradient)
+2. geuss approach (approximates with hough circles, contrasting, and texture profile then takes average)
+3. hough circles (applies CLAH and then canny and then Hough)
+
+Best Detection methods(computations):
+
+1. Structural Similarity Map(requires reference image)
+2. Local Binary Heat Map 
+3. Mahalanobis_distance (Statistical distance of outlier from larger group)

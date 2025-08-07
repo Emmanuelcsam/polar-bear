@@ -1,0 +1,22 @@
+This directory contains a modular scripts that work with real time analysis
+Any folder with a -1 next to it is a totally different program from the main problem being run.
+
+The main program is a work in progress that will later be integrated with the other programs.
+
+"foldername-1"
+
+Folders like this for example Frequency-1 contain realtime imaging and an emualtor for that specific detection method.
+
+The Best Detectioin Methods:
+
+Hough-1
+SSIM-1
+Scratch-Detection-1
+blob-detection-1
+Morphology-1
+full-demo-1
+
+Problematic Methods:
+
+Frequency-1
+Statistical-1

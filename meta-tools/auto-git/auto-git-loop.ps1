@@ -2,7 +2,7 @@
 # Save this as: auto-git-loop.ps1
 
 # Configuration
-$repoPath = "E:\GitHub\polar-bear"
+$repoPath = "C:\Test\NewLocation\polar-bear"
 $intervalMinutes = 30  # Change this to your desired interval in minutes
 
 # Convert to seconds
