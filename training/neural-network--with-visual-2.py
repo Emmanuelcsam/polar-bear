@@ -601,8 +601,8 @@ def run_inference(model_path, image_path, device, seg_classes, defect_classes):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Fiber Optic End-Face Inspector Training Script")  # Create argument parser
-    parser.add_argument('--dataset_path', type=str, default='../dataset', help="Path to the dataset directory")  # Dataset path argument
-    parser.add_argument('--reference_path', type=str, default='../reference', help="Path to the reference tensors directory")  # Reference path argument
+    parser.add_argument('--dataset_path', type=str, default='./dataset', help="Path to the dataset directory")  # Dataset path argument
+    parser.add_argument('--reference_path', type=str, default='./reference', help="Path to the reference tensors directory")  # Reference path argument
     parser.add_argument('--epochs', type=int, default=2, help="Number of training epochs")  # Epochs argument
     parser.add_argument('--batch_size', type=int, default=2, help="Training batch size")  # Batch size argument
     parser.add_argument('--learning_rate', type=float, default=1e-3, help="Optimizer learning rate")  # Learning rate argument
