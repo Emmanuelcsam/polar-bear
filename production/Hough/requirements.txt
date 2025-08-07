@@ -1,0 +1,25 @@
+# Adaptive Feature Detection System Requirements
+
+# Core ML/AI Libraries
+torch>=2.0.0
+torchvision>=0.15.0
+torchaudio>=2.0.0
+
+# Computer Vision
+opencv-python>=4.8.0
+opencv-contrib-python>=4.8.0
+scikit-image>=0.21.0
+
+# Scientific Computing
+numpy>=1.24.0
+scipy>=1.10.0
+matplotlib>=3.7.0
+
+# GUI Libraries
+Pillow>=10.0.0
+
+# Optional Camera Support (Basler)
+pypylon  # Uncomment if you have Basler cameras
+
+# Additional utilities
+pathlib2>=2.3.7
