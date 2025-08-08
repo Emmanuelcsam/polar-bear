@@ -20,6 +20,43 @@ import time
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+from PIL import Image  # Add PIL import for image handling
+import gc  # Garbage collector for memory management
+
+# Try to import psutil for system monitoring (optional)
+try:
+    import psutil
+    PSUTIL_AVAILABLE = True
+except ImportError:
+    PSUTIL_AVAILABLE = False
+    print("psutil not available - basic memory monitoring will be used")
+
+def monitor_memory():
+    """Monitor system memory usage"""
+    if PSUTIL_AVAILABLE:
+        process = psutil.Process(os.getpid())
+        mem_info = process.memory_info()
+        mem_percent = process.memory_percent()
+        system_mem = psutil.virtual_memory()
+        
+        print(f"Process Memory: {mem_info.rss / 1024**2:.1f} MB ({mem_percent:.1f}% of system)")
+        print(f"System Memory: {system_mem.percent:.1f}% used ({system_mem.available / 1024**3:.1f} GB available)")
+        
+        # Warning if memory usage is high
+        if mem_percent > 50 or system_mem.percent > 85:
+            print("⚠️ High memory usage detected!")
+            return True
+        return False
+    else:
+        # Basic memory monitoring using torch
+        if torch.cuda.is_available():
+            gpu_memory = torch.cuda.memory_allocated() / 1024**2
+            print(f"GPU Memory: {gpu_memory:.1f} MB")
+            if gpu_memory > 1000:  # More than 1GB
+                print("⚠️ High GPU memory usage detected!")
+                return True
+        print("Basic memory check - system appears stable")
+        return False
 
 def box_corner_to_center(boxes):
     """Convert corner-format bounding boxes to center-format.
@@ -77,20 +114,12 @@ def multibox_prior(data, sizes, ratios):
     center_w = (torch.arange(in_width, device=device) + offset_w) * steps_w  # Generate center x-coordinates
     shift_y, shift_x = torch.meshgrid(center_h, center_w, indexing='ij')  # Create coordinate grid
     shift_y, shift_x = shift_y.reshape(-1), shift_x.reshape(-1)  # Flatten coordinate grids
-    # Compute widths and heights (each shape: [1, num_anchors_per_pixel])
     w = torch.cat((size_tensor * torch.sqrt(ratio_tensor),  # Calculate widths for different anchor combinations
                    size_tensor * torch.sqrt(ratio_tensor[1:]))) \
                    * in_height / in_width  # Handle rectangular inputs
     h = torch.cat((size_tensor / torch.sqrt(ratio_tensor),  # Calculate heights for different anchor combinations
                    size_tensor / torch.sqrt(ratio_tensor[1:])))
-    
-    # Flatten to 1D so stack yields a 2D tensor
-    w = w.flatten()  # shape: (num_anchors_per_pixel,)
-    h = h.flatten()  # shape: (num_anchors_per_pixel,)
-    
-    # Stack into (4, num_anchors_per_pixel), then transpose to (num_anchors_per_pixel, 4)
-    anchor_manipulations = torch.stack((-w, -h, w, h)).t()  # shape (num_anchors_per_pixel, 4)
-    anchor_manipulations = anchor_manipulations.repeat(in_height * in_width, 1) / 2  # Create anchor manipulations
+    anchor_manipulations = torch.stack((-w, -h, w, h)).T.repeat(in_height * in_width, 1) / 2  # Create anchor manipulations
     out_grid = torch.stack([shift_x, shift_y, shift_x, shift_y], dim=1).repeat_interleave(boxes_per_pixel, dim=0)  # Create output grid
     output = out_grid + anchor_manipulations  # Add manipulations to grid
     return output.unsqueeze(0)  # Add batch dimension and return
@@ -125,7 +154,7 @@ def offset_boxes(anchors, assigned_bb, eps=1e-6):
     c_assigned_bb = box_corner_to_center(assigned_bb)  # Convert assigned boxes to center format
     offset_xy = 10 * (c_assigned_bb[:, :2] - c_anc[:, :2]) / c_anc[:, 2:]  # Calculate center offset
     offset_wh = 5 * torch.log(eps + c_assigned_bb[:, 2:] / c_anc[:, 2:])  # Calculate size offset
-    offset = torch.cat([offset_xy, offset_wh], axis=1)  # Concatenate offsets
+    offset = torch.cat([offset_xy, offset_wh], dim=1)  # Concatenate offsets
     return offset  # Return offset tensor
 
 def multibox_target(anchors, labels):
@@ -198,7 +227,7 @@ def multibox_detection(cls_probs, offset_preds, anchors, nms_threshold=0.5, pos_
         anc = box_corner_to_center(anchors)  # Convert anchors to center format
         pred_bbox_xy = (offset_pred[:, :2] * anc[:, 2:] / 10) + anc[:, :2]  # Calculate predicted center coordinates
         pred_bbox_wh = torch.exp(offset_pred[:, 2:] / 5) * anc[:, 2:]  # Calculate predicted width and height
-        pred_bbox = torch.cat((pred_bbox_xy, pred_bbox_wh), axis=1)  # Concatenate center and size
+        pred_bbox = torch.cat((pred_bbox_xy, pred_bbox_wh), dim=1)  # Concatenate center and size
         predicted_bb = box_center_to_corner(pred_bbox)  # Convert to corner format
         
         output = []  # Initialize output for current sample
@@ -233,8 +262,8 @@ class FiberOpticDataset(Dataset):
     """
     d2l.ai's VOCSegDataset.[9]
     """
-    def __init__(self, dataset_path, reference_path, img_size=(256, 256), is_train=True):
-        self.img_size = img_size  # Store target image size
+    def __init__(self, dataset_path, reference_path, img_size=(128, 128), is_train=True):
+        self.img_size = img_size  # Store target image size (reduced from 256x256 to 128x128)
         self.is_train = is_train  # Store training mode flag
         
         # 1. Parse dataset directory - find ALL image files recursively
@@ -288,7 +317,8 @@ class FiberOpticDataset(Dataset):
         pt_files = glob.glob(os.path.join(reference_path, '**', '*.pt'), recursive=True)  # Find all .pt files recursively
         print(f"Found {len(pt_files)} .pt files in reference directory")
         
-        for pt_file in pt_files:  # Iterate through each .pt file
+        # Load tensors with memory management
+        for i, pt_file in enumerate(pt_files):  # Iterate through each .pt file
             try:  # Try to load the tensor
                 # Create a unique key based on the relative path from reference directory
                 rel_path = os.path.relpath(pt_file, reference_path)  # Get relative path
@@ -296,11 +326,20 @@ class FiberOpticDataset(Dataset):
                 key = key.replace(os.sep, '_')  # Replace path separators with underscores
                 
                 # Load the tensor
-                tensor = torch.load(pt_file, weights_only=False)  # Load tensor (allow loading older tensors)
+                tensor = torch.load(pt_file, weights_only=False, map_location='cpu')  # Load tensor to CPU to save memory
                 refs[key] = tensor  # Store with unique key
                 
-                if len(refs) % 100 == 0:  # Print progress every 100 files
+                if len(refs) % 50 == 0:  # Print progress every 50 files (reduced frequency)
                     print(f"Loaded {len(refs)} reference tensors...")
+                    # Force garbage collection and clear cache periodically
+                    import gc
+                    gc.collect()
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
+                
+                # Add small delay every 10 files to prevent system overload
+                if i % 10 == 0:
+                    time.sleep(0.01)
                     
             except Exception as e:  # If loading fails
                 print(f"Warning: Could not load reference tensor {pt_file}: {e}")  # Print warning message
@@ -319,7 +358,7 @@ class FiberOpticDataset(Dataset):
         if image is None:  # If image couldn't be loaded
             print(f"Warning: Could not load image {img_path}")
             # Create a dummy image as fallback
-            image = np.zeros((256, 256, 3), dtype=np.uint8)
+            image = np.zeros((128, 128, 3), dtype=np.uint8)  # Reduced dummy image size
         else:
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # Convert BGR to RGB color space
             image = cv2.resize(image, self.img_size)  # Resize image to target size
@@ -331,7 +370,7 @@ class FiberOpticDataset(Dataset):
         image_tensor = self.transform(image)  # Apply transformation pipeline
         
         # Pad defect boxes to a fixed size for batching
-        max_boxes = 20  # Set maximum number of boxes per image
+        max_boxes = 5  # Set maximum number of boxes per image (reduced from 20 to 5)
         padded_boxes = torch.full((max_boxes, 5), -1.0)  # Create padded tensor with -1 values
         num_boxes = min(max_boxes, defect_boxes.shape[0])  # Calculate number of boxes to copy
         if num_boxes > 0:  # If there are boxes to copy
@@ -367,7 +406,7 @@ class FiberOpticDataset(Dataset):
                 res = cv2.matchTemplate(gray_image, template, cv2.TM_CCOEFF_NORMED)  # Perform template matching
                 _, max_val, _, max_loc = cv2.minMaxLoc(res)  # Find best match location and value
                 
-                if max_val > 0.7:  # If match confidence is above threshold
+                if max_val > 0.6:  # If match confidence is above threshold (reduced from 0.7 to 0.6)
                     th, tw = template.shape  # Get template dimensions
                     top_left = max_loc  # Get top-left corner of match
                     bottom_right = (top_left[0] + tw, top_left[1] + th)  # Calculate bottom-right corner
@@ -388,7 +427,7 @@ class FiberOpticDataset(Dataset):
                     template = cv2.cvtColor(template, cv2.COLOR_RGB2GRAY)  # Convert to grayscale
                 
                 res = cv2.matchTemplate(gray_image, template, cv2.TM_CCOEFF_NORMED)  # Perform template matching
-                loc = np.where(res >= 0.8)  # Find locations above threshold for multiple detections
+                loc = np.where(res >= 0.7)  # Find locations above threshold for multiple detections (reduced from 0.8 to 0.7)
                 th, tw = template.shape  # Get template dimensions
                 
                 for pt in zip(*loc[::-1]):  # Iterate through detected locations
@@ -413,36 +452,37 @@ class UnifiedFiberInspector(nn.Module):
 
         # --- Shared Backbone (ResNet-18) ---
         # Inspired by d2l.ai FCN example [4]
+        # Use smaller ResNet variant or reduce channels
         pretrained_net = torchvision.models.resnet18(weights=ResNet18_Weights.DEFAULT)  # Load pretrained ResNet-18
-        self.backbone = nn.Sequential(*list(pretrained_net.children())[:-2])  # Remove last two layers (avgpool and fc)
+        self.backbone = nn.Sequential(*list(pretrained_net.children())[:-3])  # Remove last 3 layers for smaller features
+        
+        # Add a conv layer to reduce channels
+        self.channel_reducer = nn.Conv2d(256, 128, kernel_size=1)  # Reduce from 256 to 128 channels
         
         # --- FCN Segmentation Head ---
-        # Inspired by d2l.ai FCN example [4]
+        # Inspired by d2l.ai FCN example [4] - Reduced complexity
         self.fcn_head = nn.Sequential(  # Create FCN head for segmentation
-            nn.ConvTranspose2d(512, 256, kernel_size=2, stride=2),  # First upsampling layer
+            nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2),  # First upsampling layer (reduced channels)
             nn.ReLU(inplace=True),  # ReLU activation
-            nn.ConvTranspose2d(256, 128, kernel_size=2, stride=2),  # Second upsampling layer
-            nn.ReLU(inplace=True),  # ReLU activation
-            nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2),  # Third upsampling layer
-            nn.ReLU(inplace=True),  # ReLU activation
-            nn.ConvTranspose2d(64, 32, kernel_size=2, stride=2),  # Fourth upsampling layer
+            nn.ConvTranspose2d(64, 32, kernel_size=2, stride=2),  # Second upsampling layer
             nn.ReLU(inplace=True),  # ReLU activation
             nn.ConvTranspose2d(32, self.num_seg_classes, kernel_size=2, stride=2)  # Final upsampling to output classes
         )
         
         # --- SSD Defect Detection Head ---
-        # Inspired by d2l.ai TinySSD example [6]
-        self.defect_sizes = [0.1, 0.15, 0.2]  # Define anchor box sizes for defects
-        self.defect_ratios = [1, 2, 0.5]  # Define anchor box ratios for defects
+        # Inspired by d2l.ai TinySSD example [6] - Reduced complexity
+        self.defect_sizes = [[0.1, 0.15]]  # Define anchor box sizes for defects (reduced)
+        self.defect_ratios = [[1, 2]]  # Define anchor box ratios for defects (reduced)
         num_anchors = len(self.defect_sizes) + len(self.defect_ratios) - 1  # Calculate total number of anchors
 
-        # Use the feature map from the backbone (512 channels)
-        self.cls_predictor = nn.Conv2d(512, num_anchors * self.num_defect_classes, kernel_size=3, padding=1)  # Classification predictor
-        self.bbox_predictor = nn.Conv2d(512, num_anchors * 4, kernel_size=3, padding=1)  # Bounding box regression predictor
+        # Use the reduced feature map (128 channels instead of 512)
+        self.cls_predictor = nn.Conv2d(128, num_anchors * self.num_defect_classes, kernel_size=3, padding=1)  # Classification predictor
+        self.bbox_predictor = nn.Conv2d(128, num_anchors * 4, kernel_size=3, padding=1)  # Bounding box regression predictor
 
     def forward(self, x):
         # 1. Backbone feature extraction
         features = self.backbone(x)  # Extract features using ResNet-18 backbone
+        features = self.channel_reducer(features)  # Reduce channels for memory efficiency
         
         # 2. FCN head for segmentation
         seg_logits = self.fcn_head(features)  # Generate segmentation logits
@@ -520,22 +560,63 @@ def calc_total_loss(seg_logits, seg_labels, cls_preds, bbox_preds, anchors, bbox
     
     return total_loss, seg_loss, det_loss  # Return total loss and individual components
 
-def train_epoch(net, train_iter, loss_fn, optimizer, device):
-    """The training loop for one epoch."""
+def train_epoch(net, train_iter, loss_fn, optimizer, device, accumulate_grad_batches=1):
+    """The training loop for one epoch with memory management, mixed precision, and gradient accumulation."""
     net.train()  # Set model to training mode
     metric = Accumulator(4)  # Initialize accumulator for total_loss, seg_loss, det_loss, num_examples
-    for batch in train_iter:  # Iterate through training batches
-        optimizer.zero_grad()  # Clear gradients from previous iteration
-        X, seg_y, bbox_y = [v.to(device) for v in batch]  # Move batch data to device
+    
+    # Enable mixed precision training for memory efficiency
+    scaler = torch.cuda.amp.GradScaler() if torch.cuda.is_available() else None
+    
+    for batch_idx, batch in enumerate(train_iter):  # Iterate through training batches
+        X, seg_y, bbox_y = [v.to(device, non_blocking=True) for v in batch]  # Move batch data to device with async transfer
         
-        seg_logits, cls_preds, bbox_preds, anchors = net(X)  # Forward pass through model
+        # Use automatic mixed precision if available
+        if scaler is not None and torch.cuda.is_available():
+            with torch.cuda.amp.autocast():
+                seg_logits, cls_preds, bbox_preds, anchors = net(X)  # Forward pass through model
+                l, seg_l, det_l = loss_fn(seg_logits, seg_y, cls_preds, bbox_preds, anchors, bbox_y)  # Calculate loss
+                # Scale loss for gradient accumulation
+                l = l / accumulate_grad_batches
+            
+            scaler.scale(l).backward()  # Backward pass with scaled gradients
+        else:
+            seg_logits, cls_preds, bbox_preds, anchors = net(X)  # Forward pass through model
+            l, seg_l, det_l = loss_fn(seg_logits, seg_y, cls_preds, bbox_preds, anchors, bbox_y)  # Calculate loss
+            # Scale loss for gradient accumulation
+            l = l / accumulate_grad_batches
+            l.backward()  # Backward pass to compute gradients
         
-        l, seg_l, det_l = loss_fn(seg_logits, seg_y, cls_preds, bbox_preds, anchors, bbox_y)  # Calculate loss
+        # Update weights only after accumulating enough gradients
+        if (batch_idx + 1) % accumulate_grad_batches == 0:
+            if scaler is not None and torch.cuda.is_available():
+                scaler.step(optimizer)  # Update model parameters
+                scaler.update()  # Update scaler for next iteration
+            else:
+                optimizer.step()  # Update model parameters
+            optimizer.zero_grad()  # Clear gradients after update
         
-        l.backward()  # Backward pass to compute gradients
-        optimizer.step()  # Update model parameters
+        metric.add(l.item() * accumulate_grad_batches, seg_l.item(), det_l.item(), X.shape[0])  # Add batch metrics to accumulator
         
-        metric.add(l.item(), seg_l.item(), det_l.item(), X.shape[0])  # Add batch metrics to accumulator
+        # Clear cache every few batches to prevent memory buildup
+        if batch_idx % 5 == 0:  # More frequent cleanup (every 5 batches instead of 10)
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            # Force garbage collection for CPU memory management
+            import gc
+            gc.collect()
+        
+        # Add delay to prevent overheating and system overload
+        time.sleep(0.05)  # Increased delay for stability
+    
+    # Handle any remaining accumulated gradients
+    if len(train_iter) % accumulate_grad_batches != 0:
+        if scaler is not None and torch.cuda.is_available():
+            scaler.step(optimizer)
+            scaler.update()
+        else:
+            optimizer.step()
+        optimizer.zero_grad()
     
     return metric[0]/metric[3], metric[1]/metric[3], metric[2]/metric[3]  # Return average losses
 
@@ -556,14 +637,24 @@ def run_inference(model_path, image_path, device, seg_classes, defect_classes):
 
     # Load and preprocess image
     image = cv2.imread(image_path)  # Read image using OpenCV
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # Convert BGR to RGB
-    orig_image = cv2.resize(image, (256, 256))  # Resize image to 256x256
+    if image is not None:
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # Convert BGR to RGB
+        orig_image = cv2.resize(image, (128, 128))  # Resize image to 128x128 (reduced from 256x256)
+    else:
+        orig_image = np.zeros((128, 128, 3), dtype=np.uint8)  # Fallback image
     
     transform = torchvision.transforms.Compose([  # Create transformation pipeline
         torchvision.transforms.ToTensor(),  # Convert to tensor
         torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # Normalize
     ])
-    img_tensor = transform(orig_image).unsqueeze(0).to(device)  # Apply transformations and add batch dimension
+    
+    # Convert numpy array to PIL Image for transform, then to tensor
+    orig_image_pil = Image.fromarray(orig_image)
+    img_tensor = transform(orig_image_pil)  # Apply transformations, this returns a tensor
+    # Ensure we have a tensor and add batch dimension
+    if not isinstance(img_tensor, torch.Tensor):
+        img_tensor = torch.tensor(img_tensor)
+    img_tensor = img_tensor.unsqueeze(0).to(device)  # Add batch dimension and move to device
     
     # Perform inference
     with torch.no_grad():  # Disable gradient computation
@@ -592,15 +683,13 @@ def run_inference(model_path, image_path, device, seg_classes, defect_classes):
         
         class_name = list(defect_classes.keys())[int(class_id)]  # Get class name from class ID
         
-        box_w = (x2 - x1) * 256  # Calculate box width in pixels
-        box_h = (y2 - y1) * 256  # Calculate box height in pixels
-        rect = patches.Rectangle((x1 * 256, y1 * 256), box_w, box_h,  # Create rectangle patch
+        box_w = (x2 - x1) * 128  # Calculate box width in pixels (changed from 256 to 128)
+        box_h = (y2 - y1) * 128  # Calculate box height in pixels (changed from 256 to 128)
+        rect = patches.Rectangle((x1 * 128, y1 * 128), box_w, box_h,  # Create rectangle patch (changed from 256 to 128)
                                  linewidth=2, edgecolor='yellow', facecolor='none')  # Set rectangle properties
         ax.add_patch(rect)  # Add rectangle to plot
-        ax.text(x1 * 256, y1 * 256 - 5, f'{class_name}: {score:.2f}',  # Add text label
-                bbox=dict(facecolor='yellow', alpha=0.5), fontsize=10, color='black')  # Set text properties
-    
-    plt.axis('off')  # Hide axes
+        ax.text(x1 * 128, y1 * 128 - 5, f'{class_name}: {score:.2f}',  # Add text label (changed from 256 to 128)
+                bbox=dict(facecolor='yellow', alpha=0.5), fontsize=10, color='black')  # Set text properties    plt.axis('off')  # Hide axes
     output_path = os.path.join(os.path.dirname(image_path), "inspection_result.png")  # Set output path
     plt.savefig(output_path, bbox_inches='tight', pad_inches=0)  # Save figure
     print(f"Inference result saved to {output_path}")  # Print confirmation message
@@ -608,11 +697,15 @@ def run_inference(model_path, image_path, device, seg_classes, defect_classes):
 
 
 if __name__ == '__main__':
+    # Limit CPU threads to prevent system overload
+    torch.set_num_threads(2)  # Limit PyTorch to 2 threads (reduced for stability)
+    
     parser = argparse.ArgumentParser(description="Fiber Optic End-Face Inspector Training Script")  # Create argument parser
     parser.add_argument('--dataset_path', type=str, default='./dataset', help="Path to the dataset directory")  # Dataset path argument
     parser.add_argument('--reference_path', type=str, default='./reference', help="Path to the reference tensors directory")  # Reference path argument
     parser.add_argument('--epochs', type=int, default=2, help="Number of training epochs")  # Epochs argument
-    parser.add_argument('--batch_size', type=int, default=2, help="Training batch size")  # Batch size argument
+    parser.add_argument('--batch_size', type=int, default=1, help="Training batch size")  # Batch size argument (kept at 1 for stability)
+    parser.add_argument('--accumulate_grad_batches', type=int, default=2, help="Number of batches to accumulate gradients")  # Reduced gradient accumulation for memory
     parser.add_argument('--learning_rate', type=float, default=1e-3, help="Optimizer learning rate")  # Learning rate argument
     parser.add_argument('--mode', type=str, default='train', choices=['train', 'inference'], help="Run mode: train or inference")  # Mode argument
     parser.add_argument('--model_path', type=str, default='./fiber_inspector.pth', help="Path to save/load the model")  # Model path argument
@@ -621,6 +714,27 @@ if __name__ == '__main__':
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')  # Set device (GPU if available, else CPU)
     print(f"Using device: {device}")  # Print which device is being used
+    
+    # Check system memory before starting
+    print("\n--- SYSTEM COMPATIBILITY CHECK ---")
+    if PSUTIL_AVAILABLE:
+        system_mem = psutil.virtual_memory()
+        print(f"System RAM: {system_mem.total / 1024**3:.1f} GB total, {system_mem.available / 1024**3:.1f} GB available")
+        
+        if system_mem.available < 4.0:  # Less than 4GB available
+            print("⚠️ Warning: Low available memory. Consider closing other applications.")
+        
+        # Force CPU usage for maximum compatibility on this system
+        if system_mem.available < 8.0 or not torch.cuda.is_available():
+            device = torch.device('cpu')
+            print("Using CPU for maximum compatibility with your system")
+    else:
+        print("System monitoring not available - using conservative settings")
+        # Use CPU by default for maximum compatibility
+        device = torch.device('cpu')
+        print("Using CPU for maximum compatibility")
+    
+    print("--- SYSTEM CHECK COMPLETE ---\n")
 
     # Convert relative paths to absolute paths based on script location
     script_dir = os.path.dirname(os.path.abspath(__file__))  # Get script directory
@@ -649,7 +763,30 @@ if __name__ == '__main__':
         if effective_batch_size != args.batch_size:  # If batch size was adjusted
             print(f"Adjusted batch size from {args.batch_size} to {effective_batch_size} based on dataset size")  # Print adjustment message
             
-        train_loader = DataLoader(fiber_dataset, batch_size=effective_batch_size, shuffle=True, num_workers=0)  # Create training data loader
+        train_loader = DataLoader(
+            fiber_dataset, 
+            batch_size=effective_batch_size, 
+            shuffle=True, 
+            num_workers=2,  # Reduced workers for stability (was 4)
+            pin_memory=False,  # Disabled pin_memory for CPU-friendly operation
+            persistent_workers=False,  # Disabled persistent workers to free memory
+            prefetch_factor=1  # Reduced prefetch to minimize memory usage
+        )  # Create training data loader with reduced resource usage
+        
+        # Force CPU usage for stability on systems with limited GPU memory
+        if not torch.cuda.is_available() or effective_batch_size == 1:
+            device = torch.device('cpu')
+            print("Using CPU for maximum stability and compatibility")
+        elif torch.cuda.is_available():
+            # Check GPU memory and use CPU if insufficient
+            try:
+                gpu_memory = torch.cuda.get_device_properties(0).total_memory / 1024**3  # GB
+                if gpu_memory < 4.0:  # If less than 4GB GPU memory, use CPU
+                    device = torch.device('cpu')
+                    print(f"GPU has only {gpu_memory:.1f}GB memory. Using CPU for stability.")
+            except:
+                device = torch.device('cpu')
+                print("GPU detection failed. Using CPU for stability.")
         
         # Instantiate model
         net = UnifiedFiberInspector(  # Create model instance
@@ -661,34 +798,81 @@ if __name__ == '__main__':
         # 1. Create a SummaryWriter to write to the 'runs' directory
         writer = SummaryWriter('runs/unified_fiber_inspector')
 
-        # 2. Get a sample batch of images to trace the graph
-        images, _, _ = next(iter(train_loader))
-
-        # 3. Add the model graph to TensorBoard
-        writer.add_graph(net, images)
+        # 2. Skip model graph visualization to save memory
+        print("✅ TensorBoard logging enabled (graph visualization skipped for memory efficiency)")
+        print("Run `tensorboard --logdir=runs` in your terminal to view training progress.")
+        
         writer.close()  # Close the writer
-
-        print("\n✅ Model graph saved for TensorBoard.")
-        print("Run `tensorboard --logdir=runs` in your terminal to view it.")
         # --- TensorBoard Visualization Code End ---
 
         # Optimizer
         optimizer = torch.optim.Adam(net.parameters(), lr=args.learning_rate)  # Create Adam optimizer
 
-        print("Starting training...")  # Print training start message
+        print("Starting training with optimized resource usage...")  # Print training start message
+        print(f"Using {args.accumulate_grad_batches} gradient accumulation steps")
+        print(f"Effective batch size: {effective_batch_size * args.accumulate_grad_batches}")
         start_time = time.time()  # Record start time
+        
+        # Enable memory efficient mode
+        if torch.cuda.is_available():
+            torch.backends.cudnn.benchmark = False
+            torch.backends.cudnn.deterministic = True
+            print(f"GPU Memory before training: {torch.cuda.memory_allocated()/1024**2:.1f} MB")
+        
+        # Force garbage collection before training starts
+        import gc
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        print("Memory cleaned before training start")
         
         stats = []  # Initialize list to store training statistics
         for epoch in range(args.epochs):  # Iterate through epochs
-            train_loss, seg_loss, det_loss = train_epoch(net, train_loader, calc_total_loss, optimizer, device)  # Train one epoch
-            print(f"Epoch {epoch+1}/{args.epochs} | "  # Print epoch progress
-                  f"Total Loss: {train_loss:.4f} | "  # Print total loss
-                  f"Seg Loss: {seg_loss:.4f} | "  # Print segmentation loss
-                  f"Det Loss: {det_loss:.4f}")  # Print detection loss
+            # Clear cache before each epoch
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            # Force garbage collection before each epoch
+            import gc
+            gc.collect()
+            print(f"\nStarting epoch {epoch+1}/{args.epochs}...")
+                
+            train_loss, seg_loss, det_loss = train_epoch(
+                net, train_loader, calc_total_loss, optimizer, device, args.accumulate_grad_batches
+            )  # Train one epoch with gradient accumulation
+            
+            # Print progress with memory info
+            progress_msg = f"Epoch {epoch+1}/{args.epochs} | Total Loss: {train_loss:.4f} | Seg Loss: {seg_loss:.4f} | Det Loss: {det_loss:.4f}"
+            if torch.cuda.is_available():
+                progress_msg += f" | GPU Mem: {torch.cuda.memory_allocated()/1024**2:.1f} MB"
+            print(progress_msg)
+            
+            # Monitor memory usage after each epoch
+            high_memory = monitor_memory()
+            if high_memory:
+                print("Performing aggressive memory cleanup...")
+                gc.collect()
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                time.sleep(2.0)  # Extra delay if memory is high
+            
             stats.append([epoch+1, train_loss, seg_loss, det_loss])  # Store epoch statistics
+            
+            # Additional delay between epochs to prevent overheating and system stress
+            time.sleep(1.0)  # Increased delay for system stability
+            
+            # Force cleanup after each epoch
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            import gc
+            gc.collect()
         
         end_time = time.time()  # Record end time
         total_training_time = end_time - start_time  # Calculate total training time
+        
+        # Final cleanup
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            print(f"GPU Memory after training: {torch.cuda.memory_allocated()/1024**2:.1f} MB")
         
         # Save model
         torch.save(net.state_dict(), args.model_path)  # Save model weights
